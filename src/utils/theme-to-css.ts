@@ -199,7 +199,7 @@ export function themeToCSS(
   css.push(generateTableCSS(tableStyle, colorScheme));
 
   // Code highlighting (use colorScheme.background.code)
-  css.push(generateCodeCSS(theme.fontScheme.code, codeTheme, layoutScheme.code, colorScheme));
+  css.push(generateCodeCSS(theme.fontScheme.code, codeTheme, layoutScheme.code, layoutScheme.body.fontSize, colorScheme));
 
   // Block spacing (uses colorScheme for blockquote border)
   css.push(generateBlockSpacingCSS(layoutScheme, colorScheme));
@@ -487,6 +487,7 @@ function generateCodeCSS(
   codeConfig: { fontFamily: string },
   codeTheme: CodeThemeConfig,
   codeLayout: { fontSize: string },
+  bodyFontSize: string,
   colorScheme: ColorScheme
 ): string {
   const css: string[] = [];
@@ -494,11 +495,16 @@ function generateCodeCSS(
   // Code font settings - background from colorScheme
   const codeFontFamily = themeManager.buildFontFamily(codeConfig.fontFamily);
   const codeFontSize = themeManager.ptToPx(codeLayout.fontSize);
+  const bodyFontSizePt = parseFloat(bodyFontSize);
+  const codeFontSizePt = parseFloat(codeLayout.fontSize);
+  const inlineCodeScale = bodyFontSizePt > 0
+    ? Number((codeFontSizePt / bodyFontSizePt).toFixed(4))
+    : 1;
   const codeBackground = colorScheme.background.code;
 
   css.push(`#markdown-content code {
   font-family: ${codeFontFamily};
-  font-size: ${codeFontSize};
+  font-size: ${inlineCodeScale}em;
   background-color: ${codeBackground};
 }`);
 

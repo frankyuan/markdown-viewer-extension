@@ -735,10 +735,17 @@ class DocxExporter {
       5: HeadingLevel.HEADING_5, 6: HeadingLevel.HEADING_6,
     };
     const depth = node.depth || 1;
+    const headingStyle = this.themeStyles?.paragraphStyles?.[`Heading${depth}`]?.run;
 
     // Convert inline nodes to support styles (bold, italic, code, etc.)
     const children = await this.inlineConverter!.convertInlineNodes(
-      (node.children || []) as unknown as InlineNode[]
+      (node.children || []) as unknown as InlineNode[],
+      {
+        size: headingStyle?.size,
+        bold: headingStyle?.bold,
+        font: headingStyle?.font,
+        color: headingStyle?.color,
+      }
     );
 
     const config: {
