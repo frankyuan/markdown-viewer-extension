@@ -191,9 +191,9 @@
     "message": "Spausdinti į PDF",
     "description": "Export menu item for printing to PDF"
   },
-  "export_menu_save_markdown": {
-    "message": "Išsaugoti kaip Markdown",
-    "description": "Export menu item for saving current file as Markdown"
+  "export_menu_save_file": {
+    "message": "Išsaugoti failą",
+    "description": "Export menu item for saving current file"
   },
   "exporting": {
     "message": "Ruošiamas Word dokumentas...",
@@ -518,46 +518,6 @@
   "settings_save_success": {
     "message": "Nustatymai išsaugoti",
     "description": "Toast when settings saved"
-  },
-  "settings_support_canvas": {
-    "message": "JSON Canvas diagramos (.canvas)",
-    "description": "Checkbox label for enabling JSON Canvas file support"
-  },
-  "settings_support_dot": {
-    "message": "Graphviz DOT diagramos (.gv)",
-    "description": "Checkbox label for enabling DOT file support"
-  },
-  "settings_support_drawio": {
-    "message": "drawio diagramos (.drawio)",
-    "description": "Checkbox label for enabling drawio file support"
-  },
-  "settings_support_infographic": {
-    "message": "Infografika (.infographic)",
-    "description": "Checkbox label for enabling infographic file support"
-  },
-  "settings_support_mermaid": {
-    "message": "Mermaid diagramos (.mermaid)",
-    "description": "Checkbox label for enabling Mermaid file support"
-  },
-  "settings_support_plantuml": {
-    "message": "PlantUML diagramos (.plantuml, .puml)",
-    "description": "Checkbox label for enabling PlantUML file support"
-  },
-  "settings_support_slidev": {
-    "message": "Slidev slides (.slides.md)",
-    "description": "Checkbox label for enabling Slidev file support"
-  },
-  "settings_support_vega": {
-    "message": "Vega grafikai (.vega)",
-    "description": "Checkbox label for enabling Vega file support"
-  },
-  "settings_support_vega_lite": {
-    "message": "Vega-Lite grafikai (.vl, .vega-lite)",
-    "description": "Checkbox label for enabling Vega-Lite file support"
-  },
-  "settings_supported_formats_title": {
-    "message": "Palaikomi formatai",
-    "description": "Heading for supported formats section"
   },
   "settings_swap_panel_side": {
     "message": "Swap TOC / file tree side",

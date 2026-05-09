@@ -5,6 +5,7 @@ import { platform } from '../webview/index';
 import { startViewer } from '../webview/viewer-main';
 import { initializeViewerBase } from '../../../src/core/viewer/viewer-bootstrap';
 import { loadAndApplyTheme } from '../../../src/utils/theme-to-css';
+import { applyCodeViewPresentation } from '../../../src/utils/code-preview';
 import { createTocPanel } from '../../../src/ui/toc-panel';
 import type { TocPanel } from '../../../src/ui/toc-panel';
 import { extractHeadings } from '../../../src/core/markdown-processor';
@@ -322,23 +323,7 @@ async function renderFile(message: RenderFileMessage): Promise<void> {
   document.documentElement.dataset.viewerFilename = filename;
   document.documentElement.dataset.viewerFilePath = `${fileDir || ''}${filename}`;
 
-  if (codeView) {
-    document.documentElement.dataset.codeView = '1';
-    // Add line numbers after code block is rendered with highlighting
-    const observer = new MutationObserver(() => {
-      const code = document.querySelector('#markdown-content pre code.hljs');
-      if (!code) return;
-      observer.disconnect();
-      requestAnimationFrame(() => {
-        // Count lines from the actual rendered text — always in sync
-        const text = code.textContent || '';
-        const lines = text.replace(/\n+$/, '').split('\n');
-        const nums = lines.map((_, i) => i + 1).join('\n');
-        (code as HTMLElement).dataset.lineNumbers = nums;
-      });
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-  }
+  applyCodeViewPresentation(codeView);
 
   if (!initialized) {
     await initializeViewerBase(platform).then((pluginRenderer) => {

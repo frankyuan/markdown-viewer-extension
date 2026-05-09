@@ -191,9 +191,9 @@
     "message": "PDF के रूप में प्रिंट करें",
     "description": "Export menu item for printing to PDF"
   },
-  "export_menu_save_markdown": {
-    "message": "Markdown के रूप में सहेजें",
-    "description": "Export menu item for saving current file as Markdown"
+  "export_menu_save_file": {
+    "message": "फ़ाइल सहेजें",
+    "description": "Export menu item for saving current file"
   },
   "exporting": {
     "message": "Word दस्तावेज़ तैयार हो रहा है...",
@@ -518,46 +518,6 @@
   "settings_save_success": {
     "message": "सेटिंग्स सहेजी गईं",
     "description": "Toast when settings saved"
-  },
-  "settings_support_canvas": {
-    "message": "JSON Canvas आरेख (.canvas)",
-    "description": "Checkbox label for enabling JSON Canvas file support"
-  },
-  "settings_support_dot": {
-    "message": "Graphviz DOT आरेख (.gv)",
-    "description": "Checkbox label for Graphviz DOT format support"
-  },
-  "settings_support_drawio": {
-    "message": "drawio आरेख (.drawio)",
-    "description": "Checkbox label for enabling drawio file support"
-  },
-  "settings_support_infographic": {
-    "message": "इन्फोग्राफिक्स (.infographic)",
-    "description": "Checkbox label for Infographic format support"
-  },
-  "settings_support_mermaid": {
-    "message": "Mermaid आरेख (.mermaid)",
-    "description": "Checkbox label for Mermaid format support"
-  },
-  "settings_support_plantuml": {
-    "message": "PlantUML आरेख (.plantuml, .puml)",
-    "description": "Checkbox label for enabling PlantUML file support"
-  },
-  "settings_support_slidev": {
-    "message": "Slidev slides (.slides.md)",
-    "description": "Checkbox label for enabling Slidev file support"
-  },
-  "settings_support_vega": {
-    "message": "Vega चार्ट (.vega)",
-    "description": "Checkbox label for Vega format support"
-  },
-  "settings_support_vega_lite": {
-    "message": "Vega-Lite चार्ट (.vl, .vega-lite)",
-    "description": "Checkbox label for Vega-Lite format support"
-  },
-  "settings_supported_formats_title": {
-    "message": "समर्थित प्रारूप",
-    "description": "Title for supported file formats section in settings"
   },
   "settings_swap_panel_side": {
     "message": "Swap TOC / file tree side",

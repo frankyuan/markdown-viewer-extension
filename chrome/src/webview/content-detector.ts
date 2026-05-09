@@ -5,20 +5,11 @@
 import { getWebExtensionApi } from '../../../src/utils/platform-info';
 
 import {
-  DOT_EXTENSION_TO_FILE_TYPE,
   ALL_SUPPORTED_EXTENSIONS,
-  getDefaultSupportedExtensions,
-  type SupportedExtensions,
 } from '../../../src/types/formats';
+import { getCodePreviewMatchedExtension } from '../../../src/utils/code-preview';
 
 const webExtensionApi = getWebExtensionApi();
-
-/**
- * Map file extension to fileType
- */
-function getExtensionFileType(ext: string): string | null {
-  return DOT_EXTENSION_TO_FILE_TYPE[ext] || null;
-}
 
 /**
  * Check if file extension requires settings check (non-markdown extensions)
@@ -34,6 +25,13 @@ function getMatchedExtension(path: string): string | null {
   if (lowerPath.endsWith('.html')) {
     return '.html';
   }
+  if (lowerPath.endsWith('.htm')) {
+    return '.html';
+  }
+
+  const codePreviewExt = getCodePreviewMatchedExtension(lowerPath);
+  if (codePreviewExt) return codePreviewExt;
+
   return null;
 }
 
@@ -212,26 +210,14 @@ async function detectAndInject(): Promise<void> {
     return;
   }
 
-  // For other extensions, check settings
-  const fileType = getExtensionFileType(matchedExt);
-  if (!fileType) {
+  // Common text/code files should preview directly in reader mode.
+  if (getCodePreviewMatchedExtension(matchedExt)) {
+    injectContentScript();
     return;
   }
 
-  try {
-    const result = await webExtensionApi.storage.local.get(['markdownViewerSettings']);
-    const settings = result.markdownViewerSettings as { supportedExtensions?: SupportedExtensions } | undefined;
-    
-    // Default settings if not configured
-    const extensions: SupportedExtensions = settings?.supportedExtensions || getDefaultSupportedExtensions();
-    
-    if (extensions[fileType]) {
-      injectContentScript();
-    }
-  } catch (error) {
-    // On error, use default behavior (inject)
-    injectContentScript();
-  }
+  // All other recognized non-HTML formats are now always previewed.
+  injectContentScript();
 }
 
 // Run detection

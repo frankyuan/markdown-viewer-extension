@@ -47,11 +47,16 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     getFileState,
     isMobile,
     rawMarkdown,
+    getRawContent,
     docxExporter,
     cancelScrollRestore,
     updateActiveTocItem,
     toolbarPrintDisabledTitle,
-    onBeforeZoom
+    onBeforeZoom,
+    enableSourceToggle,
+    onToggleSourceMode,
+    getSourceMode,
+    isSourceModeActive,
   } = options;
 
   // Layout configurations
@@ -143,7 +148,7 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
   const exportMenu = createExportMenu({
     translate,
     onExportDocx: () => exportDocxFromToolbar(),
-    onSaveMarkdown: () => triggerSaveMarkdown(),
+    onSaveFile: () => triggerSaveFile(),
     onPrint: () => triggerPrint(),
     getPrintDisabledTitle: () => {
       const protocol = document.location.protocol;
@@ -352,6 +357,26 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
       })();
     }
 
+    // Source/preview toggle button (.md only)
+    const sourceToggleBtn = document.getElementById('toggle-source-view-btn');
+    if (sourceToggleBtn && enableSourceToggle && onToggleSourceMode && getSourceMode) {
+      const sourceIcon = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor"><path d="M7 6 3 10l4 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m13 6 4 4-4 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      const previewIcon = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor"><path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5Z" stroke-width="2"/><circle cx="10" cy="10" r="2" stroke-width="2"/></svg>`;
+
+      const updateSourceToggleUI = (): void => {
+        const sourceMode = getSourceMode();
+        sourceToggleBtn.innerHTML = sourceMode ? previewIcon : sourceIcon;
+        sourceToggleBtn.title = sourceMode ? 'Preview Mode' : 'Source Mode';
+        sourceToggleBtn.setAttribute('aria-label', sourceToggleBtn.title);
+      };
+
+      updateSourceToggleUI();
+      sourceToggleBtn.addEventListener('click', () => {
+        onToggleSourceMode();
+        updateSourceToggleUI();
+      });
+    }
+
     const downloadBtn = document.getElementById('download-btn') as HTMLButtonElement | null;
     if (downloadBtn) {
       downloadBtn.addEventListener('click', () => {
@@ -378,9 +403,10 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     // Print availability is handled by the shared export menu.
   }
 
-  function triggerSaveMarkdown(): void {
-    const filename = getDocumentFilename().replace(/\.[^.]+$/, '') + '.md';
-    const blob = new Blob([rawMarkdown], { type: 'text/markdown;charset=utf-8' });
+  function triggerSaveFile(): void {
+    const filename = getFilenameFromURL();
+    const fileContent = getRawContent ? getRawContent() : rawMarkdown;
+    const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -435,7 +461,12 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
       // Ctrl/Cmd + S: Download as DOCX
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        void exportDocxFromToolbar();
+        const shouldSaveRawFile = isSourceModeActive ? isSourceModeActive() : Boolean(getSourceMode?.());
+        if (shouldSaveRawFile) {
+          triggerSaveFile();
+        } else {
+          void exportDocxFromToolbar();
+        }
         return;
       }
 
@@ -467,7 +498,8 @@ export function generateToolbarHTML(options: GenerateToolbarHTMLOptions): string
     escapeHtml,
     initialTocClass,
     initialMaxWidth,
-    initialZoom
+    initialZoom,
+    enableSourceToggle,
   } = options;
 
   const toolbarLayoutTitleNormal = translate('toolbar_layout_title_normal');
@@ -523,6 +555,13 @@ export function generateToolbarHTML(options: GenerateToolbarHTMLOptions): string
               <line x1="3" y1="7" x2="17" y2="7" stroke-width="2"/>
             </svg>
           </button>
+          ${enableSourceToggle ? `
+          <button id="toggle-source-view-btn" class="toolbar-btn" title="Source Mode" aria-label="Source Mode">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+              <path d="M7 6 3 10l4 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="m13 6 4 4-4 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>` : ''}
         </div>
         <div class="toolbar-right">
           <button id="download-btn" class="toolbar-btn toolbar-menu-trigger" title="${downloadTitleAttr}" aria-haspopup="menu" aria-expanded="false">

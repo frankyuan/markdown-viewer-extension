@@ -33,12 +33,22 @@ export interface ToolbarManagerOptions {
   getFileState: () => Promise<FileState>;
   isMobile: boolean;
   rawMarkdown: string;
+  /** Get latest original/raw file content for save-file action */
+  getRawContent?: () => string;
   docxExporter: DocxExporter;
   cancelScrollRestore: () => void;
   updateActiveTocItem: () => void;
   toolbarPrintDisabledTitle: string;
   /** Called before zoom changes to lock scroll position */
   onBeforeZoom?: () => void;
+  /** Whether to show source/preview toggle button */
+  enableSourceToggle?: boolean;
+  /** Toggle between markdown preview and source mode */
+  onToggleSourceMode?: () => void;
+  /** Get current source mode state */
+  getSourceMode?: () => boolean;
+  /** Whether current view should save raw file on Ctrl/Cmd+S */
+  isSourceModeActive?: () => boolean;
 }
 
 /**
@@ -50,6 +60,7 @@ export interface GenerateToolbarHTMLOptions {
   initialTocClass: string;
   initialMaxWidth: string;
   initialZoom: number;
+  enableSourceToggle?: boolean;
 }
 
 /**

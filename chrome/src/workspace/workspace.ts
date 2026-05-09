@@ -5,21 +5,16 @@ import { fileTypeFromBuffer } from 'file-type';
 import { getWebExtensionApi } from '../../../src/utils/platform-info';
 import Localization, { DEFAULT_SETTING_LOCALE } from '../../../src/utils/localization';
 import { applyI18nText } from '../../../src/ui/popup/i18n-helpers';
+import { ALL_SUPPORTED_EXTENSIONS } from '../../../src/types/formats';
 import { chevronRight, chevronDown, folderClosed, folderOpen, folderPlus, searchIcon, fileSearchIcon, textSearchIcon, getFileIcon } from './file-icons';
 import themeManager from '../../../src/utils/theme-manager';
 
 const webExtensionApi = getWebExtensionApi();
 const VIEWER_URL = webExtensionApi.runtime.getURL('ui/workspace/viewer-embed.html');
 
-const SUPPORTED_EXTENSIONS = new Set([
-  'md', 'markdown', 'slides.md',
-  'mermaid', 'mmd',
-  'plantuml', 'puml',
-  'vega', 'vl', 'vega-lite',
-  'gv', 'dot',
-  'infographic', 'canvas', 'drawio',
-  'svg'
-]);
+const SUPPORTED_EXTENSIONS = new Set(
+  ALL_SUPPORTED_EXTENSIONS.map((ext) => ext.slice(1).toLowerCase())
+);
 
 interface TreeNode {
   name: string;
@@ -728,9 +723,10 @@ async function openFile(fileHandle: FileSystemFileHandle) {
   }
 
   if (isTextFile(name) && await canPreviewAsText(file)) {
-    // Code/text files: wrap in code block using extension as language tag
+    // Text/code files: pass raw content; reader-side shared module decides
+    // whether to render in code-reading mode.
     const text = await file.text();
-    sendToViewer(`\`\`\`${ext}\n${text.trimEnd()}\n\`\`\``, name, true);
+    sendToViewer(text, name, false);
     return;
   }
 

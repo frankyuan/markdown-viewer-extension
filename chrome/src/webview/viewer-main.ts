@@ -10,6 +10,7 @@ import Localization, { DEFAULT_SETTING_LOCALE } from '../../../src/utils/localiz
 import themeManager from '../../../src/utils/theme-manager';
 import { loadAndApplyTheme } from '../../../src/utils/theme-to-css';
 import { wrapFileContent } from '../../../src/utils/file-wrapper';
+import { buildCodeReadingRender, applyCodeViewPresentation, toFencedCode } from '../../../src/utils/code-preview';
 import { initSlidevViewer } from '../../../src/slidev/slidev-viewer';
 import { getWebExtensionApi } from '../../../src/utils/platform-info';
 
@@ -621,8 +622,40 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
     return;
   }
 
-  // Wrap non-markdown file content (e.g., mermaid, vega) in markdown format
-  const rawMarkdown = wrapFileContent(rawContent, initialUrl);
+  // Wrap non-markdown file content (e.g., mermaid, vega) in markdown format.
+  // For standalone text/code files detected by content-detector, render as
+  // fenced code so syntax highlighting matches workspace behavior.
+  const isMarkdownSourceToggleEnabled = (): boolean => {
+    if (htmlConverted) {
+      return false;
+    }
+    const activeUrl = getActiveDocumentUrl();
+    return /\.md$/i.test(activeUrl) && !/\.slides\.md$/i.test(activeUrl);
+  };
+  let sourceModeEnabled = false;
+  let liveRawContent = rawContent;
+
+  const computeRenderState = (content: string): { markdown: string; codeView: boolean } => {
+    const codeReading = !htmlConverted ? buildCodeReadingRender(content, initialUrl) : null;
+    return {
+      markdown: codeReading ? codeReading.markdown : wrapFileContent(content, initialUrl),
+      codeView: Boolean(codeReading),
+    };
+  };
+
+  let renderState = computeRenderState(liveRawContent);
+  const getDisplayMarkdown = (): string => {
+    if (isMarkdownSourceToggleEnabled() && sourceModeEnabled) {
+      return toFencedCode(liveRawContent, 'markdown');
+    }
+    return renderState.markdown;
+  };
+  const updateCodeViewPresentation = (): void => {
+    applyCodeViewPresentation((isMarkdownSourceToggleEnabled() && sourceModeEnabled) || renderState.codeView);
+  };
+
+  updateCodeViewPresentation();
+  const rawMarkdown = renderState.markdown;
 
   // Get saved state early to prevent any flashing
   const initialState = await getFileState();
@@ -668,6 +701,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
     getFileState,
     isMobile,
     rawMarkdown,
+    getRawContent: () => liveRawContent,
     docxExporter,
     cancelScrollRestore: () => {
       // Scroll restoration is handled by markdown-viewer state.
@@ -678,6 +712,15 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
       // Lock scroll position before zoom change
       // No scroll lock needed in simplified scroll controller.
     },
+    enableSourceToggle: isMarkdownSourceToggleEnabled(),
+    onToggleSourceMode: () => {
+      sourceModeEnabled = !sourceModeEnabled;
+      const scrollLine = getCurrentScrollLine();
+      updateCodeViewPresentation();
+      void renderMarkdown(getDisplayMarkdown(), scrollLine);
+    },
+    getSourceMode: () => sourceModeEnabled,
+    isSourceModeActive: () => (isMarkdownSourceToggleEnabled() && sourceModeEnabled) || renderState.codeView,
   });
 
   toolbarManager.setInitialZoom(initialZoom);
@@ -689,6 +732,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
     initialTocClass,
     initialMaxWidth,
     initialZoom,
+    enableSourceToggle: isMarkdownSourceToggleEnabled(),
   });
   if (!initialTocVisible) {
     document.body.classList.add('toc-hidden');
@@ -751,7 +795,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
 
     toolbarManager.initializeToolbar();
 
-    await renderMarkdown(rawMarkdown, savedScrollLine);
+    await renderMarkdown(getDisplayMarkdown(), savedScrollLine);
 
     if (pendingAnchor) {
       await getOrCreateMarkdownViewerElement();
@@ -908,6 +952,10 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
         });
         await markdownViewerElement!.switchTheme(themeId);
       }
+
+      // Theme switch may recreate or rewrite code DOM; refresh line numbers in source/code view.
+      updateCodeViewPresentation();
+
       logDebug('theme.done', { themeId });
     } catch (error) {
       logThenPermissionError('theme.failed', error, {
@@ -958,7 +1006,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
         } else {
           // Other settings changed - just re-render with scroll preservation
           const scrollLine = getCurrentScrollLine();
-          void renderMarkdown(rawMarkdown, scrollLine);
+          void renderMarkdown(getDisplayMarkdown(), scrollLine);
         }
         return;
       }
@@ -1008,26 +1056,28 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
       throw error;
     }
 
-    // Wrap content if needed (e.g., mermaid, vega files)
-    const wrappedContent = wrapFileContent(newContent, getActiveDocumentUrl());
+    liveRawContent = newContent;
+    renderState = computeRenderState(liveRawContent);
+    const displayMarkdown = getDisplayMarkdown();
+    updateCodeViewPresentation();
 
     showProcessingIndicator();
     try {
       if (markdownViewerAdapter) {
         logDebug('fileChanged.path.adapter', {
-          contentLength: wrappedContent.length,
+          contentLength: displayMarkdown.length,
         });
-        await markdownViewerAdapter.render(wrappedContent, {
+        await markdownViewerAdapter.render(displayMarkdown, {
           fileChanged: false,
           forceRender: false,
           zoomLevel: toolbarManager.getZoomLevel() / 100,
         });
       } else {
         logDebug('fileChanged.path.element', {
-          contentLength: wrappedContent.length,
+          contentLength: displayMarkdown.length,
           renderType: typeof viewer.render,
         });
-        await viewer.render(wrappedContent);
+        await viewer.render(displayMarkdown);
       }
       await generateTOC();
       updateActiveTocItem();

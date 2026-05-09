@@ -191,9 +191,9 @@
     "message": "In ra PDF",
     "description": "Export menu item for printing to PDF"
   },
-  "export_menu_save_markdown": {
-    "message": "Lưu dưới dạng Markdown",
-    "description": "Export menu item for saving current file as Markdown"
+  "export_menu_save_file": {
+    "message": "Lưu tệp",
+    "description": "Export menu item for saving current file"
   },
   "exporting": {
     "message": "Đang chuẩn bị tài liệu Word...",
@@ -518,46 +518,6 @@
   "settings_save_success": {
     "message": "Đã lưu cài đặt",
     "description": "Toast when settings saved"
-  },
-  "settings_support_canvas": {
-    "message": "Biểu đồ JSON Canvas (.canvas)",
-    "description": "Checkbox label for enabling JSON Canvas file support"
-  },
-  "settings_support_dot": {
-    "message": "Biểu đồ Graphviz DOT (.gv)",
-    "description": "Checkbox label for Graphviz DOT format support"
-  },
-  "settings_support_drawio": {
-    "message": "Biểu đồ drawio (.drawio)",
-    "description": "Checkbox label for enabling drawio file support"
-  },
-  "settings_support_infographic": {
-    "message": "Infographic (.infographic)",
-    "description": "Checkbox label for Infographic format support"
-  },
-  "settings_support_mermaid": {
-    "message": "Biểu đồ Mermaid (.mermaid)",
-    "description": "Checkbox label for Mermaid format support"
-  },
-  "settings_support_plantuml": {
-    "message": "Biểu đồ PlantUML (.plantuml, .puml)",
-    "description": "Checkbox label for enabling PlantUML file support"
-  },
-  "settings_support_slidev": {
-    "message": "Slidev slides (.slides.md)",
-    "description": "Checkbox label for enabling Slidev file support"
-  },
-  "settings_support_vega": {
-    "message": "Biểu đồ Vega (.vega)",
-    "description": "Checkbox label for Vega format support"
-  },
-  "settings_support_vega_lite": {
-    "message": "Biểu đồ Vega-Lite (.vl, .vega-lite)",
-    "description": "Checkbox label for Vega-Lite format support"
-  },
-  "settings_supported_formats_title": {
-    "message": "Định dạng được hỗ trợ",
-    "description": "Title for supported file formats section in settings"
   },
   "settings_swap_panel_side": {
     "message": "Swap TOC / file tree side",

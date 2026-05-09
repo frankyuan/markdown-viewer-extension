@@ -191,9 +191,9 @@
     "message": "PDF olarak yazdır",
     "description": "Export menu item for printing to PDF"
   },
-  "export_menu_save_markdown": {
-    "message": "Markdown olarak kaydet",
-    "description": "Export menu item for saving current file as Markdown"
+  "export_menu_save_file": {
+    "message": "Dosyayi kaydet",
+    "description": "Export menu item for saving current file"
   },
   "exporting": {
     "message": "Word belgesi hazırlanıyor...",
@@ -518,46 +518,6 @@
   "settings_save_success": {
     "message": "Ayarlar kaydedildi",
     "description": "Toast when settings saved"
-  },
-  "settings_support_canvas": {
-    "message": "JSON Canvas diyagramları (.canvas)",
-    "description": "Checkbox label for enabling JSON Canvas file support"
-  },
-  "settings_support_dot": {
-    "message": "Graphviz DOT diyagramları (.gv)",
-    "description": "Checkbox label for Graphviz DOT format support"
-  },
-  "settings_support_drawio": {
-    "message": "drawio diyagramları (.drawio)",
-    "description": "Checkbox label for enabling drawio file support"
-  },
-  "settings_support_infographic": {
-    "message": "İnfografikler (.infographic)",
-    "description": "Checkbox label for Infographic format support"
-  },
-  "settings_support_mermaid": {
-    "message": "Mermaid diyagramları (.mermaid)",
-    "description": "Checkbox label for Mermaid format support"
-  },
-  "settings_support_plantuml": {
-    "message": "PlantUML diyagramları (.plantuml, .puml)",
-    "description": "Checkbox label for enabling PlantUML file support"
-  },
-  "settings_support_slidev": {
-    "message": "Slidev slides (.slides.md)",
-    "description": "Checkbox label for enabling Slidev file support"
-  },
-  "settings_support_vega": {
-    "message": "Vega grafikleri (.vega)",
-    "description": "Checkbox label for Vega format support"
-  },
-  "settings_support_vega_lite": {
-    "message": "Vega-Lite grafikleri (.vl, .vega-lite)",
-    "description": "Checkbox label for Vega-Lite format support"
-  },
-  "settings_supported_formats_title": {
-    "message": "Desteklenen Formatlar",
-    "description": "Title for supported file formats section in settings"
   },
   "settings_swap_panel_side": {
     "message": "Swap TOC / file tree side",

@@ -3,7 +3,7 @@ import { showActionMenu, type ActionMenuHandle } from './action-menu';
 export interface ExportMenuOptions {
   translate?: (key: string) => string;
   onExportDocx: () => void | Promise<void>;
-  onSaveMarkdown?: () => void | Promise<void>;
+  onSaveFile?: () => void | Promise<void>;
   onPrint?: () => void | Promise<void>;
   getPrintDisabledTitle?: () => string | null;
 }
@@ -36,12 +36,6 @@ export function createExportMenu(options: ExportMenuOptions): ExportMenu {
             await options.onExportDocx();
           },
         },
-        ...(options.onSaveMarkdown ? [{
-          label: translate('export_menu_save_markdown'),
-          onSelect: async () => {
-            await options.onSaveMarkdown!();
-          },
-        }] : []),
         ...(options.onPrint ? [{
           label: translate('export_menu_print_pdf'),
           onSelect: async () => {
@@ -49,6 +43,12 @@ export function createExportMenu(options: ExportMenuOptions): ExportMenu {
           },
           disabled: Boolean(printDisabledTitle),
           title: printDisabledTitle || '',
+        }] : []),
+        ...(options.onSaveFile ? [{
+          label: translate('export_menu_save_file'),
+          onSelect: async () => {
+            await options.onSaveFile!();
+          },
         }] : []),
       ],
     });
@@ -65,7 +65,7 @@ export function createExportMenu(options: ExportMenuOptions): ExportMenu {
 function fallbackTranslation(key: string): string {
   const map: Record<string, string> = {
     export_menu_export_docx: 'Export to DOCX',
-    export_menu_save_markdown: 'Save as Markdown',
+    export_menu_save_file: 'Save File',
     export_menu_print_pdf: 'Print to PDF',
   };
   return map[key] || key;

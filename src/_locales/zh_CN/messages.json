@@ -191,9 +191,9 @@
     "message": "打印为 PDF",
     "description": "导出菜单中的 PDF 打印项"
   },
-  "export_menu_save_markdown": {
-    "message": "保存为 Markdown",
-    "description": "导出菜单中的保存 Markdown 项"
+  "export_menu_save_file": {
+    "message": "保存文件",
+    "description": "Export menu item for saving current file"
   },
   "exporting": {
     "message": "正在准备 Word 文档...",
@@ -518,46 +518,6 @@
   "settings_save_success": {
     "message": "设置已保存",
     "description": "保存设置成功提示"
-  },
-  "settings_support_canvas": {
-    "message": "JSON Canvas 图表 (.canvas)",
-    "description": "Checkbox label for enabling JSON Canvas file support"
-  },
-  "settings_support_dot": {
-    "message": "Graphviz DOT 图表 (.dot)",
-    "description": "启用 DOT 文件支持的复选框标签"
-  },
-  "settings_support_drawio": {
-    "message": "drawio 图表 (.drawio)",
-    "description": "Checkbox label for enabling drawio file support"
-  },
-  "settings_support_infographic": {
-    "message": "信息图表 (.infographic)",
-    "description": "启用信息图表文件支持的复选框标签"
-  },
-  "settings_support_mermaid": {
-    "message": "Mermaid 图表 (.mermaid)",
-    "description": "启用 Mermaid 文件支持的复选框标签"
-  },
-  "settings_support_plantuml": {
-    "message": "PlantUML 图表 (.plantuml, .puml)",
-    "description": "Checkbox label for enabling PlantUML file support"
-  },
-  "settings_support_slidev": {
-    "message": "Slidev slides (.slides.md)",
-    "description": "Checkbox label for enabling Slidev file support"
-  },
-  "settings_support_vega": {
-    "message": "Vega 图表 (.vega)",
-    "description": "启用 Vega 文件支持的复选框标签"
-  },
-  "settings_support_vega_lite": {
-    "message": "Vega-Lite 图表 (.vl, .vega-lite)",
-    "description": "启用 Vega-Lite 文件支持的复选框标签"
-  },
-  "settings_supported_formats_title": {
-    "message": "支持的文件格式",
-    "description": "支持的格式部分标题"
   },
   "settings_swap_panel_side": {
     "message": "切换 TOC / 文件树侧边位置",

@@ -8,11 +8,6 @@ import type { LocaleInfo, LocaleRegistry } from '../../utils/localization';
 import { translate, applyI18nText, getUiLocale } from './i18n-helpers';
 import { storageGet, storageSet } from './storage-helper';
 import type { EmojiStyle } from '../../types/docx.js';
-import {
-  SUPPORTED_FORMATS,
-  getDefaultSupportedExtensions,
-  type SupportedExtensions,
-} from '../../types/formats';
 
 // Helper: Send message compatible with both Chrome and Firefox
 function safeSendMessage(message: unknown): void {
@@ -142,7 +137,6 @@ interface Settings {
   preferredLocale: string;
   docxHrDisplay: 'pageBreak' | 'line' | 'hide';
   docxEmojiStyle?: EmojiStyle;
-  supportedExtensions?: SupportedExtensions;
   frontmatterDisplay?: FrontmatterDisplay;
   tableMergeEmpty?: boolean;
   tableLayout?: TableLayout;
@@ -186,7 +180,6 @@ export function createSettingsTabManager({
     preferredLocale: DEFAULT_SETTING_LOCALE,
     docxHrDisplay: 'hide',
     docxEmojiStyle: 'system',
-    supportedExtensions: getDefaultSupportedExtensions(),
     frontmatterDisplay: 'hide',
     tableMergeEmpty: true,
     tableLayout: 'center',
@@ -349,16 +342,6 @@ export function createSettingsTabManager({
     // Auto Refresh settings (Chrome only)
     loadAutoRefreshSettingsUI();
 
-    // Load supported file extensions checkboxes
-    const ext = settings.supportedExtensions || getDefaultSupportedExtensions();
-
-    for (const format of SUPPORTED_FORMATS) {
-      const el = document.getElementById(`support-${format.fileType}`) as HTMLInputElement | null;
-      if (el) {
-        el.checked = ext[format.fileType] ?? true;
-        addExtensionChangeListener(el, format.fileType);
-      }
-    }
   }
 
   async function loadLocalesIntoSelect(localeSelect: HTMLSelectElement): Promise<void> {
@@ -534,22 +517,6 @@ export function createSettingsTabManager({
         showMessage(translate('settings_save_failed'), 'error');
       }
     });
-  }
-
-  /**
-   * Add change listener for extension checkbox
-   */
-  function addExtensionChangeListener(el: HTMLInputElement, key: string): void {
-    if (!el.dataset.listenerAdded) {
-      el.dataset.listenerAdded = 'true';
-      el.addEventListener('change', async () => {
-        if (!settings.supportedExtensions) {
-          settings.supportedExtensions = getDefaultSupportedExtensions();
-        }
-        settings.supportedExtensions[key] = el.checked;
-        await saveSettingsToStorage();
-      });
-    }
   }
 
   /**
@@ -811,14 +778,6 @@ export function createSettingsTabManager({
         settings.docxEmojiStyle = docxEmojiStyleEl.value as EmojiStyle;
       }
 
-      // Load supported file extensions from checkboxes
-      const extResult: SupportedExtensions = {};
-      for (const format of SUPPORTED_FORMATS) {
-        const el = document.getElementById(`support-${format.fileType}`) as HTMLInputElement | null;
-        extResult[format.fileType] = el?.checked ?? true;
-      }
-      settings.supportedExtensions = extResult;
-
       await storageSet({
         markdownViewerSettings: settings
       });
@@ -854,7 +813,6 @@ export function createSettingsTabManager({
         preferredLocale: DEFAULT_SETTING_LOCALE,
         docxHrDisplay: 'hide',
         docxEmojiStyle: 'system',
-        supportedExtensions: getDefaultSupportedExtensions(),
         tableMergeEmpty: true,
         tableLayout: 'center',
         swapPanelSide: false,

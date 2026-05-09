@@ -191,9 +191,9 @@
     "message": "Skriv ut till PDF",
     "description": "Export menu item for printing to PDF"
   },
-  "export_menu_save_markdown": {
-    "message": "Spara som Markdown",
-    "description": "Export menu item for saving current file as Markdown"
+  "export_menu_save_file": {
+    "message": "Spara fil",
+    "description": "Export menu item for saving current file"
   },
   "exporting": {
     "message": "Förbereder Word-dokument...",
@@ -518,46 +518,6 @@
   "settings_save_success": {
     "message": "Inställningar sparade",
     "description": "Toast when settings saved"
-  },
-  "settings_support_canvas": {
-    "message": "JSON Canvas diagram (.canvas)",
-    "description": "Checkbox label for enabling JSON Canvas file support"
-  },
-  "settings_support_dot": {
-    "message": "Graphviz DOT-diagram (.gv)",
-    "description": "Checkbox label for Graphviz DOT format support"
-  },
-  "settings_support_drawio": {
-    "message": "drawio diagram (.drawio)",
-    "description": "Checkbox label for enabling drawio file support"
-  },
-  "settings_support_infographic": {
-    "message": "Infografik (.infographic)",
-    "description": "Checkbox label for Infographic format support"
-  },
-  "settings_support_mermaid": {
-    "message": "Mermaid-diagram (.mermaid)",
-    "description": "Checkbox label for Mermaid format support"
-  },
-  "settings_support_plantuml": {
-    "message": "PlantUML diagram (.plantuml, .puml)",
-    "description": "Checkbox label for enabling PlantUML file support"
-  },
-  "settings_support_slidev": {
-    "message": "Slidev slides (.slides.md)",
-    "description": "Checkbox label for enabling Slidev file support"
-  },
-  "settings_support_vega": {
-    "message": "Vega-diagram (.vega)",
-    "description": "Checkbox label for Vega format support"
-  },
-  "settings_support_vega_lite": {
-    "message": "Vega-Lite-diagram (.vl, .vega-lite)",
-    "description": "Checkbox label for Vega-Lite format support"
-  },
-  "settings_supported_formats_title": {
-    "message": "Stödda format",
-    "description": "Title for supported file formats section in settings"
   },
   "settings_swap_panel_side": {
     "message": "Swap TOC / file tree side",
