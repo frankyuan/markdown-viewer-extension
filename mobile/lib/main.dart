@@ -1472,7 +1472,7 @@ class _MarkdownViewerHomeState extends State<MarkdownViewerHome> {
       builder: (context) => _AboutDialog(
         appName: localization.t('extensionName'),
         version: 'v${packageInfo.version}',
-        author: '@xicilion',
+        author: 'https://docu.md',
       ),
     );
   }

@@ -204,7 +204,7 @@
     "description": "扩展简介"
   },
   "extensionName": {
-    "message": "Markdown Viewer",
+    "message": "docu.md Markdown Viewer",
     "description": "扩展名称"
   },
   "failed_to_open_file": {
