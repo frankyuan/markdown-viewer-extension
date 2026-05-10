@@ -133,22 +133,30 @@ function scheduleFloatingTocHeadingsUpdate(): void {
 }
 
 function ensureFloatingTocPanel(): TocPanel {
+  if (floatingTocPanel && !floatingTocPanel.getElement().isConnected) {
+    floatingTocPanel.dispose();
+    floatingTocPanel = null;
+    floatingContentObserver = null;
+    floatingScrollListener = null;
+  }
+
   if (!floatingTocPanel) {
     floatingTocPanel = createTocPanel({ onSelectHeading: scrollToHeadingById });
     document.body.appendChild(floatingTocPanel.getElement());
+  }
 
-    const wrapper = document.getElementById('markdown-wrapper');
-    if (wrapper && !floatingScrollListener) {
-      floatingScrollListener = () => updateFloatingTocActiveHeading();
-      wrapper.addEventListener('scroll', floatingScrollListener);
-    }
+  const wrapper = document.getElementById('markdown-wrapper');
+  if (wrapper && !floatingScrollListener) {
+    floatingScrollListener = () => updateFloatingTocActiveHeading();
+    wrapper.addEventListener('scroll', floatingScrollListener);
+  }
 
-    // Watch content for heading changes (progressive render)
-    const contentDiv = document.getElementById('markdown-content');
-    if (contentDiv && !floatingContentObserver) {
-      floatingContentObserver = new MutationObserver(() => scheduleFloatingTocHeadingsUpdate());
-      floatingContentObserver.observe(contentDiv, { childList: true, subtree: true });
-    }
+  // Watch content for heading changes (progressive render).
+  // Keep this resilient: panel may be created before #markdown-content exists.
+  const contentDiv = document.getElementById('markdown-content');
+  if (contentDiv && !floatingContentObserver) {
+    floatingContentObserver = new MutationObserver(() => scheduleFloatingTocHeadingsUpdate());
+    floatingContentObserver.observe(contentDiv, { childList: true, subtree: true });
   }
   return floatingTocPanel;
 }
@@ -369,59 +377,85 @@ async function renderFile(message: RenderFileMessage): Promise<void> {
 
   applyCodeViewPresentation(codeView);
 
-  if (!initialized) {
-    await initializeViewerBase(platform).then((pluginRenderer) => {
-      startViewer({
-        platform,
-        pluginRenderer,
-        themeConfigRenderer: platform.renderer,
-      });
-      initialized = true;
-      attachWrapperInteractionFixes();
-    }).catch((error) => {
-      console.error('[viewer-embed] viewer base init failed', error);
-    });
-  } else {
-    const viewer = document.querySelector('markdown-viewer') as { render?: (markdown: string) => Promise<void> } | null;
-    if (viewer?.render) {
-      await viewer.render(content);
-    }
-  }
-
-  if (targetLine !== undefined) {
-    const tryScrollToLine = (): boolean => {
-      const viewer = document.querySelector('markdown-viewer') as { scrollLine?: number } | null;
-      if (!viewer) {
-        return false;
-      }
-      viewer.scrollLine = targetLine;
-      return true;
-    };
-
-    if (!tryScrollToLine()) {
-      // Initial viewer boot path is async; retry briefly until markdown-viewer is mounted.
-      for (let attempt = 0; attempt < 12; attempt++) {
-        await new Promise<void>((resolve) => {
-          setTimeout(resolve, 50);
+  try {
+    if (!initialized) {
+      await initializeViewerBase(platform).then((pluginRenderer) => {
+        startViewer({
+          platform,
+          pluginRenderer,
+          themeConfigRenderer: platform.renderer,
         });
-        if (tryScrollToLine()) {
-          break;
+        initialized = true;
+        attachWrapperInteractionFixes();
+      }).catch((error) => {
+        console.error('[viewer-embed] viewer base init failed', error);
+      });
+    } else {
+      const viewer = document.querySelector('markdown-viewer') as { render?: (markdown: string) => Promise<void> } | null;
+      if (viewer?.render) {
+        await viewer.render(content);
+      }
+    }
+
+    if (targetLine !== undefined) {
+      const tryScrollToLine = (): boolean => {
+        const viewer = document.querySelector('markdown-viewer') as { scrollLine?: number } | null;
+        if (!viewer) {
+          return false;
+        }
+        viewer.scrollLine = targetLine;
+        return true;
+      };
+
+      if (!tryScrollToLine()) {
+        // Initial viewer boot path is async; retry briefly until markdown-viewer is mounted.
+        for (let attempt = 0; attempt < 12; attempt++) {
+          await new Promise<void>((resolve) => {
+            setTimeout(resolve, 50);
+          });
+          if (tryScrollToLine()) {
+            break;
+          }
         }
       }
     }
+
+    // Resolve relative images via parent workspace
+    if (fileDir !== undefined) {
+      resolveWorkspaceImages(fileDir);
+      setupWorkspaceFileReader();
+    }
+
+    // The initial bootstrap path may reset document.body content.
+    // Re-apply embed UI so floating TOC/FAB state stays consistent after render.
+    applyEmbedUi(latestEmbedUi);
+
+    if (latestEmbedUi.toc === 'floating') {
+      let attempts = 0;
+      const retryApplyFloating = (): void => {
+        attempts += 1;
+        applyEmbedUi(latestEmbedUi);
+
+        const contentDiv = document.getElementById('markdown-content');
+        const panelConnected = Boolean(floatingTocPanel?.getElement().isConnected);
+        if (contentDiv && panelConnected) {
+          return;
+        }
+
+        if (attempts >= 10) {
+          return;
+        }
+
+        setTimeout(retryApplyFloating, 80);
+      };
+
+      setTimeout(retryApplyFloating, 0);
+    }
+
+    window.parent.postMessage({ type: 'VIEWER_RENDERED' }, '*');
+  } catch (error) {
+    throw error;
   }
-
-  // Resolve relative images via parent workspace
-  if (fileDir !== undefined) {
-    resolveWorkspaceImages(fileDir);
-    setupWorkspaceFileReader();
-  }
-
-  // The initial bootstrap path may reset document.body content.
-  // Re-apply embed UI so floating TOC/FAB state stays consistent after render.
-  applyEmbedUi(latestEmbedUi);
-
-  window.parent.postMessage({ type: 'VIEWER_RENDERED' }, '*');
 }
 
 // Wait for commands from parent host.
