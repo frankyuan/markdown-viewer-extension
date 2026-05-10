@@ -63,7 +63,7 @@ export interface ColorScheme {
     border?: string;
   };
 
-  /** Optional horizontal rule color (overrides table.border for hr) */
+  /** Optional horizontal rule color. Web preview only — not applied by DOCX/other renderers. */
   rule?: {
     color?: string;
   };
@@ -178,9 +178,10 @@ export interface LayoutHeadingConfig {
   spacingBefore: string;
   spacingAfter: string;
   alignment?: 'left' | 'center' | 'right';
-  /** Optional unitless line-height override (e.g. 1.25) */
+  /** Optional unitless line-height override (e.g. 1.25). Web preview only — not applied by DOCX/other renderers. */
   lineHeight?: number;
-  /** Optional bottom border (e.g. VSCode-style h1/h2 underline). Color from colorScheme.headings.border. */
+  /** Optional bottom border (e.g. VSCode-style h1/h2 underline). Color from colorScheme.headings.border.
+   *  Web preview only — not applied by DOCX/other renderers. */
   borderBottom?: {
     width: string;
     style?: string;
@@ -196,7 +197,8 @@ export interface LayoutBlockConfig {
   spacingAfter?: string;
   paddingVertical?: string;
   paddingHorizontal?: string;
-  /** Optional border width for horizontal rule. Color from colorScheme.rule.color or table.border. */
+  /** Optional border width for horizontal rule. Color from colorScheme.rule.color.
+   *  Web preview only — not applied by DOCX/other renderers. */
   borderWidth?: string;
 }
 

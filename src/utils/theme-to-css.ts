@@ -297,7 +297,7 @@ function generateFontAndLayoutCSS(fontScheme: FontScheme, layoutScheme: LayoutSc
     ];
 
     // Optional unitless line-height (e.g. VSCode preset uses 1.25 on all headings)
-    if (layoutHeading.lineHeight) {
+    if (layoutHeading.lineHeight !== undefined) {
       styles.push(`  line-height: ${layoutHeading.lineHeight};`);
     }
 
@@ -647,13 +647,15 @@ function generateBlockSpacingCSS(layoutScheme: LayoutScheme, colorScheme: ColorS
     const hrStyles: string[] = [
       `  margin: ${marginBefore} 0 ${marginAfter} 0;`
     ];
-    // Optional explicit width / color for hr (used by the VSCode preset)
-    const hrColor = colorScheme.rule?.color || colorScheme.table?.border;
-    if (hr.borderWidth || hrColor) {
-      const width = hr.borderWidth || '1px';
+    // Only override hr rendering when explicitly configured; falling back to
+    // colorScheme.table.border (always present) would affect all themes.
+    if (hr.borderWidth !== undefined || colorScheme.rule?.color !== undefined) {
+      const width = hr.borderWidth ?? '1px';
+      const hrColor = colorScheme.rule?.color;
+      hrStyles.push(`  background-color: transparent;`);
       hrStyles.push(`  border: 0;`);
-      hrStyles.push(`  height: ${width};`);
-      hrStyles.push(`  border-bottom: ${width} solid ${hrColor || 'currentColor'};`);
+      hrStyles.push(`  height: 0;`);
+      hrStyles.push(`  border-top: ${width} solid ${hrColor || 'currentColor'};`);
     }
     css.push(`#markdown-content hr {
 ${hrStyles.join('\n')}
