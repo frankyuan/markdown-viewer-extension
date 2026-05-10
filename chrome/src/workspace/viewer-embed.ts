@@ -16,6 +16,7 @@ interface RenderFileMessage {
   filename?: string;
   fileDir?: string;
   codeView?: boolean;
+  targetLine?: number;
 }
 
 interface SetEmbedUiMessage {
@@ -55,6 +56,8 @@ let floatingUpdateTimer: ReturnType<typeof setTimeout> | null = null;
 let resizeWheelFallbackArmed = false;
 let wrapperInteractionFixesAttached = false;
 let handlingManualWheelScroll = false;
+let wheelFallbackHandler: ((event: WheelEvent) => void) | null = null;
+let wheelFallbackTimeout: ReturnType<typeof setTimeout> | null = null;
 
 // Inject embed-mode CSS when loaded with ?embed=1 (from element.ts custom element iframe).
 // This hides the toolbar and shifts the TOC panel up so it fills the full iframe height.
@@ -170,6 +173,73 @@ function normalizeWheelDelta(event: WheelEvent, wrapper: HTMLElement): number {
   return event.deltaY;
 }
 
+function clearWheelFallbackTimeout(): void {
+  if (wheelFallbackTimeout !== null) {
+    clearTimeout(wheelFallbackTimeout);
+    wheelFallbackTimeout = null;
+  }
+}
+
+function disarmResizeWheelFallback(): void {
+  resizeWheelFallbackArmed = false;
+  clearWheelFallbackTimeout();
+
+  const wrapper = document.getElementById('markdown-wrapper') as HTMLElement | null;
+  if (!wrapper || !wheelFallbackHandler) {
+    return;
+  }
+
+  wrapper.removeEventListener('wheel', wheelFallbackHandler as EventListener);
+  wheelFallbackHandler = null;
+}
+
+function armResizeWheelFallback(): void {
+  const wrapper = document.getElementById('markdown-wrapper') as HTMLElement | null;
+  if (!wrapper) {
+    return;
+  }
+
+  resizeWheelFallbackArmed = true;
+
+  if (!wheelFallbackHandler) {
+    wheelFallbackHandler = (event: WheelEvent) => {
+      if (!resizeWheelFallbackArmed) {
+        return;
+      }
+
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey) {
+        return;
+      }
+
+      const maxScrollTop = Math.max(0, wrapper.scrollHeight - wrapper.clientHeight);
+      if (maxScrollTop <= 0) {
+        return;
+      }
+
+      const beforeScrollTop = wrapper.scrollTop;
+      const nextScrollTop = Math.max(
+        0,
+        Math.min(maxScrollTop, beforeScrollTop + normalizeWheelDelta(event, wrapper))
+      );
+
+      if (Math.abs(nextScrollTop - beforeScrollTop) < 0.5) {
+        return;
+      }
+
+      event.preventDefault();
+      handlingManualWheelScroll = true;
+      wrapper.scrollTop = nextScrollTop;
+    };
+
+    wrapper.addEventListener('wheel', wheelFallbackHandler, { passive: false });
+  }
+
+  clearWheelFallbackTimeout();
+  wheelFallbackTimeout = setTimeout(() => {
+    disarmResizeWheelFallback();
+  }, 1500);
+}
+
 function focusWrapperAfterLayoutChange(): void {
   const wrapper = document.getElementById('markdown-wrapper') as HTMLElement | null;
   if (!wrapper) {
@@ -199,37 +269,8 @@ function attachWrapperInteractionFixes(): void {
         return;
       }
 
-      resizeWheelFallbackArmed = false;
+      disarmResizeWheelFallback();
     }, { passive: true });
-
-    wrapper.addEventListener('wheel', (event) => {
-      if (!resizeWheelFallbackArmed) {
-        return;
-      }
-
-      if (event.defaultPrevented || event.ctrlKey || event.metaKey) {
-        return;
-      }
-
-      const maxScrollTop = Math.max(0, wrapper.scrollHeight - wrapper.clientHeight);
-      if (maxScrollTop <= 0) {
-        return;
-      }
-
-      const beforeScrollTop = wrapper.scrollTop;
-      const nextScrollTop = Math.max(
-        0,
-        Math.min(maxScrollTop, beforeScrollTop + normalizeWheelDelta(event, wrapper))
-      );
-
-      if (Math.abs(nextScrollTop - beforeScrollTop) < 0.5) {
-        return;
-      }
-
-      event.preventDefault();
-      handlingManualWheelScroll = true;
-      wrapper.scrollTop = nextScrollTop;
-    }, { passive: false });
   };
 
   requestAnimationFrame(install);
@@ -306,6 +347,9 @@ async function renderFile(message: RenderFileMessage): Promise<void> {
   const filename = String(message.filename || 'inline.md');
   const fileDir = String(message.fileDir || '');
   const codeView = Boolean(message.codeView);
+  const targetLine = typeof message.targetLine === 'number' && Number.isFinite(message.targetLine)
+    ? Math.max(1, Math.floor(message.targetLine))
+    : undefined;
   latestFileDir = fileDir;
 
   // Note: #markdown-viewer-preload style is now injected statically in
@@ -341,6 +385,29 @@ async function renderFile(message: RenderFileMessage): Promise<void> {
     const viewer = document.querySelector('markdown-viewer') as { render?: (markdown: string) => Promise<void> } | null;
     if (viewer?.render) {
       await viewer.render(content);
+    }
+  }
+
+  if (targetLine !== undefined) {
+    const tryScrollToLine = (): boolean => {
+      const viewer = document.querySelector('markdown-viewer') as { scrollLine?: number } | null;
+      if (!viewer) {
+        return false;
+      }
+      viewer.scrollLine = targetLine;
+      return true;
+    };
+
+    if (!tryScrollToLine()) {
+      // Initial viewer boot path is async; retry briefly until markdown-viewer is mounted.
+      for (let attempt = 0; attempt < 12; attempt++) {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 50);
+        });
+        if (tryScrollToLine()) {
+          break;
+        }
+      }
     }
   }
 
@@ -389,7 +456,7 @@ window.addEventListener('message', (event: MessageEvent) => {
   }
 
   if (data.type === 'WORKSPACE_LAYOUT_CHANGED') {
-    resizeWheelFallbackArmed = true;
+    armResizeWheelFallback();
     requestAnimationFrame(() => {
       focusWrapperAfterLayoutChange();
     });

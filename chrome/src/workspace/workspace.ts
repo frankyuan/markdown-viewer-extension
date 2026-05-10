@@ -22,11 +22,14 @@ interface TreeNode {
   handle: FileSystemFileHandle | FileSystemDirectoryHandle;
   path: string;
   children?: TreeNode[];
+  childrenLoaded?: boolean;
+  childrenLoading?: boolean;
 }
 
 interface ContentSearchResult {
   node: TreeNode;
   snippet: string;
+  lineNumber: number;
 }
 
 type SearchMode = 'filename' | 'content';
@@ -60,6 +63,7 @@ let contentSearchResults: ContentSearchResult[] = [];
 let lastExecutedContentQuery = '';
 let contentSearchInProgress = false;
 let contentSearchRunId = 0;
+const directoryReadCache = new Map<string, Promise<TreeNode[]>>();
 
 function updateResizeHandlePosition(): void {
   const workspaceWidth = $workspace.clientWidth;
@@ -275,14 +279,55 @@ async function readDirectory(dirHandle: FileSystemDirectoryHandle, parentPath = 
     if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
     return a.name.localeCompare(b.name);
   });
+  return entries;
+}
 
-  for (const entry of entries) {
-    if (entry.kind === 'directory') {
-      entry.children = await readDirectory(entry.handle as FileSystemDirectoryHandle, entry.path);
+function getCachedDirectoryEntries(dirHandle: FileSystemDirectoryHandle, parentPath = ''): Promise<TreeNode[]> {
+  const key = parentPath;
+  const cached = directoryReadCache.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const pending = readDirectory(dirHandle, parentPath)
+    .catch((error) => {
+      directoryReadCache.delete(key);
+      throw error;
+    });
+  directoryReadCache.set(key, pending);
+  return pending;
+}
+
+async function collectFileNodesRecursively(
+  dirHandle: FileSystemDirectoryHandle,
+  parentPath: string,
+  shouldCancel: () => boolean,
+): Promise<TreeNode[]> {
+  const files: TreeNode[] = [];
+  const stack: Array<{ dirHandle: FileSystemDirectoryHandle; parentPath: string }> = [
+    { dirHandle, parentPath },
+  ];
+
+  while (stack.length > 0) {
+    if (shouldCancel()) {
+      return [];
+    }
+
+    const current = stack.pop()!;
+    const entries = await getCachedDirectoryEntries(current.dirHandle, current.parentPath);
+    for (const entry of entries) {
+      if (entry.kind === 'file') {
+        files.push(entry);
+      } else {
+        stack.push({
+          dirHandle: entry.handle as FileSystemDirectoryHandle,
+          parentPath: entry.path,
+        });
+      }
     }
   }
 
-  return entries;
+  return files;
 }
 
 // ─── File tree rendering ───
@@ -319,23 +364,6 @@ function nodeMatchesSearch(node: TreeNode, query: string): boolean {
   return false;
 }
 
-function flattenFileNodes(nodes: TreeNode[]): TreeNode[] {
-  const files: TreeNode[] = [];
-
-  for (const node of nodes) {
-    if (node.kind === 'file') {
-      files.push(node);
-      continue;
-    }
-
-    if (node.children) {
-      files.push(...flattenFileNodes(node.children));
-    }
-  }
-
-  return files;
-}
-
 function extractContentSnippet(content: string, query: string): string {
   const normalizedContent = content.toLowerCase();
   const matchIndex = normalizedContent.indexOf(query);
@@ -358,11 +386,57 @@ function extractContentSnippet(content: string, query: string): string {
   return prefix + rawLine.slice(snippetStart, snippetEnd) + suffix;
 }
 
+function getMatchedLineNumber(content: string, query: string): number {
+  const normalizedContent = content.toLowerCase();
+  const matchIndex = normalizedContent.indexOf(query);
+  if (matchIndex === -1) {
+    return 1;
+  }
+
+  let lineNumber = 1;
+  for (let i = 0; i < matchIndex; i++) {
+    if (content.charCodeAt(i) === 10) {
+      lineNumber += 1;
+    }
+  }
+  return lineNumber;
+}
+
+function appendHighlightedText(container: HTMLElement, text: string, query: string): void {
+  if (!query) {
+    container.textContent = text;
+    return;
+  }
+
+  const normalizedText = text.toLowerCase();
+  const normalizedQuery = query.toLowerCase();
+  let from = 0;
+
+  while (from < text.length) {
+    const matchIndex = normalizedText.indexOf(normalizedQuery, from);
+    if (matchIndex === -1) {
+      container.append(document.createTextNode(text.slice(from)));
+      break;
+    }
+
+    if (matchIndex > from) {
+      container.append(document.createTextNode(text.slice(from, matchIndex)));
+    }
+
+    const mark = document.createElement('mark');
+    mark.className = 'search-highlight';
+    mark.textContent = text.slice(matchIndex, matchIndex + query.length);
+    container.append(mark);
+    from = matchIndex + query.length;
+  }
+}
+
 async function runContentSearch(): Promise<void> {
   const query = currentSearchQuery;
   lastExecutedContentQuery = query;
   contentSearchRunId += 1;
   const runId = contentSearchRunId;
+  let lastRenderAt = 0;
 
   if (!query) {
     contentSearchResults = [];
@@ -376,7 +450,13 @@ async function runContentSearch(): Promise<void> {
   renderTreeView();
 
   const results: ContentSearchResult[] = [];
-  const files = flattenFileNodes(workspaceTree);
+  const files = rootDirHandle
+    ? await collectFileNodesRecursively(rootDirHandle, '', () => runId !== contentSearchRunId)
+    : [];
+
+  if (runId !== contentSearchRunId) {
+    return;
+  }
 
   for (const node of files) {
     if (runId !== contentSearchRunId) {
@@ -397,7 +477,16 @@ async function runContentSearch(): Promise<void> {
       results.push({
         node,
         snippet: extractContentSnippet(text, query),
+        lineNumber: getMatchedLineNumber(text, query),
       });
+
+      const now = Date.now();
+      // Throttle UI updates while still allowing near real-time incremental results.
+      if (now - lastRenderAt >= 120) {
+        contentSearchResults = results.slice();
+        renderTreeView();
+        lastRenderAt = now;
+      }
     } catch {
       // Ignore unreadable files and continue searching.
     }
@@ -426,7 +515,7 @@ function renderContentSearchResults(container: HTMLElement): void {
     return;
   }
 
-  if (contentSearchInProgress) {
+  if (contentSearchInProgress && contentSearchResults.length === 0) {
     const searching = document.createElement('div');
     searching.className = 'tree-empty';
     searching.textContent = Localization.translate('workspace_search_content_searching');
@@ -448,18 +537,18 @@ function renderContentSearchResults(container: HTMLElement): void {
 
     const title = document.createElement('div');
     title.className = 'search-result-title';
-    title.textContent = result.node.name;
+    appendHighlightedText(title, result.node.name, currentSearchQuery);
     item.appendChild(title);
 
     const path = document.createElement('div');
     path.className = 'search-result-path';
-    path.textContent = result.node.path;
+    path.textContent = `${result.node.path}:${result.lineNumber}`;
     item.appendChild(path);
 
     if (result.snippet) {
       const snippet = document.createElement('div');
       snippet.className = 'search-result-snippet';
-      snippet.textContent = result.snippet;
+      appendHighlightedText(snippet, result.snippet, currentSearchQuery);
       item.appendChild(snippet);
     }
 
@@ -467,10 +556,17 @@ function renderContentSearchResults(container: HTMLElement): void {
       activeFilePath = result.node.path;
       currentFileDir = getParentDirFromPath(result.node.path);
       renderTreeView();
-      openFile(result.node.handle as FileSystemFileHandle);
+      openFile(result.node.handle as FileSystemFileHandle, { targetLine: Math.max(0, result.lineNumber - 1) });
     });
 
     container.appendChild(item);
+  }
+
+  if (contentSearchInProgress) {
+    const searchingMore = document.createElement('div');
+    searchingMore.className = 'tree-empty';
+    searchingMore.textContent = Localization.translate('workspace_search_content_searching');
+    container.appendChild(searchingMore);
   }
 }
 
@@ -523,12 +619,28 @@ function renderTree(nodes: TreeNode[], container: HTMLElement, depth = 0, forceV
         visibleCount += renderTree(node.children, childContainer, depth + 1, forceVisible || isDirectoryMatch);
       }
 
-      item.addEventListener('click', () => {
-        if (expandedPaths.has(node.path)) {
+      item.addEventListener('click', async () => {
+        const isExpanded = expandedPaths.has(node.path);
+        if (isExpanded) {
           expandedPaths.delete(node.path);
-        } else {
-          expandedPaths.add(node.path);
+          renderTreeView();
+          return;
         }
+
+        expandedPaths.add(node.path);
+        if (!node.childrenLoaded && !node.childrenLoading) {
+          node.childrenLoading = true;
+          try {
+            node.children = await getCachedDirectoryEntries(node.handle as FileSystemDirectoryHandle, node.path);
+            node.childrenLoaded = true;
+          } catch {
+            node.children = [];
+            node.childrenLoaded = true;
+          } finally {
+            node.childrenLoading = false;
+          }
+        }
+
         renderTreeView();
       });
     } else {
@@ -662,7 +774,7 @@ async function showImagePreview(_file: File, name: string, _ext: string): Promis
 }
 
 // ─── File preview via embedded viewer ───
-function sendToViewer(content: string, filename: string, codeView = false) {
+function sendToViewer(content: string, filename: string, codeView = false, targetLine?: number) {
   // Keep iframe visible so rendering updates (including TOC generation) are
   // visible during loading instead of appearing only after full completion.
   $previewEmpty.style.display = 'none';
@@ -679,6 +791,7 @@ function sendToViewer(content: string, filename: string, codeView = false) {
         filename,
         fileDir: currentFileDir,
         codeView,
+        targetLine,
       }, '*');
       void postThemeToViewer();
       return;
@@ -702,7 +815,7 @@ async function postThemeToViewer(themeId?: string): Promise<void> {
   }, '*');
 }
 
-async function openFile(fileHandle: FileSystemFileHandle) {
+async function openFile(fileHandle: FileSystemFileHandle, options?: { targetLine?: number }) {
   const file = await fileHandle.getFile();
   const name = fileHandle.name;
 
@@ -718,7 +831,7 @@ async function openFile(fileHandle: FileSystemFileHandle) {
 
   if (isSupportedFile(name)) {
     const text = await file.text();
-    sendToViewer(text, name);
+    sendToViewer(text, name, false, options?.targetLine);
     return;
   }
 
@@ -726,7 +839,7 @@ async function openFile(fileHandle: FileSystemFileHandle) {
     // Text/code files: pass raw content; reader-side shared module decides
     // whether to render in code-reading mode.
     const text = await file.text();
-    sendToViewer(text, name, false);
+    sendToViewer(text, name, false, options?.targetLine);
     return;
   }
 
@@ -748,7 +861,8 @@ async function openWorkspace(dirHandle: FileSystemDirectoryHandle) {
   $previewFrame.src = 'about:blank';
 
   rootDirHandle = dirHandle;
-  workspaceTree = await readDirectory(dirHandle, '');
+  directoryReadCache.clear();
+  workspaceTree = await getCachedDirectoryEntries(dirHandle, '');
   renderTreeView();
 
   // Save to recent workspaces

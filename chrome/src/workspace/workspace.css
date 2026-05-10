@@ -312,6 +312,13 @@ html, body {
   color: var(--color-text-tertiary);
 }
 
+.search-highlight {
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
 .tree-children { display: none; }
 .tree-children.open { display: block; }
 

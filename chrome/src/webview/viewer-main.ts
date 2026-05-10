@@ -611,7 +611,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
         } catch { /* ignore */ }
       },
       getShellSource: async () =>
-        webExtensionApi.runtime.getURL('slidev-shell/index.html'),
+        webExtensionApi.runtime.getURL('slidev-shell/slidev-shell/index.html'),
       getThemeUrl: async (name) =>
         webExtensionApi.runtime.getURL(`slidev-shell/themes/theme-${name}.js`),
       onParsed: ({ title }) => {
