@@ -23,6 +23,7 @@ import {
   exportDocxFlow,
 } from '../../../src/core/viewer/viewer-host';
 import { setupImageContextMenu } from '../../../src/ui/image-context-menu';
+import { setupDiagramLightbox } from '../../../src/ui/diagram-lightbox';
 import { findHeadingLine } from '../../../src/utils/heading-slug';
 import { isExternalUrl, splitPathAndFragment } from '../../../src/utils/document-url';
 
@@ -139,6 +140,11 @@ async function initialize(): Promise<void> {
         onDownload: ({ filename, data, mimeType }) => {
           bridge.sendRequest('DOWNLOAD_FILE', { filename, data, mimeType });
         },
+        translate: (key) => Localization.translate(key),
+      });
+
+      setupDiagramLightbox({
+        container: contentContainer,
         translate: (key) => Localization.translate(key),
       });
     }
