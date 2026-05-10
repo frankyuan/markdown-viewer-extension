@@ -59,6 +59,13 @@ export interface ColorScheme {
     h4?: string;
     h5?: string;
     h6?: string;
+    /** Optional border color used when a layout scheme defines headings[level].borderBottom */
+    border?: string;
+  };
+
+  /** Optional horizontal rule color (overrides table.border for hr) */
+  rule?: {
+    color?: string;
   };
 }
 
@@ -171,6 +178,14 @@ export interface LayoutHeadingConfig {
   spacingBefore: string;
   spacingAfter: string;
   alignment?: 'left' | 'center' | 'right';
+  /** Optional unitless line-height override (e.g. 1.25) */
+  lineHeight?: number;
+  /** Optional bottom border (e.g. VSCode-style h1/h2 underline). Color from colorScheme.headings.border. */
+  borderBottom?: {
+    width: string;
+    style?: string;
+    paddingBottom?: string;
+  };
 }
 
 /**
@@ -181,6 +196,8 @@ export interface LayoutBlockConfig {
   spacingAfter?: string;
   paddingVertical?: string;
   paddingHorizontal?: string;
+  /** Optional border width for horizontal rule. Color from colorScheme.rule.color or table.border. */
+  borderWidth?: string;
 }
 
 /**
