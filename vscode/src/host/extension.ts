@@ -204,29 +204,10 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('markdownViewer.openExportMenu', async () => {
+    vscode.commands.registerCommand('markdownViewer.openExportMenu', () => {
       const panel = MarkdownPreviewPanel.currentPanel;
       if (panel) {
-        await vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Exporting to DOCX',
-            cancellable: false,
-          },
-          async (progress) => {
-            let lastProgress = 0;
-            const success = await panel.exportToDocx((percent) => {
-              const increment = percent - lastProgress;
-              if (increment > 0) {
-                progress.report({ increment, message: `${percent}%` });
-                lastProgress = percent;
-              }
-            });
-            if (!success) {
-              vscode.window.showErrorMessage('DOCX export failed');
-            }
-          }
-        );
+        panel.openExportMenu();
       } else {
         vscode.window.showWarningMessage('Please open the Markdown preview first');
       }

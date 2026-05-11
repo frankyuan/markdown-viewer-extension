@@ -187,6 +187,10 @@
     "message": "Esporta in DOCX",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_html": {
+    "message": "Esporta in HTML",
+    "description": "Export menu item for exporting to HTML"
+  },
   "export_menu_print_pdf": {
     "message": "Stampa in PDF",
     "description": "Export menu item for printing to PDF"

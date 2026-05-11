@@ -4,7 +4,7 @@
  */
 
 import { getFilenameFromURL, getDocumentFilename } from '../../../../src/core/document-utils';
-import { applyZoom as applyZoomCore } from '../../../../src/core/viewer/viewer-host';
+import { applyZoom as applyZoomCore, exportHtmlFlow } from '../../../../src/core/viewer/viewer-host';
 import { createExportMenu } from '../../../../src/ui/export-menu';
 import { printElement } from '../../../../src/ui/print-utils';
 import type {
@@ -145,9 +145,84 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     }
   }
 
+  async function exportHtmlFromToolbar(): Promise<void> {
+    const downloadBtn = document.getElementById('download-btn') as HTMLButtonElement | null;
+    if (!downloadBtn || downloadBtn.disabled) {
+      return;
+    }
+
+    const page = document.getElementById('markdown-page') as HTMLElement | null;
+    if (!page) {
+      return;
+    }
+
+    // Request downloads permission only for remote files (local files use <a download> fallback)
+    if (!window.location.protocol.startsWith('file')) {
+      try {
+        await chrome.runtime.sendMessage({ type: 'REQUEST_DOWNLOADS_PERMISSION' });
+      } catch {
+        // Ignore - background will fall back if permission denied
+      }
+    }
+
+    const originalContent = downloadBtn.innerHTML;
+    let exportError: string | null = null;
+
+    try {
+      downloadBtn.disabled = true;
+      downloadBtn.classList.add('downloading');
+      downloadBtn.setAttribute('data-original-content', originalContent);
+      const progressHTML = `
+        <svg class="progress-circle" width="18" height="18" viewBox="0 0 18 18">
+          <circle class="progress-circle-bg" cx="9" cy="9" r="7" stroke="currentColor" stroke-width="2" fill="none" opacity="0.3"/>
+          <circle class="download-progress-circle" cx="9" cy="9" r="7" stroke="currentColor" stroke-width="2" fill="none"
+                  stroke-dasharray="43.98" stroke-dashoffset="43.98" transform="rotate(-90 9 9)"/>
+        </svg>
+      `;
+      downloadBtn.innerHTML = progressHTML;
+
+      await exportHtmlFlow({
+        container: page,
+        filename: getFilenameFromURL(),
+        title: document.title || getFilenameFromURL(),
+        platform: globalThis.platform,
+        onProgress: (completed, total) => {
+          const progressCircle = downloadBtn.querySelector('.download-progress-circle');
+          if (progressCircle && total > 0) {
+            const progress = completed / total;
+            const circumference = 43.98;
+            const offset = circumference * (1 - progress);
+            (progressCircle as SVGCircleElement).style.strokeDashoffset = String(offset);
+          }
+        },
+        onError: (error) => {
+          exportError = error;
+        },
+      });
+
+      if (exportError) {
+        throw new Error(exportError);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`Export HTML failed: ${message}`);
+    } finally {
+      const fallbackIcon = `
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M10 3v10m0 0l-3-3m3 3l3-3M3 16h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+      downloadBtn.innerHTML = downloadBtn.getAttribute('data-original-content') || fallbackIcon;
+      downloadBtn.disabled = false;
+      downloadBtn.classList.remove('downloading');
+      downloadBtn.removeAttribute('data-original-content');
+    }
+  }
+
   const exportMenu = createExportMenu({
     translate,
     onExportDocx: () => exportDocxFromToolbar(),
+    onExportHtml: () => exportHtmlFromToolbar(),
     onSaveFile: () => triggerSaveFile(),
     onPrint: () => triggerPrint(),
     getPrintDisabledTitle: () => {

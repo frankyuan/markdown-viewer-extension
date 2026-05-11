@@ -187,6 +187,10 @@
     "message": "Ekspordi DOCX-ina",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_html": {
+    "message": "Ekspordi HTML-ina",
+    "description": "Export menu item for exporting to HTML"
+  },
   "export_menu_print_pdf": {
     "message": "Prindi PDF-ina",
     "description": "Export menu item for printing to PDF"

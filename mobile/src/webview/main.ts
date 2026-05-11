@@ -21,6 +21,7 @@ import {
   renderMarkdownFlow,
   handleThemeSwitchFlow,
   exportDocxFlow,
+  exportHtmlFlow,
 } from '../../../src/core/viewer/viewer-host';
 import { setupImageContextMenu } from '../../../src/ui/image-context-menu';
 import { findHeadingLine } from '../../../src/utils/heading-slug';
@@ -191,6 +192,10 @@ function setupMessageHandlers(): void {
 
         case 'EXPORT_DOCX':
           await handleExportDocx();
+          break;
+
+        case 'EXPORT_HTML':
+          await handleExportHtml();
           break;
 
         case 'UPDATE_SETTINGS':
@@ -476,6 +481,37 @@ async function handleExportDocx(): Promise<void> {
 }
 
 /**
+ * Handle HTML export
+ */
+async function handleExportHtml(): Promise<void> {
+  const page = document.getElementById('markdown-page') as HTMLElement | null;
+  if (!page) {
+    return;
+  }
+
+  await exportHtmlFlow({
+    container: page,
+    filename: currentFilename,
+    title: currentFilename || document.title || 'Markdown Viewer',
+    platform,
+    onProgress: (completed, total, phase) => {
+      bridge.postMessage('EXPORT_PROGRESS', {
+        completed,
+        total,
+        phase: phase || 'processing',
+        format: 'html',
+      });
+    },
+    onSuccess: () => {
+      // Mobile share flow is handled by DOWNLOAD_FILE response pipeline.
+    },
+    onError: (error) => {
+      bridge.postMessage('EXPORT_ERROR', { error });
+    },
+  });
+}
+
+/**
  * Handle settings update
  */
 async function handleUpdateSettings(payload: UpdateSettingsPayload): Promise<void> {
@@ -509,6 +545,7 @@ declare global {
     setTheme: (themeId: string) => void;
     // Export
     exportDocx: () => void;
+    exportHtml: () => void;
     // Display settings
     setFontSize: (size: number) => void;
     setLocale: (locale: string) => void;
@@ -542,6 +579,10 @@ window.setTheme = (themeId: string) => {
 
 window.exportDocx = () => {
   handleExportDocx();
+};
+
+window.exportHtml = () => {
+  handleExportHtml();
 };
 
 window.setFontSize = (size: number) => {

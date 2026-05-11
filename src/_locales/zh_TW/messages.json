@@ -187,6 +187,10 @@
     "message": "匯出為 DOCX",
     "description": "匯出選單中的 DOCX 項"
   },
+  "export_menu_export_html": {
+    "message": "匯出為 HTML",
+    "description": "Export menu item for exporting to HTML"
+  },
   "export_menu_print_pdf": {
     "message": "列印為 PDF",
     "description": "匯出選單中的 PDF 列印項"

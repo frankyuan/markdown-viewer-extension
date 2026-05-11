@@ -49,6 +49,8 @@ export interface SettingsPanelOptions {
   onShow?: () => void;
   /** Close panel callback */
   onClose?: () => void;
+  /** Right margin for fixed-position display */
+  rightMargin?: number;
 }
 
 export interface SettingsPanel {
@@ -107,7 +109,8 @@ export function createSettingsPanel(options: SettingsPanelOptions): SettingsPane
     onLocaleChange,
     onDocxHrDisplayChange,
     onDocxEmojiStyleChange,
-    onClose
+    onClose,
+    rightMargin = 13,
   } = options;
 
   let visible = false;
@@ -306,12 +309,12 @@ export function createSettingsPanel(options: SettingsPanelOptions): SettingsPane
     const rect = anchorEl.getBoundingClientRect();
     
     // Fixed position relative to page right edge
-    const rightMargin = 13; // Margin from page right edge
+    const panelRightMargin = rightMargin;
     
     panel.style.position = 'fixed';
     panel.style.top = `${rect.bottom + 4}px`;
     panel.style.left = 'auto';
-    panel.style.right = `${rightMargin}px`;
+    panel.style.right = `${panelRightMargin}px`;
     panel.style.display = 'block';
     panel.style.zIndex = '10000';
     visible = true;
@@ -329,12 +332,12 @@ export function createSettingsPanel(options: SettingsPanelOptions): SettingsPane
     if (visible) return;
     
     // Fixed position relative to page right edge
-    const rightMargin = 13; // Margin from page right edge
+    const panelRightMargin = rightMargin;
     
     panel.style.position = 'fixed';
     panel.style.top = `${y}px`;
     panel.style.left = 'auto';
-    panel.style.right = `${rightMargin}px`;
+    panel.style.right = `${panelRightMargin}px`;
     panel.style.display = 'block';
     panel.style.zIndex = '10000';
     visible = true;

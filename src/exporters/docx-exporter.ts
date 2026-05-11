@@ -22,8 +22,6 @@ import type {
   IParagraphStylePropertiesOptions,
 } from 'docx';
 import { mathJaxReady, convertLatex2Math } from './docx-math-converter';
-import { loadImageAsBuffer } from '../utils/image-loader';
-import { isNetworkUrl } from '../utils/document-url';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkInlineHtml from '../plugins/remark-inline-html';
@@ -61,6 +59,7 @@ import { createTableConverter, type TableConverter } from './docx-table-converte
 import { createBlockquoteConverter, type BlockquoteConverter } from './docx-blockquote-converter';
 import { createListConverter, createNumberingLevels, type ListConverter } from './docx-list-converter';
 import { createInlineConverter, type InlineConverter, type InlineNode } from './docx-inline-converter';
+import { ResourceEmbedder } from './resource-embedder';
 
 // Re-export for external use
 export { convertPluginResultToDOCX } from './docx-image-utils';
@@ -93,6 +92,7 @@ class DocxExporter {
   private progressCallback: DOCXProgressCallback | null = null;
   private totalResources = 0;
   private processedResources = 0;
+  private resourceEmbedder: ResourceEmbedder;
 
   private docxHrDisplay: 'pageBreak' | 'line' | 'hide' = 'hide';
   private docxEmojiStyle: EmojiStyle = 'windows';
@@ -108,6 +108,7 @@ class DocxExporter {
 
   constructor(renderer: PluginRenderer | null = null) {
     this.renderer = renderer;
+    this.resourceEmbedder = new ResourceEmbedder();
   }
 
   setBaseUrl(url: string): void {
@@ -118,6 +119,7 @@ class DocxExporter {
       // Extract file path from file:// URL
       const filePath = url.startsWith('file://') ? url.replace('file://', '') : url;
       doc.setDocumentPath(filePath);
+      this.resourceEmbedder.setDocumentService(doc);
     }
   }
 
@@ -925,67 +927,13 @@ class DocxExporter {
     if (this.imageCache.has(url)) {
       return this.imageCache.get(url)!;
     }
-
-    // Handle data: URLs directly
-    if (url.startsWith('data:')) {
-      const match = url.match(/^data:([^;,]+)[^,]*,(.+)$/);
-      if (!match) throw new Error('Invalid data URL format');
-
-      const contentType = match[1];
-      const binaryString = atob(match[2]);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      const result: ImageBufferResult = { buffer: bytes, contentType };
+    try {
+      const result = await this.resourceEmbedder.fetchImageAsBuffer(url);
       this.imageCache.set(url, result);
       return result;
-    }
-
-    const doc = this.getDocumentService();
-    if (!doc) {
-      throw new Error('DocumentService not available - platform not initialized');
-    }
-
-    try {
-      if (isNetworkUrl(url)) {
-        // Use <img> + canvas to load remote images (bypasses fetch/CSP restrictions)
-        const imgResult = await loadImageAsBuffer(url);
-        if (!imgResult) {
-          throw new Error(`Failed to load remote image: ${url}`);
-        }
-        const result: ImageBufferResult = { buffer: imgResult.buffer, contentType: 'image/png' };
-        this.imageCache.set(url, result);
-        return result;
-      } else {
-        // Use DocumentService.readRelativeFile for local files
-        const content = await doc.readRelativeFile(url, { binary: true });
-        const binaryString = atob(content);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const contentType = this.guessContentType(url);
-        const result: ImageBufferResult = { buffer: bytes, contentType };
-        this.imageCache.set(url, result);
-        return result;
-      }
     } catch (error) {
       throw new Error(`Failed to fetch image: ${url} - ${(error as Error).message}`);
     }
-  }
-
-  /**
-   * Guess content type from URL extension
-   */
-  private guessContentType(url: string): string {
-    const ext = url.split('.').pop()?.toLowerCase().split('?')[0] || '';
-    const map: Record<string, string> = {
-      'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
-      'gif': 'image/gif', 'bmp': 'image/bmp', 'webp': 'image/webp', 'svg': 'image/svg+xml'
-    };
-    return map[ext] || 'image/png';
   }
 }
 

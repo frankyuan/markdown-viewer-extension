@@ -27,6 +27,7 @@ import {
   renderMarkdownFlow,
   handleThemeSwitchFlow,
   exportDocxFlow,
+  exportHtmlFlow,
 } from '../../../src/core/viewer/viewer-host';
 
 // VSCode-specific UI components
@@ -459,13 +460,41 @@ async function handleExportDocx(): Promise<void> {
     filename: currentFilename,
     renderer: pluginRenderer,
     onProgress: (completed, total) => {
-      vscodeBridge.postMessage('EXPORT_PROGRESS', { completed, total, phase: 'processing' });
+      vscodeBridge.postMessage('EXPORT_PROGRESS', { completed, total, phase: 'processing', format: 'docx' });
     },
     onSuccess: (filename) => {
       vscodeBridge.postMessage('EXPORT_DOCX_RESULT', { success: true, filename });
     },
     onError: (error) => {
       vscodeBridge.postMessage('EXPORT_DOCX_RESULT', { success: false, error });
+    },
+  });
+}
+
+async function handleExportHtml(): Promise<void> {
+  const page = document.getElementById('markdown-page') as HTMLElement | null;
+  if (!page) {
+    return;
+  }
+
+  await exportHtmlFlow({
+    container: page,
+    filename: currentFilename,
+    title: currentFilename || document.title || 'Markdown Viewer',
+    platform,
+    onProgress: (completed, total, phase) => {
+      vscodeBridge.postMessage('EXPORT_PROGRESS', {
+        completed,
+        total,
+        phase: phase || 'processing',
+        format: 'html',
+      });
+    },
+    onSuccess: (filename) => {
+      vscodeBridge.postMessage('EXPORT_HTML_RESULT', { success: true, filename });
+    },
+    onError: (error) => {
+      vscodeBridge.postMessage('EXPORT_HTML_RESULT', { success: false, error });
     },
   });
 }
@@ -686,6 +715,7 @@ function initializeUI(): void {
   exportMenu = createExportMenu({
     translate: (key) => Localization.translate(key),
     onExportDocx: () => handleExportDocx(),
+    onExportHtml: () => handleExportHtml(),
   });
 
   // Create search panel

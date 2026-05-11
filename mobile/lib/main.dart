@@ -524,6 +524,10 @@ class _MarkdownViewerHomeState extends State<MarkdownViewerHome> {
 
         case 'EXPORT_PROGRESS':
           if (payload is Map) {
+            // Ignore late/stale progress events after export has been finalized.
+            if (!_isExporting) {
+              break;
+            }
             final completed = payload['completed'] as int? ?? 0;
             final total = payload['total'] as int? ?? 0;
             final phase = payload['phase'] as String? ?? 'processing';
@@ -1343,6 +1347,30 @@ class _MarkdownViewerHomeState extends State<MarkdownViewerHome> {
     }
   }
 
+  /// Export current file to HTML
+  Future<void> _exportHtml() async {
+    if (!_hasContent) return;
+
+    setState(() {
+      _isExporting = true;
+      _exportProgress = 0;
+      _exportTotal = 0;
+      _exportPhase = 'processing';
+    });
+
+    try {
+      await _controller.runJavaScript('window.exportHtml()');
+    } catch (e) {
+      debugPrint('[Mobile] Export HTML error: $e');
+      _hideExportProgress();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(localization.t('docx_export_failed_default'))),
+        );
+      }
+    }
+  }
+
   void _showRecentFiles() {
     final recentFiles = recentFilesService.getAll();
     
@@ -1636,6 +1664,8 @@ class _MarkdownViewerHomeState extends State<MarkdownViewerHome> {
         _buildPopupMenuItem('recent', AntIcons.history, localization.t('recent_files')),
         if (_hasContent)
           _buildPopupMenuItem('export_docx', AntIcons.file_word, localization.t('export_docx')),
+        if (_hasContent)
+          _buildPopupMenuItem('export_html', AntIcons.html5, localization.t('export_menu_export_html')),
         const PopupMenuDivider(),
         _buildPopupMenuItem('settings', AntIcons.setting_outline, localization.t('tab_settings')),
         _buildPopupMenuItem('about', AntIcons.info_circle_outline, localization.t('about')),
@@ -1648,6 +1678,9 @@ class _MarkdownViewerHomeState extends State<MarkdownViewerHome> {
           break;
         case 'export_docx':
           _exportDocx();
+          break;
+        case 'export_html':
+          _exportHtml();
           break;
         case 'settings':
           Navigator.of(context).push(

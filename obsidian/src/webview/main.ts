@@ -30,11 +30,13 @@ import {
   renderMarkdownFlow,
   handleThemeSwitchFlow,
   exportDocxFlow,
+  exportHtmlFlow,
 } from '../../../src/core/viewer/viewer-host';
 
 // Settings panel (reused from VSCode)
 import { createSettingsPanel, type SettingsPanel, type ThemeOption, type LocaleOption } from '../../../vscode/src/webview/settings-panel';
 import { createTocPanel, type TocPanel } from '../../../src/ui/toc-panel';
+import { createExportMenu, type ExportMenu } from '../../../src/ui/export-menu';
 import { findHeadingLine } from '../../../src/utils/heading-slug';
 import { printElement } from '../../../src/ui/print-utils';
 import { isDocumentRelativeUrl, isExternalUrl, splitPathAndFragment } from '../../../src/utils/document-url';
@@ -83,6 +85,7 @@ let renderQueue: Promise<void> = Promise.resolve();
 // UI
 let settingsPanel: SettingsPanel | null = null;
 let tocPanel: TocPanel | null = null;
+let exportMenu: ExportMenu | null = null;
 
 // Listener cleanup
 let unsubscribeBridge: (() => void) | null = null;
@@ -92,6 +95,9 @@ const pluginRenderer = createPluginRenderer(platform);
 
 // Scroll sync controller (created after DOM ready)
 let scrollSyncController: ScrollSyncController | null = null;
+
+const RIGHT_OVERLAY_TOP = 40;
+const RIGHT_OVERLAY_RIGHT_MARGIN = 13;
 
 function applyNormalLayoutStyles(container: HTMLElement): void {
   container.style.height = '100%';
@@ -569,13 +575,41 @@ async function handleExportDocx(): Promise<void> {
     filename: currentFilename,
     renderer: pluginRenderer,
     onProgress: (completed, total) => {
-      obsidianBridge.postMessage('EXPORT_PROGRESS', { completed, total, phase: 'processing' });
+      obsidianBridge.postMessage('EXPORT_PROGRESS', { completed, total, phase: 'processing', format: 'docx' });
     },
     onSuccess: (filename) => {
       obsidianBridge.postMessage('EXPORT_DOCX_RESULT', { success: true, filename });
     },
     onError: (error) => {
       obsidianBridge.postMessage('EXPORT_DOCX_RESULT', { success: false, error });
+    },
+  });
+}
+
+async function handleExportHtml(): Promise<void> {
+  const page = rootContainer?.querySelector('#markdown-page') as HTMLElement | null;
+  if (!page) {
+    return;
+  }
+
+  await exportHtmlFlow({
+    container: page,
+    filename: currentFilename,
+    title: currentFilename || document.title || 'Markdown Viewer',
+    platform,
+    onProgress: (completed, total, phase) => {
+      obsidianBridge.postMessage('EXPORT_PROGRESS', {
+        completed,
+        total,
+        phase: phase || 'processing',
+        format: 'html',
+      });
+    },
+    onSuccess: (filename) => {
+      obsidianBridge.postMessage('EXPORT_HTML_RESULT', { success: true, filename });
+    },
+    onError: (error) => {
+      obsidianBridge.postMessage('EXPORT_HTML_RESULT', { success: false, error });
     },
   });
 }
@@ -597,19 +631,13 @@ function handleOpenSettings(): void {
     if (settingsPanel.isVisible()) {
       settingsPanel.hide();
     } else {
-      settingsPanel.showAtPosition(window.innerWidth - 300, 40);
+      settingsPanel.showAtPosition(0, RIGHT_OVERLAY_TOP);
     }
   }
 }
 
 function handleOpenExportMenu(): void {
-  handleExportDocx().catch((error) => {
-    console.error('[MV Viewer] DOCX export unhandled error:', error);
-    obsidianBridge.postMessage('EXPORT_DOCX_RESULT', {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  });
+  exportMenu?.showAtPosition(0, RIGHT_OVERLAY_TOP);
 }
 
 // ============================================================================
@@ -701,10 +729,21 @@ function initializeUI(): void {
     onShow: () => {
       loadCacheStats();
     },
+    rightMargin: RIGHT_OVERLAY_RIGHT_MARGIN,
   });
   if (rootContainer) {
     rootContainer.appendChild(settingsPanel.getElement());
   }
+
+  exportMenu = createExportMenu({
+    translate: (key) => Localization.translate(key),
+    onExportDocx: () => handleExportDocx(),
+    onExportHtml: () => handleExportHtml(),
+    menuClassName: 'mv-action-menu-panel',
+    rightAligned: true,
+    rightMargin: RIGHT_OVERLAY_RIGHT_MARGIN,
+    container: rootContainer || undefined,
+  });
 
   tocPanel = createTocPanel({
     onSelectHeading: (headingId) => {

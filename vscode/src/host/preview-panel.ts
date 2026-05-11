@@ -542,12 +542,13 @@ export class MarkdownPreviewPanel {
             this._exportProgressCallback(progress);
           } else if (payload) {
             // Webview-initiated export: start a withProgress notification on first message
-            const { completed, total } = payload as { completed: number; total: number };
+            const { completed, total, format } = payload as { completed: number; total: number; format?: string };
             const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
             if (!this._webviewExportProgressReporter) {
               this._webviewExportLastPercent = 0;
+              const exportTitle = format === 'html' ? 'Exporting to HTML' : 'Exporting to DOCX';
               vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: 'Exporting to DOCX', cancellable: false },
+                { location: vscode.ProgressLocation.Notification, title: exportTitle, cancellable: false },
                 (progressReporter) => {
                   this._webviewExportProgressReporter = progressReporter;
                   return new Promise<void>((resolve) => {
@@ -565,6 +566,22 @@ export class MarkdownPreviewPanel {
             }
           }
           break;
+
+        case 'EXPORT_HTML_RESULT': {
+          const result = payload as { success: boolean; filename?: string; error?: string } | undefined;
+          if (this._webviewExportDoneResolver) {
+            this._webviewExportDoneResolver();
+            this._webviewExportProgressReporter = null;
+            this._webviewExportDoneResolver = null;
+            this._webviewExportLastPercent = 0;
+          }
+          if (result?.success) {
+            vscode.window.showInformationMessage(result.filename ? `Exported: ${result.filename}` : 'HTML exported successfully');
+          } else {
+            vscode.window.showErrorMessage(`HTML export failed${result?.error ? ': ' + result.error : ''}`);
+          }
+          break;
+        }
 
         case 'EXPORT_DOCX_RESULT':
           // Export completed - resolve the promise
@@ -943,7 +960,25 @@ export class MarkdownPreviewPanel {
       throw new Error('Upload not finalized');
     }
 
-    const filename = (session.metadata.filename as string) || 'document.docx';
+    const mimeType = (session.metadata.mimeType as string) || 'application/octet-stream';
+    const fallbackFilename = mimeType.includes('html') ? 'document.html' : 'document.docx';
+    const filename = (session.metadata.filename as string) || fallbackFilename;
+    const extension = path.extname(filename).toLowerCase();
+
+    let filters: Record<string, string[]> = {
+      'All Files': ['*'],
+    };
+    if (mimeType.includes('html') || extension === '.html' || extension === '.htm') {
+      filters = {
+        'HTML Files': ['html', 'htm'],
+        'All Files': ['*'],
+      };
+    } else if (mimeType.includes('word') || extension === '.docx') {
+      filters = {
+        'Word Documents': ['docx'],
+        'All Files': ['*'],
+      };
+    }
     
     // Build default save path based on current document directory
     let defaultUri: vscode.Uri;
@@ -957,10 +992,7 @@ export class MarkdownPreviewPanel {
     // Ask user for save location
     const uri = await vscode.window.showSaveDialog({
       defaultUri,
-      filters: {
-        'Word Documents': ['docx'],
-        'All Files': ['*']
-      }
+      filters,
     });
 
     if (uri) {

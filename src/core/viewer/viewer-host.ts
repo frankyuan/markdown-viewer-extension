@@ -1034,3 +1034,110 @@ export async function exportDocxFlow(options: DocxExportFlowOptions): Promise<vo
     onError?.(errMsg);
   }
 }
+
+// ============================================================================
+// HTML Export Flow
+// ============================================================================
+
+/**
+ * Options for the unified HTML export flow.
+ */
+export interface HtmlExportFlowOptions {
+  /** Rendered container to serialize (typically #markdown-page). */
+  container: HTMLElement;
+
+  /** Original filename (will be converted to .html). */
+  filename: string;
+
+  /** Optional document title for exported HTML. */
+  title?: string;
+
+  /** Optional platform override (defaults to global platform). */
+  platform?: PlatformAPI;
+
+  /** Progress callback during export. */
+  onProgress?: (completed: number, total: number, phase?: 'processing' | 'saving') => void;
+
+  /** Success callback with generated filename. */
+  onSuccess?: (filename: string) => void;
+
+  /** Error callback with error message. */
+  onError?: (error: string) => void;
+}
+
+/**
+ * Unified HTML single-file export flow.
+ */
+export async function exportHtmlFlow(options: HtmlExportFlowOptions): Promise<void> {
+  const {
+    container,
+    filename,
+    title,
+    platform,
+    onProgress,
+    onSuccess,
+    onError,
+  } = options;
+
+  try {
+    onProgress?.(0, 100, 'processing');
+
+    const effectivePlatform = platform || (globalThis.platform as PlatformAPI | undefined);
+    if (!effectivePlatform?.file) {
+      throw new Error('File service is not available');
+    }
+
+    const HtmlExporterModule = await import('../../exporters/html-exporter');
+    const result = await HtmlExporterModule.exportToHtml({
+      container,
+      filename,
+      title,
+      documentService: effectivePlatform.document,
+      includeKatexCdn: true,
+      onProgress: (completed: number, total: number) => {
+        const percent = total > 0 ? Math.max(0, Math.min(80, Math.round((completed / total) * 80))) : 0;
+        onProgress?.(percent, 100, 'processing');
+      },
+    });
+
+    if (!result.success || !result.html || !result.filename) {
+      throw new Error(result.error || 'Export failed');
+    }
+
+    const blob = new Blob([result.html], { type: 'text/html;charset=utf-8' });
+    onProgress?.(90, 100, 'saving');
+
+    // Local-file pages can lose ephemeral upload sessions in extension background,
+    // so prefer direct anchor download (same strategy as DOCX fallback path).
+    if (
+      typeof window !== 'undefined'
+      && window.location?.protocol === 'file:'
+      && effectivePlatform.platform !== 'mobile'
+    ) {
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = result.filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(objectUrl);
+      }, 100);
+      onProgress?.(100, 100, 'saving');
+      onSuccess?.(result.filename);
+      return;
+    }
+
+    await effectivePlatform.file.download(blob, result.filename, { mimeType: 'text/html' });
+    onProgress?.(100, 100, 'saving');
+    onSuccess?.(result.filename);
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg === 'Download cancelled by user') return;
+    // eslint-disable-next-line no-console
+    console.error('[ViewerHost] HTML export failed:', errMsg);
+    onError?.(errMsg);
+  }
+}

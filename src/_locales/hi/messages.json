@@ -187,6 +187,10 @@
     "message": "DOCX में निर्यात करें",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_html": {
+    "message": "HTML में निर्यात करें",
+    "description": "Export menu item for exporting to HTML"
+  },
   "export_menu_print_pdf": {
     "message": "PDF के रूप में प्रिंट करें",
     "description": "Export menu item for printing to PDF"

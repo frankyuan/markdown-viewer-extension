@@ -3,9 +3,14 @@ import { showActionMenu, type ActionMenuHandle } from './action-menu';
 export interface ExportMenuOptions {
   translate?: (key: string) => string;
   onExportDocx: () => void | Promise<void>;
+  onExportHtml?: () => void | Promise<void>;
   onSaveFile?: () => void | Promise<void>;
   onPrint?: () => void | Promise<void>;
   getPrintDisabledTitle?: () => string | null;
+  menuClassName?: string;
+  rightAligned?: boolean;
+  rightMargin?: number;
+  container?: HTMLElement;
 }
 
 export interface ExportMenu {
@@ -19,7 +24,11 @@ export function createExportMenu(options: ExportMenuOptions): ExportMenu {
   let current: ActionMenuHandle | null = null;
 
   function translate(key: string): string {
-    return options.translate?.(key) || fallbackTranslation(key);
+    const translated = options.translate?.(key);
+    if (!translated || translated === key) {
+      return fallbackTranslation(key);
+    }
+    return translated;
   }
 
   function show(anchor?: HTMLElement, x?: number, y?: number): void {
@@ -29,6 +38,10 @@ export function createExportMenu(options: ExportMenuOptions): ExportMenu {
       anchor,
       x,
       y,
+      className: options.menuClassName,
+      rightAligned: options.rightAligned,
+      rightMargin: options.rightMargin,
+      container: options.container,
       items: [
         {
           label: translate('export_menu_export_docx'),
@@ -36,6 +49,12 @@ export function createExportMenu(options: ExportMenuOptions): ExportMenu {
             await options.onExportDocx();
           },
         },
+        ...(options.onExportHtml ? [{
+          label: translate('export_menu_export_html'),
+          onSelect: async () => {
+            await options.onExportHtml!();
+          },
+        }] : []),
         ...(options.onPrint ? [{
           label: translate('export_menu_print_pdf'),
           onSelect: async () => {
@@ -65,6 +84,7 @@ export function createExportMenu(options: ExportMenuOptions): ExportMenu {
 function fallbackTranslation(key: string): string {
   const map: Record<string, string> = {
     export_menu_export_docx: 'Export to DOCX',
+    export_menu_export_html: 'Export to HTML',
     export_menu_save_file: 'Save File',
     export_menu_print_pdf: 'Print to PDF',
   };

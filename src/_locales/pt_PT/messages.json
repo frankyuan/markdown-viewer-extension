@@ -187,6 +187,10 @@
     "message": "Exportar para DOCX",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_html": {
+    "message": "Exportar para HTML",
+    "description": "Export menu item for exporting to HTML"
+  },
   "export_menu_print_pdf": {
     "message": "Imprimir para PDF",
     "description": "Export menu item for printing to PDF"
