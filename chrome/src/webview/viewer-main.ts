@@ -24,6 +24,11 @@ import { showProcessingIndicator, hideProcessingIndicator } from './ui/progress-
 import { createTocManager } from './ui/toc-manager';
 import { createGitbookPanel } from './ui/gitbook-panel';
 import { createToolbarManager, generateToolbarHTML, layoutIcons } from './ui/toolbar';
+import {
+  OBSIDIAN_ATTACHMENT_FOLDER_STORAGE_KEY,
+  readObsidianAttachmentFolderSetting,
+  rewriteObsidianAttachmentImagePaths,
+} from '../obsidian-attachments';
 
 // Import shared utilities from viewer-host
 import {
@@ -568,6 +573,14 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
 
   // ── Slidev mode: .slides.md files render as presentations ────────────
   const initialUrl = getActiveDocumentUrl();
+  let obsidianAttachmentFolder = await readObsidianAttachmentFolderSetting();
+  const rewriteAttachmentPaths = (content: string, documentUrl = getActiveDocumentUrl()): string => {
+    if (htmlConverted || !/\.(md|markdown)(?:$|[?#])/i.test(documentUrl)) {
+      return content;
+    }
+    return rewriteObsidianAttachmentImagePaths(content, documentUrl, obsidianAttachmentFolder);
+  };
+
   const isSlidevByExtension = /\.slides\.md$/i.test(initialUrl);
   if (isSlidevByExtension) {
     // Remove preload style that hides page content (opacity: 0 !important)
@@ -588,7 +601,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
     } catch { /* cross-origin parent — ignore */ }
 
     await initSlidevViewer({
-      rawContent,
+      rawContent: rewriteAttachmentPaths(rawContent, initialUrl),
       container: document.body,
       renderDiagram: (type, code) =>
         platform.renderer.render(type, code).then((r) => ({
@@ -638,9 +651,11 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
   let liveRawContent = rawContent;
 
   const computeRenderState = (content: string): { markdown: string; codeView: boolean } => {
-    const codeReading = !htmlConverted ? buildCodeReadingRender(content, initialUrl) : null;
+    const activeUrl = getActiveDocumentUrl();
+    const rewrittenContent = rewriteAttachmentPaths(content, activeUrl);
+    const codeReading = !htmlConverted ? buildCodeReadingRender(rewrittenContent, activeUrl) : null;
     return {
-      markdown: codeReading ? codeReading.markdown : wrapFileContent(content, initialUrl),
+      markdown: codeReading ? codeReading.markdown : wrapFileContent(rewrittenContent, activeUrl),
       codeView: Boolean(codeReading),
     };
   };
@@ -922,7 +937,9 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
       document.title = filename;
 
       // Update page content with new markdown
-      await renderMarkdown(content);
+      liveRawContent = content;
+      renderState = computeRenderState(liveRawContent);
+      await renderMarkdown(getDisplayMarkdown());
 
       // Save to browser history
       saveToHistory(platform);
@@ -1005,6 +1022,11 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
           void handleSetTheme(value);
         } else if (key === 'swapPanelSide') {
           applyTocPanelSide(Boolean(value));
+        } else if (key === OBSIDIAN_ATTACHMENT_FOLDER_STORAGE_KEY) {
+          obsidianAttachmentFolder = typeof value === 'string' ? value : '';
+          renderState = computeRenderState(liveRawContent);
+          const scrollLine = getCurrentScrollLine();
+          void renderMarkdown(getDisplayMarkdown(), scrollLine);
         } else {
           // Other settings changed - just re-render with scroll preservation
           const scrollLine = getCurrentScrollLine();

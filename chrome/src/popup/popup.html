@@ -171,6 +171,24 @@
         </div>
 
         <div class="info-section">
+          <h3>Obsidian Attachments</h3>
+          <div style="margin: 10px 0;">
+            <label for="obsidian-attachment-folder">Attachment folder template</label>
+            <input
+              type="text"
+              id="obsidian-attachment-folder"
+              placeholder="assets/${noteFileName}"
+              spellcheck="false"
+              autocomplete="off"
+            >
+            <div class="settings-note">
+              Use this when Obsidian stores embeds outside the Markdown file folder. Example:
+              <code>assets/${noteFileName}</code>. Leave empty to disable.
+            </div>
+          </div>
+        </div>
+
+        <div class="info-section">
           <h3 data-i18n="settings_cache_title">Cache</h3>
           <div class="cache-stats" id="cache-stats">
             <div class="stat-item">

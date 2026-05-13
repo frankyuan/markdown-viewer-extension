@@ -559,7 +559,7 @@ label.checkbox-label span {
   font-weight: 500;
 }
 
-select, input[type="number"] {
+select, input[type="number"], input[type="text"] {
   width: 100%;
   padding: 8px;
   border-radius: var(--radius-sm);
@@ -570,10 +570,20 @@ select, input[type="number"] {
   transition: border-color var(--transition-fast);
 }
 
-select:focus, input[type="number"]:focus {
+select:focus, input[type="number"]:focus, input[type="text"]:focus {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.settings-note code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
 }
 
 .settings-note {
