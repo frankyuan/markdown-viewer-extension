@@ -347,6 +347,70 @@
     "message": "最近檔案",
     "description": "Title for recent files section"
   },
+  "remark_add_note": {
+    "message": "新增備注…",
+    "description": "Placeholder for the note input in the annotation popup and sidebar"
+  },
+  "remark_cancel": {
+    "message": "取消",
+    "description": "Cancel button in the annotation popup"
+  },
+  "remark_color_blue": {
+    "message": "疑問",
+    "description": "Label for the blue annotation color"
+  },
+  "remark_color_green": {
+    "message": "保留",
+    "description": "Label for the green annotation color"
+  },
+  "remark_color_pink": {
+    "message": "關注",
+    "description": "Label for the pink annotation color"
+  },
+  "remark_color_yellow": {
+    "message": "建議",
+    "description": "Label for the yellow annotation color"
+  },
+  "remark_copied": {
+    "message": "已複製！",
+    "description": "Feedback shown after remarks are successfully copied"
+  },
+  "remark_copy_btn": {
+    "message": "複製批注",
+    "description": "Button label to copy all remarks to clipboard and exit Remark Mode"
+  },
+  "remark_copy_failed": {
+    "message": "複製失敗",
+    "description": "Feedback shown when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "複製所有批注到剪貼板，然後退出批注模式",
+    "description": "Tooltip for the Copy remarks button"
+  },
+  "remark_edit_note": {
+    "message": "點擊編輯",
+    "description": "Tooltip on a remark note in the sidebar indicating it is editable"
+  },
+  "remark_empty": {
+    "message": "選取文字以新增批注",
+    "description": "Placeholder shown in sidebar when no remarks exist"
+  },
+  "remark_exit_mode": {
+    "message": "退出批注模式",
+    "description": "Toolbar button tooltip to exit Remark Mode"
+  },
+  "remark_mode": {
+    "message": "批注模式",
+    "description": "Toolbar button tooltip to enter Remark Mode"
+  },
+  "remark_save": {
+    "message": "儲存",
+    "description": "Save button in the annotation popup"
+  },
+  "remark_sidebar_title": {
+    "message": "批注",
+    "description": "Title of the Remark Mode sidebar panel"
+  },
   "remove_from_list": {
     "message": "從列表移除",
     "description": "Menu item to remove file from recent list"

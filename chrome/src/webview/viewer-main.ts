@@ -725,6 +725,9 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
     },
     getSourceMode: () => sourceModeEnabled,
     isSourceModeActive: () => (isMarkdownSourceToggleEnabled() && sourceModeEnabled) || renderState.codeView,
+    enableRemarkMode: true,
+    getRemarkContainer: () => document.getElementById('markdown-content'),
+    getRemarkRawMarkdown: () => liveRawContent,
   });
 
   toolbarManager.setInitialZoom(initialZoom);
@@ -737,6 +740,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
     initialMaxWidth,
     initialZoom,
     enableSourceToggle: isMarkdownSourceToggleEnabled(),
+    enableRemarkMode: true,
   });
   if (!initialTocVisible) {
     document.body.classList.add('toc-hidden');
