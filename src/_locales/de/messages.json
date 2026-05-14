@@ -311,6 +311,22 @@
     "message": "Sprache",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "Schließen",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "An Bildschirm anpassen",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "Vergrößern",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "Verkleinern",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "Mehr",
     "description": "More menu tooltip"

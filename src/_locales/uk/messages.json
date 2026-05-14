@@ -311,6 +311,22 @@
     "message": "Мова",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "Закрити",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "Умістити на екрані",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "Збільшити масштаб",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "Зменшити масштаб",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "Більше",
     "description": "More options menu"

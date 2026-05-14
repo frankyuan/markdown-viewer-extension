@@ -311,6 +311,22 @@
     "message": "言語",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "閉じる",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "画面に合わせる",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "ズームイン",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "ズームアウト",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "その他",
     "description": "More menu tooltip"

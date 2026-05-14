@@ -311,6 +311,22 @@
     "message": "언어",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "닫기",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "화면에 맞추기",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "확대",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "축소",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "더 보기",
     "description": "More menu tooltip"

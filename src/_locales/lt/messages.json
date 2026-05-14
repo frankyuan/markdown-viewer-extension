@@ -311,6 +311,22 @@
     "message": "Kalba",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "Uždaryti",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "Pritaikyti ekranui",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "Didinti",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "Mažinti",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "Daugiau",
     "description": "More options menu"

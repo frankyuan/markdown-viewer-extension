@@ -311,6 +311,22 @@
     "message": "語言",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "關閉",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "適應螢幕",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "放大",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "縮小",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "更多",
     "description": "More options menu"
