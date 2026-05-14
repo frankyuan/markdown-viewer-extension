@@ -38,6 +38,14 @@ interface RecentWorkspaceItem {
   time: number;
 }
 
+interface PendingWorkspaceOpenRequest {
+  workspaceName: string;
+  filePath: string;
+  requestedAt: number;
+}
+
+const PENDING_WORKSPACE_OPEN_KEY = 'markdownViewerPendingWorkspaceOpen';
+
 type SearchMode = 'filename' | 'content';
 
 // ─── DOM refs ───
@@ -784,7 +792,7 @@ async function showImagePreview(_file: File, name: string, _ext: string): Promis
 }
 
 // ─── File preview via embedded viewer ───
-function sendToViewer(content: string, filename: string, codeView = false, targetLine?: number) {
+function sendToViewer(content: string, filename: string, codeView = false, targetLine?: number, workspaceFilePath?: string) {
   // Keep iframe visible so rendering updates (including TOC generation) are
   // visible during loading instead of appearing only after full completion.
   $previewEmpty.style.display = 'none';
@@ -800,6 +808,8 @@ function sendToViewer(content: string, filename: string, codeView = false, targe
         content,
         filename,
         fileDir: currentFileDir,
+        workspaceName: rootDirHandle?.name || '',
+        workspaceFilePath: workspaceFilePath || '',
         codeView,
         targetLine,
       }, '*');
@@ -828,9 +838,10 @@ async function postThemeToViewer(themeId?: string): Promise<void> {
 async function openFile(fileHandle: FileSystemFileHandle, options?: { targetLine?: number }) {
   const file = await fileHandle.getFile();
   const name = fileHandle.name;
+  const workspaceFilePath = currentFileDir + name;
 
   // Save last opened file path
-  sessionStorage.setItem(`workspace-last-file:${rootDirHandle?.name}`, currentFileDir + name);
+  sessionStorage.setItem(`workspace-last-file:${rootDirHandle?.name}`, workspaceFilePath);
 
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
 
@@ -848,7 +859,7 @@ async function openFile(fileHandle: FileSystemFileHandle, options?: { targetLine
 
   if (isSupportedFile(name)) {
     const text = await file.text();
-    sendToViewer(text, name, false, options?.targetLine);
+    sendToViewer(text, name, false, options?.targetLine, workspaceFilePath);
     return;
   }
 
@@ -856,7 +867,7 @@ async function openFile(fileHandle: FileSystemFileHandle, options?: { targetLine
     // Text/code files: pass raw content; reader-side shared module decides
     // whether to render in code-reading mode.
     const text = await file.text();
-    sendToViewer(text, name, false, options?.targetLine);
+    sendToViewer(text, name, false, options?.targetLine, workspaceFilePath);
     return;
   }
 
@@ -1128,6 +1139,61 @@ async function restoreLastWorkspace(): Promise<boolean> {
   } catch { return false; }
 }
 
+async function consumePendingWorkspaceOpen(): Promise<boolean> {
+  try {
+    const storageLocal = webExtensionApi.storage.local as {
+      get: (keys: string | string[] | Record<string, unknown>) => Promise<Record<string, unknown>>;
+      remove?: (keys: string | string[]) => Promise<void>;
+      set?: (items: Record<string, unknown>) => Promise<void>;
+    };
+
+    const result = await storageLocal.get([PENDING_WORKSPACE_OPEN_KEY]);
+    const pending = result[PENDING_WORKSPACE_OPEN_KEY] as PendingWorkspaceOpenRequest | undefined;
+
+    if (!pending?.workspaceName || !pending?.filePath) {
+      return false;
+    }
+
+    if (typeof storageLocal.remove === 'function') {
+      await storageLocal.remove(PENDING_WORKSPACE_OPEN_KEY);
+    } else if (typeof storageLocal.set === 'function') {
+      await storageLocal.set({ [PENDING_WORKSPACE_OPEN_KEY]: null });
+    }
+
+    const db = await openDB();
+    const tx = db.transaction('recent', 'readonly');
+    const store = tx.objectStore('recent');
+    const req = store.get(pending.workspaceName);
+
+    return await new Promise<boolean>((resolve) => {
+      req.onsuccess = async () => {
+        const item = req.result as RecentWorkspaceItem | undefined;
+        if (!item) {
+          resolve(false);
+          return;
+        }
+
+        try {
+          const perm = await item.handle.queryPermission({ mode: 'read' });
+          if (perm !== 'granted') {
+            resolve(false);
+            return;
+          }
+
+          await openWorkspace(item.handle);
+          await restoreLastFile(pending.filePath);
+          resolve(true);
+        } catch {
+          resolve(false);
+        }
+      };
+      req.onerror = () => resolve(false);
+    });
+  } catch {
+    return false;
+  }
+}
+
 // ─── Init ───
 // Dark-mode sync: read the currently selected theme's category from the
 // registry and toggle `.dark` on <html>. Doing this eagerly (not via the
@@ -1196,7 +1262,7 @@ Localization.init().then(async () => {
   });
 
   applyI18nText();
-  const restored = await restoreLastWorkspace();
+  const restored = await consumePendingWorkspaceOpen() || await restoreLastWorkspace();
   if (!restored) {
     loadRecentWorkspaces();
   }
