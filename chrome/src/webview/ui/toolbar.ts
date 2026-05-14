@@ -17,6 +17,8 @@ import type {
   ToolbarManagerInstance,
   GenerateToolbarHTMLOptions
 } from '../../../../src/types/index';
+import { createRemarkMode } from '../../../../src/ui/remark-mode';
+import type { RemarkModeController } from '../../../../src/ui/remark-mode';
 
 // SVG icons for different layouts
 export const layoutIcons: Record<string, string> = {
@@ -57,6 +59,9 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     onToggleSourceMode,
     getSourceMode,
     isSourceModeActive,
+    enableRemarkMode,
+    getRemarkContainer,
+    getRemarkRawMarkdown,
   } = options;
 
   // Layout configurations
@@ -74,6 +79,33 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
 
   // Global zoom state
   let currentZoomLevel = 100;
+
+  // Remark Mode controller
+  let remarkController: RemarkModeController | null = null;
+  if (enableRemarkMode && getRemarkContainer) {
+    remarkController = createRemarkMode({
+      getContainer: getRemarkContainer,
+      getRawMarkdown: getRemarkRawMarkdown || (() => rawMarkdown),
+      onModeChange: (isActive: boolean) => {
+        const btn = document.getElementById('toggle-remark-btn');
+        if (!btn) return;
+        btn.classList.toggle('remark-active', isActive);
+        const title = isActive
+          ? (chrome.i18n?.getMessage('remark_exit_mode') || 'Exit Remark Mode')
+          : (chrome.i18n?.getMessage('remark_mode') || 'Remark Mode');
+        btn.title = title;
+        btn.setAttribute('aria-label', title);
+        btn.setAttribute('aria-pressed', String(isActive));
+      },
+      onAnnotationCountChange: (count: number) => {
+        const badge = document.getElementById('remark-count-badge');
+        if (badge) {
+          badge.textContent = count > 0 ? String(count) : '';
+          badge.style.display = count > 0 ? 'flex' : 'none';
+        }
+      },
+    });
+  }
 
   async function exportDocxFromToolbar(): Promise<void> {
     const downloadBtn = document.getElementById('download-btn') as HTMLButtonElement | null;
@@ -449,6 +481,40 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
       sourceToggleBtn.addEventListener('click', () => {
         onToggleSourceMode();
         updateSourceToggleUI();
+        // Exit remark mode when entering source mode
+        if (getSourceMode() && remarkController?.isActive()) {
+          remarkController.exit();
+          updateRemarkToggleUI();
+        }
+      });
+    }
+
+    // Remark Mode toggle button
+    const remarkToggleBtn = document.getElementById('toggle-remark-btn');
+    function updateRemarkToggleUI(): void {
+      if (!remarkToggleBtn) return;
+      const isActive = remarkController?.isActive() ?? false;
+      remarkToggleBtn.classList.toggle('remark-active', isActive);
+      remarkToggleBtn.title = isActive
+        ? (chrome.i18n?.getMessage('remark_exit_mode') || 'Exit Remark Mode')
+        : (chrome.i18n?.getMessage('remark_mode') || 'Remark Mode');
+      remarkToggleBtn.setAttribute('aria-label', remarkToggleBtn.title);
+      remarkToggleBtn.setAttribute('aria-pressed', String(isActive));
+    }
+
+    if (remarkToggleBtn && remarkController) {
+      // Load persisted annotations on init
+      void remarkController.loadAnnotations();
+      updateRemarkToggleUI();
+      remarkToggleBtn.addEventListener('click', () => {
+        if (remarkController!.isActive()) {
+          remarkController!.exit();
+        } else {
+          // Don't enter remark mode while in source mode
+          if (getSourceMode?.()) return;
+          remarkController!.enter();
+        }
+        updateRemarkToggleUI();
       });
     }
 
@@ -575,6 +641,7 @@ export function generateToolbarHTML(options: GenerateToolbarHTMLOptions): string
     initialMaxWidth,
     initialZoom,
     enableSourceToggle,
+    enableRemarkMode,
   } = options;
 
   const toolbarLayoutTitleNormal = translate('toolbar_layout_title_normal');
@@ -639,6 +706,15 @@ export function generateToolbarHTML(options: GenerateToolbarHTMLOptions): string
           </button>` : ''}
         </div>
         <div class="toolbar-right">
+          ${enableRemarkMode ? `
+          <div style="position:relative;display:inline-flex;">
+          <button id="toggle-remark-btn" class="toolbar-btn" title="Remark Mode" aria-label="Remark Mode" aria-pressed="false">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+              <path d="M13.5 3.5l3 3L7 16H4v-3L13.5 3.5Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <span id="remark-count-badge" class="remark-count-badge" style="display:none;position:absolute;top:2px;right:2px;background:#6b7280;color:#fff;font-size:9px;font-weight:700;min-width:14px;height:14px;border-radius:7px;align-items:center;justify-content:center;padding:0 3px;line-height:1;pointer-events:none;"></span>
+          </div>` : ''}
           <button id="download-btn" class="toolbar-btn toolbar-menu-trigger" title="${downloadTitleAttr}" aria-haspopup="menu" aria-expanded="false">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 3v10m0 0l-3-3m3 3l3-3M3 16h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -669,5 +745,6 @@ export function generateToolbarHTML(options: GenerateToolbarHTMLOptions): string
   </div>
   <div id="table-of-contents" class="${initialTocClass}"></div>
   <div id="toc-overlay" class="hidden"></div>
+  <div id="remark-sidebar" class="remark-sidebar remark-sidebar-closed"></div>
 `;
 }

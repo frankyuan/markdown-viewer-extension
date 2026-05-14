@@ -1167,11 +1167,16 @@ async function getMenuTitle(isRaw = false): Promise<string> {
 // Initialize context menu for viewing any file as markdown
 async function initializeContextMenu(): Promise<void> {
   try {
-    // Remove old menu item if exists (migration from preview to view)
+    // Remove old menu items if exist (prevents duplicate ID error on SW restart)
     try {
       await chrome.contextMenus.remove('preview-as-markdown');
     } catch {
       // Ignore if old menu doesn't exist
+    }
+    try {
+      await chrome.contextMenus.remove('view-as-markdown');
+    } catch {
+      // Ignore if menu doesn't exist yet
     }
     
     const title = await getMenuTitle();

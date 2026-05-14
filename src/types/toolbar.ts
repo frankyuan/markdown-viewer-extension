@@ -49,6 +49,12 @@ export interface ToolbarManagerOptions {
   getSourceMode?: () => boolean;
   /** Whether current view should save raw file on Ctrl/Cmd+S */
   isSourceModeActive?: () => boolean;
+  /** Whether to show remark mode toggle button */
+  enableRemarkMode?: boolean;
+  /** Get the container for remark annotations (rendered markdown div) */
+  getRemarkContainer?: () => HTMLElement | null;
+  /** Get raw markdown for remark export */
+  getRemarkRawMarkdown?: () => string;
 }
 
 /**
@@ -61,6 +67,7 @@ export interface GenerateToolbarHTMLOptions {
   initialMaxWidth: string;
   initialZoom: number;
   enableSourceToggle?: boolean;
+  enableRemarkMode?: boolean;
 }
 
 /**

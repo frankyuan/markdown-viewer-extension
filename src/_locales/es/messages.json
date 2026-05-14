@@ -351,6 +351,70 @@
     "message": "Archivos recientes",
     "description": "Title for recent files section"
   },
+  "remark_add_note": {
+    "message": "Añadir nota…",
+    "description": "Placeholder for the note input in the annotation popup and sidebar"
+  },
+  "remark_cancel": {
+    "message": "Cancelar",
+    "description": "Cancel button in the annotation popup"
+  },
+  "remark_color_blue": {
+    "message": "Pregunta",
+    "description": "Label for the blue annotation color"
+  },
+  "remark_color_green": {
+    "message": "Mantener",
+    "description": "Label for the green annotation color"
+  },
+  "remark_color_pink": {
+    "message": "Preocupación",
+    "description": "Label for the pink annotation color"
+  },
+  "remark_color_yellow": {
+    "message": "Sugerencia",
+    "description": "Label for the yellow annotation color"
+  },
+  "remark_copied": {
+    "message": "¡Copiado!",
+    "description": "Feedback shown after remarks are successfully copied"
+  },
+  "remark_copy_btn": {
+    "message": "Copiar anotaciones",
+    "description": "Button label to copy all remarks to clipboard and exit Remark Mode"
+  },
+  "remark_copy_failed": {
+    "message": "Error",
+    "description": "Feedback shown when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "Copiar todas las anotaciones al portapapeles y salir del modo anotación",
+    "description": "Tooltip for the Copy remarks button"
+  },
+  "remark_edit_note": {
+    "message": "Haz clic para editar",
+    "description": "Tooltip on a remark note in the sidebar indicating it is editable"
+  },
+  "remark_empty": {
+    "message": "Selecciona texto para añadir anotaciones",
+    "description": "Placeholder shown in sidebar when no remarks exist"
+  },
+  "remark_exit_mode": {
+    "message": "Salir del modo anotación",
+    "description": "Toolbar button tooltip to exit Remark Mode"
+  },
+  "remark_mode": {
+    "message": "Modo anotación",
+    "description": "Toolbar button tooltip to enter Remark Mode"
+  },
+  "remark_save": {
+    "message": "Guardar",
+    "description": "Save button in the annotation popup"
+  },
+  "remark_sidebar_title": {
+    "message": "Anotaciones",
+    "description": "Title of the Remark Mode sidebar panel"
+  },
   "remove_from_list": {
     "message": "Eliminar de la lista",
     "description": "Menu item to remove file from recent list"

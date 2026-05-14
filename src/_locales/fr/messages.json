@@ -351,6 +351,70 @@
     "message": "Fichiers récents",
     "description": "Title for recent files section"
   },
+  "remark_add_note": {
+    "message": "Ajouter une note…",
+    "description": "Placeholder for the note input in the annotation popup and sidebar"
+  },
+  "remark_cancel": {
+    "message": "Annuler",
+    "description": "Cancel button in the annotation popup"
+  },
+  "remark_color_blue": {
+    "message": "Interrogation",
+    "description": "Label for the blue annotation color"
+  },
+  "remark_color_green": {
+    "message": "Conserver",
+    "description": "Label for the green annotation color"
+  },
+  "remark_color_pink": {
+    "message": "Préoccupation",
+    "description": "Label for the pink annotation color"
+  },
+  "remark_color_yellow": {
+    "message": "Recommandation",
+    "description": "Label for the yellow annotation color"
+  },
+  "remark_copied": {
+    "message": "Copié !",
+    "description": "Feedback shown after remarks are successfully copied"
+  },
+  "remark_copy_btn": {
+    "message": "Copier les annotations",
+    "description": "Button label to copy all remarks to clipboard and exit Remark Mode"
+  },
+  "remark_copy_failed": {
+    "message": "Échec",
+    "description": "Feedback shown when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "Copier toutes les annotations dans le presse-papiers et quitter le mode annotation",
+    "description": "Tooltip for the Copy remarks button"
+  },
+  "remark_edit_note": {
+    "message": "Cliquer pour modifier",
+    "description": "Tooltip on a remark note in the sidebar indicating it is editable"
+  },
+  "remark_empty": {
+    "message": "Sélectionnez du texte pour ajouter des annotations",
+    "description": "Placeholder shown in sidebar when no remarks exist"
+  },
+  "remark_exit_mode": {
+    "message": "Quitter le mode annotation",
+    "description": "Toolbar button tooltip to exit Remark Mode"
+  },
+  "remark_mode": {
+    "message": "Mode annotation",
+    "description": "Toolbar button tooltip to enter Remark Mode"
+  },
+  "remark_save": {
+    "message": "Enregistrer",
+    "description": "Save button in the annotation popup"
+  },
+  "remark_sidebar_title": {
+    "message": "Annotations",
+    "description": "Title of the Remark Mode sidebar panel"
+  },
   "remove_from_list": {
     "message": "Retirer de la liste",
     "description": "Menu item to remove file from recent list"

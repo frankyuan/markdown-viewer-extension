@@ -351,6 +351,70 @@
     "message": "최근 파일",
     "description": "Title for recent files section"
   },
+  "remark_add_note": {
+    "message": "메모 추가…",
+    "description": "Placeholder for the note input in the annotation popup and sidebar"
+  },
+  "remark_cancel": {
+    "message": "취소",
+    "description": "Cancel button in the annotation popup"
+  },
+  "remark_color_blue": {
+    "message": "질문",
+    "description": "Label for the blue annotation color"
+  },
+  "remark_color_green": {
+    "message": "유지",
+    "description": "Label for the green annotation color"
+  },
+  "remark_color_pink": {
+    "message": "우려",
+    "description": "Label for the pink annotation color"
+  },
+  "remark_color_yellow": {
+    "message": "제안",
+    "description": "Label for the yellow annotation color"
+  },
+  "remark_copied": {
+    "message": "복사됨!",
+    "description": "Feedback shown after remarks are successfully copied"
+  },
+  "remark_copy_btn": {
+    "message": "주석 복사",
+    "description": "Button label to copy all remarks to clipboard and exit Remark Mode"
+  },
+  "remark_copy_failed": {
+    "message": "복사 실패",
+    "description": "Feedback shown when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "모든 주석을 클립보드에 복사하고 주석 모드를 종료합니다",
+    "description": "Tooltip for the Copy remarks button"
+  },
+  "remark_edit_note": {
+    "message": "클릭하여 편집",
+    "description": "Tooltip on a remark note in the sidebar indicating it is editable"
+  },
+  "remark_empty": {
+    "message": "텍스트를 선택하여 주석 추가",
+    "description": "Placeholder shown in sidebar when no remarks exist"
+  },
+  "remark_exit_mode": {
+    "message": "주석 모드 종료",
+    "description": "Toolbar button tooltip to exit Remark Mode"
+  },
+  "remark_mode": {
+    "message": "주석 모드",
+    "description": "Toolbar button tooltip to enter Remark Mode"
+  },
+  "remark_save": {
+    "message": "저장",
+    "description": "Save button in the annotation popup"
+  },
+  "remark_sidebar_title": {
+    "message": "주석",
+    "description": "Title of the Remark Mode sidebar panel"
+  },
   "remove_from_list": {
     "message": "목록에서 제거",
     "description": "Menu item to remove file from recent list"
