@@ -155,6 +155,10 @@
     "message": "Vis som Markdown",
     "description": "Context menu item to view any file as markdown"
   },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
+  },
   "copy_as_png": {
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
@@ -350,6 +354,94 @@
   "recent_files": {
     "message": "Nylige filer",
     "description": "Title for recent files section"
+  },
+  "remark_add_note": {
+    "message": "Legg til merknad…",
+    "description": "Placeholder and tooltip for adding a remark note"
+  },
+  "remark_cancel": {
+    "message": "Avbryt og fjern",
+    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  },
+  "remark_clear_all": {
+    "message": "Fjern alle merknader",
+    "description": "Tooltip for clearing all remarks"
+  },
+  "remark_color_blue": {
+    "message": "Spørsmål",
+    "description": "Label for the blue remark category"
+  },
+  "remark_color_green": {
+    "message": "Behold",
+    "description": "Label for the green remark category"
+  },
+  "remark_color_pink": {
+    "message": "Bekymring",
+    "description": "Label for the pink remark category"
+  },
+  "remark_color_yellow": {
+    "message": "Forslag",
+    "description": "Label for the yellow remark category"
+  },
+  "remark_confirm_clear": {
+    "message": "Klikk igjen for å bekrefte",
+    "description": "Tooltip shown before confirming clear-all remarks"
+  },
+  "remark_copied": {
+    "message": "Kopiert!",
+    "description": "Temporary success state after copying remarks"
+  },
+  "remark_copy_btn": {
+    "message": "Kopier merknader",
+    "description": "Button text for copying all remarks"
+  },
+  "remark_copy_failed": {
+    "message": "Kopiering mislyktes",
+    "description": "Temporary error state when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "Kopier alle merknader til utklippstavlen",
+    "description": "Tooltip for copying all remarks"
+  },
+  "remark_delete": {
+    "message": "Slett",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Slettet",
+    "description": "Status label shown after a remark is deleted"
+  },
+  "remark_edit_note": {
+    "message": "Klikk for å redigere",
+    "description": "Tooltip for editing an existing remark note"
+  },
+  "remark_empty_hint": {
+    "message": "Velg tekst for å legge til merknader",
+    "description": "Empty state hint in the remarks sidebar"
+  },
+  "remark_exit_mode": {
+    "message": "Avslutt merknadsmodus",
+    "description": "Toolbar button title for leaving remark mode"
+  },
+  "remark_export_intro": {
+    "message": "Jeg har gjennomgått **{0}** og har følgende tilbakemeldinger:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Merknad",
+    "description": "Label preceding the note text in exported remarks"
+  },
+  "remark_mode": {
+    "message": "Merknadsmodus",
+    "description": "Toolbar button title for entering remark mode"
+  },
+  "remark_sidebar_title": {
+    "message": "Merknader",
+    "description": "Sidebar title for the remarks panel"
+  },
+  "remark_undo": {
+    "message": "Angre",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Remove from list",
@@ -698,9 +790,5 @@
   "zoom": {
     "message": "Zoom",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

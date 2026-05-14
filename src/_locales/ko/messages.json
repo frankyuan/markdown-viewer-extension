@@ -155,6 +155,10 @@
     "message": "Markdown으로 보기",
     "description": "Context menu item to view any file as markdown"
   },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
+  },
   "copy_as_png": {
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
@@ -356,8 +360,12 @@
     "description": "Placeholder for the note input in the annotation popup and sidebar"
   },
   "remark_cancel": {
-    "message": "취소",
+    "message": "취소하고 제거",
     "description": "Cancel button in the annotation popup"
+  },
+  "remark_clear_all": {
+    "message": "모든 주석 지우기",
+    "description": "Tooltip for clearing all remarks"
   },
   "remark_color_blue": {
     "message": "질문",
@@ -375,6 +383,10 @@
     "message": "제안",
     "description": "Label for the yellow annotation color"
   },
+  "remark_confirm_clear": {
+    "message": "다시 클릭하여 확인",
+    "description": "Tooltip shown before confirming clear-all remarks"
+  },
   "remark_copied": {
     "message": "복사됨!",
     "description": "Feedback shown after remarks are successfully copied"
@@ -388,32 +400,48 @@
     "description": "Feedback shown when copying remarks fails"
   },
   "remark_copy_tooltip": {
-    "message": "모든 주석을 클립보드에 복사하고 주석 모드를 종료합니다",
+    "message": "모든 주석을 클립보드에 복사",
     "description": "Tooltip for the Copy remarks button"
+  },
+  "remark_delete": {
+    "message": "삭제",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "삭제됨",
+    "description": "Status label shown after a remark is deleted"
   },
   "remark_edit_note": {
     "message": "클릭하여 편집",
     "description": "Tooltip on a remark note in the sidebar indicating it is editable"
   },
-  "remark_empty": {
-    "message": "텍스트를 선택하여 주석 추가",
-    "description": "Placeholder shown in sidebar when no remarks exist"
+  "remark_empty_hint": {
+    "message": "텍스트를 선택해 주석 추가",
+    "description": "Empty state hint in the remarks sidebar"
   },
   "remark_exit_mode": {
     "message": "주석 모드 종료",
     "description": "Toolbar button tooltip to exit Remark Mode"
   },
+  "remark_export_intro": {
+    "message": "**{0}**을 검토했고 다음과 같은 피드백이 있습니다:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "메모",
+    "description": "Label preceding the note text in exported remarks"
+  },
   "remark_mode": {
     "message": "주석 모드",
     "description": "Toolbar button tooltip to enter Remark Mode"
   },
-  "remark_save": {
-    "message": "저장",
-    "description": "Save button in the annotation popup"
-  },
   "remark_sidebar_title": {
     "message": "주석",
     "description": "Title of the Remark Mode sidebar panel"
+  },
+  "remark_undo": {
+    "message": "실행 취소",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "목록에서 제거",
@@ -762,9 +790,5 @@
   "zoom": {
     "message": "확대/축소",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

@@ -155,6 +155,10 @@
     "message": "Afficher en Markdown",
     "description": "Context menu item to view any file as markdown"
   },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
+  },
   "copy_as_png": {
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
@@ -352,19 +356,23 @@
     "description": "Title for recent files section"
   },
   "remark_add_note": {
-    "message": "Ajouter une note…",
+    "message": "Ajouter une remarque…",
     "description": "Placeholder for the note input in the annotation popup and sidebar"
   },
   "remark_cancel": {
-    "message": "Annuler",
+    "message": "Annuler et supprimer",
     "description": "Cancel button in the annotation popup"
+  },
+  "remark_clear_all": {
+    "message": "Effacer toutes les remarques",
+    "description": "Tooltip for clearing all remarks"
   },
   "remark_color_blue": {
     "message": "Interrogation",
     "description": "Label for the blue annotation color"
   },
   "remark_color_green": {
-    "message": "Conserver",
+    "message": "À conserver",
     "description": "Label for the green annotation color"
   },
   "remark_color_pink": {
@@ -372,48 +380,68 @@
     "description": "Label for the pink annotation color"
   },
   "remark_color_yellow": {
-    "message": "Recommandation",
+    "message": "Proposition",
     "description": "Label for the yellow annotation color"
+  },
+  "remark_confirm_clear": {
+    "message": "Cliquez à nouveau pour confirmer",
+    "description": "Tooltip shown before confirming clear-all remarks"
   },
   "remark_copied": {
     "message": "Copié !",
     "description": "Feedback shown after remarks are successfully copied"
   },
   "remark_copy_btn": {
-    "message": "Copier les annotations",
+    "message": "Copier les remarques",
     "description": "Button label to copy all remarks to clipboard and exit Remark Mode"
   },
   "remark_copy_failed": {
-    "message": "Échec",
+    "message": "Échec de la copie",
     "description": "Feedback shown when copying remarks fails"
   },
   "remark_copy_tooltip": {
-    "message": "Copier toutes les annotations dans le presse-papiers et quitter le mode annotation",
+    "message": "Copier toutes les remarques dans le presse-papiers",
     "description": "Tooltip for the Copy remarks button"
+  },
+  "remark_delete": {
+    "message": "Supprimer",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Supprimé",
+    "description": "Status label shown after a remark is deleted"
   },
   "remark_edit_note": {
     "message": "Cliquer pour modifier",
     "description": "Tooltip on a remark note in the sidebar indicating it is editable"
   },
-  "remark_empty": {
-    "message": "Sélectionnez du texte pour ajouter des annotations",
-    "description": "Placeholder shown in sidebar when no remarks exist"
+  "remark_empty_hint": {
+    "message": "Sélectionnez du texte pour ajouter des remarques",
+    "description": "Empty state hint in the remarks sidebar"
   },
   "remark_exit_mode": {
-    "message": "Quitter le mode annotation",
+    "message": "Quitter le mode remarques",
     "description": "Toolbar button tooltip to exit Remark Mode"
   },
+  "remark_export_intro": {
+    "message": "J’ai relu **{0}** et voici mes remarques :",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Remarque",
+    "description": "Label preceding the note text in exported remarks"
+  },
   "remark_mode": {
-    "message": "Mode annotation",
+    "message": "Mode remarques",
     "description": "Toolbar button tooltip to enter Remark Mode"
   },
-  "remark_save": {
-    "message": "Enregistrer",
-    "description": "Save button in the annotation popup"
-  },
   "remark_sidebar_title": {
-    "message": "Annotations",
+    "message": "Remarques",
     "description": "Title of the Remark Mode sidebar panel"
+  },
+  "remark_undo": {
+    "message": "Annuler",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Retirer de la liste",
@@ -762,9 +790,5 @@
   "zoom": {
     "message": "Zoom",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

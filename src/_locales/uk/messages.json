@@ -155,6 +155,10 @@
     "message": "Переглянути як Markdown",
     "description": "Context menu item to view any file as markdown"
   },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
+  },
   "copy_as_png": {
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
@@ -350,6 +354,94 @@
   "recent_files": {
     "message": "Останні файли",
     "description": "Title for recent files section"
+  },
+  "remark_add_note": {
+    "message": "Додати примітку…",
+    "description": "Placeholder and tooltip for adding a remark note"
+  },
+  "remark_cancel": {
+    "message": "Скасувати й видалити",
+    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  },
+  "remark_clear_all": {
+    "message": "Очистити всі примітки",
+    "description": "Tooltip for clearing all remarks"
+  },
+  "remark_color_blue": {
+    "message": "Питання",
+    "description": "Label for the blue remark category"
+  },
+  "remark_color_green": {
+    "message": "Залишити",
+    "description": "Label for the green remark category"
+  },
+  "remark_color_pink": {
+    "message": "Застереження",
+    "description": "Label for the pink remark category"
+  },
+  "remark_color_yellow": {
+    "message": "Пропозиція",
+    "description": "Label for the yellow remark category"
+  },
+  "remark_confirm_clear": {
+    "message": "Натисніть ще раз для підтвердження",
+    "description": "Tooltip shown before confirming clear-all remarks"
+  },
+  "remark_copied": {
+    "message": "Скопійовано!",
+    "description": "Temporary success state after copying remarks"
+  },
+  "remark_copy_btn": {
+    "message": "Скопіювати примітки",
+    "description": "Button text for copying all remarks"
+  },
+  "remark_copy_failed": {
+    "message": "Не вдалося скопіювати",
+    "description": "Temporary error state when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "Скопіювати всі примітки до буфера обміну",
+    "description": "Tooltip for copying all remarks"
+  },
+  "remark_delete": {
+    "message": "Видалити",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Видалено",
+    "description": "Status label shown after a remark is deleted"
+  },
+  "remark_edit_note": {
+    "message": "Натисніть, щоб редагувати",
+    "description": "Tooltip for editing an existing remark note"
+  },
+  "remark_empty_hint": {
+    "message": "Виділіть текст, щоб додати примітки",
+    "description": "Empty state hint in the remarks sidebar"
+  },
+  "remark_exit_mode": {
+    "message": "Вийти з режиму приміток",
+    "description": "Toolbar button title for leaving remark mode"
+  },
+  "remark_export_intro": {
+    "message": "Я переглянув **{0}** і маю такі зауваження:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Примітка",
+    "description": "Label preceding the note text in exported remarks"
+  },
+  "remark_mode": {
+    "message": "Режим приміток",
+    "description": "Toolbar button title for entering remark mode"
+  },
+  "remark_sidebar_title": {
+    "message": "Примітки",
+    "description": "Sidebar title for the remarks panel"
+  },
+  "remark_undo": {
+    "message": "Скасувати",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Видалити зі списку",
@@ -698,9 +790,5 @@
   "zoom": {
     "message": "Масштаб",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

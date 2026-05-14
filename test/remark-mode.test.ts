@@ -283,4 +283,22 @@ describe('formatExportText', () => {
     const result = formatExportText([makeAnn()], '/Users/kyle/AGENTS.md');
     assert.ok(result.startsWith('I reviewed **/Users/kyle/AGENTS.md**'));
   });
+
+  it('supports custom localized labels', () => {
+    const result = formatExportText(
+      [makeAnn({ note: 'ajusta esto', color: 'blue' })],
+      '/tmp/test.md',
+      {
+        intro: 'He revisado **/tmp/test.md** y tengo los siguientes comentarios:',
+        noteLabel: 'Nota',
+        colorLabels: {
+          blue: 'Pregunta',
+        },
+      },
+    );
+
+    assert.ok(result.startsWith('He revisado **/tmp/test.md** y tengo los siguientes comentarios:'));
+    assert.ok(result.includes('[🔵 Pregunta] L5:'));
+    assert.ok(result.includes('Nota: "ajusta esto"'));
+  });
 });

@@ -1,5 +1,6 @@
 import { getCurrentDocumentUrl } from '../core/document-utils';
 import { escapeHtml } from '../core/markdown-processor';
+import type { TranslateFunction } from '../types/core';
 import {
   truncate, formatLineRef, getBlockRange, rangesOverlap, isMediaBlock,
   formatExportText,
@@ -41,6 +42,8 @@ export interface RemarkModeOptions {
   getContainer(): HTMLElement | null;
   /** Get raw markdown source for export context */
   getRawMarkdown(): string;
+  /** Active translation function from the viewer runtime */
+  translate?: TranslateFunction;
   /** Callback when mode changes */
   onModeChange?(active: boolean): void;
   /** Callback when annotation count changes (for badge on toolbar button) */
@@ -51,22 +54,37 @@ export interface RemarkModeOptions {
 
 // ─── i18n helper ─────────────────────────────────────────────────────────────
 
-function t(key: string, fallback: string): string {
+function defaultTranslate(key: string, substitutions?: string | string[]): string {
   try {
     if (typeof chrome !== 'undefined' && chrome.i18n?.getMessage) {
-      const msg = chrome.i18n.getMessage(key);
+      const msg = chrome.i18n.getMessage(key, substitutions);
       if (msg) return msg;
     }
   } catch {
     // Non-extension context
   }
-  return fallback;
+  return key;
 }
 
 // ─── Controller ──────────────────────────────────────────────────────────────
 
 export function createRemarkMode(options: RemarkModeOptions): RemarkModeController {
   const { getContainer, getRawMarkdown, onModeChange, onAnnotationCountChange, getStorageKey } = options;
+  const translate = options.translate || defaultTranslate;
+
+  function t(key: string, fallback: string): string {
+    const translated = translate(key);
+    return !translated || translated === key ? fallback : translated;
+  }
+
+  function tf(key: string, fallback: string, substitutions: string | string[]): string {
+    const translated = translate(key, substitutions);
+    if (!translated || translated === key) {
+      const values = Array.isArray(substitutions) ? substitutions : [substitutions];
+      return values.reduce((result, value, index) => result.split(`{${index}}`).join(value), fallback);
+    }
+    return translated;
+  }
 
   let active = false;
   let annotations: RemarkAnnotation[] = [];
@@ -75,6 +93,19 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
   let sidebarEl: HTMLElement | null = null;
   let tooltipEl: HTMLElement | null = null;
   let pendingFocusId: string | null = null; // for focus chain across re-renders
+
+  function getColorLabel(color: RemarkColor): string {
+    switch (color) {
+      case 'yellow':
+        return t('remark_color_yellow', COLOR_LABELS.yellow);
+      case 'green':
+        return t('remark_color_green', COLOR_LABELS.green);
+      case 'blue':
+        return t('remark_color_blue', COLOR_LABELS.blue);
+      case 'pink':
+        return t('remark_color_pink', COLOR_LABELS.pink);
+    }
+  }
 
   function isActive(): boolean {
     return active;
@@ -471,7 +502,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
       <div class="remark-popup-colors">
         ${(Object.keys(COLOR_MAP) as RemarkColor[]).map((c, i) => `
           <button class="remark-color-btn${i === 0 ? ' active' : ''}" data-color="${c}" title="${t(`remark_color_${c}`, COLOR_LABELS[c])}">
-            ${COLOR_MAP[c].emoji} <span class="remark-color-label">${COLOR_LABELS[c]}</span>
+            ${COLOR_MAP[c].emoji} <span class="remark-color-label">${getColorLabel(c)}</span>
           </button>
         `).join('')}
       </div>
@@ -534,7 +565,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
       undo.className = 'remark-undo-row';
       undo.setAttribute('role', 'status');
       undo.setAttribute('aria-live', 'polite');
-      undo.innerHTML = `<span>${t('remark_deleted', 'Deleted')}</span><div class="remark-undo-actions"><span class="remark-undo-countdown">${remaining}s</span><button class="remark-undo-btn">↩ Undo</button></div><div class="remark-undo-progress" style="animation-duration:${UNDO_SECONDS}s"></div>`;
+      undo.innerHTML = `<span>${t('remark_deleted', 'Deleted')}</span><div class="remark-undo-actions"><span class="remark-undo-countdown">${remaining}s</span><button class="remark-undo-btn">↩ ${t('remark_undo', 'Undo')}</button></div><div class="remark-undo-progress" style="animation-duration:${UNDO_SECONDS}s"></div>`;
       item.after(undo);
       const countdownEl = undo.querySelector('.remark-undo-countdown')!;
       let committed = false;
@@ -601,7 +632,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
       <div class="remark-sidebar-header">
         <span class="remark-sidebar-title">${t('remark_sidebar_title', 'Remarks')} <span class="remark-sidebar-count"></span></span>
         <div class="remark-sidebar-actions">
-          <button class="remark-sidebar-export" title="${t('remark_copy_tooltip', 'Copy all remarks to clipboard, then exit Remark Mode')}">📋 ${t('remark_copy_btn', 'Copy remarks')}</button>
+          <button class="remark-sidebar-export" title="${t('remark_copy_tooltip', 'Copy all remarks to clipboard')}">📋 ${t('remark_copy_btn', 'Copy remarks')}</button>
           <button class="remark-sidebar-clear" title="${t('remark_clear_all', 'Clear all remarks')}">🗑️</button>
         </div>
       </div>
@@ -704,7 +735,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         <div class="remark-sidebar-item" data-ann-id="${ann.id}">
           <div class="remark-sidebar-item-header">
             <span>${COLOR_MAP[ann.color].emoji} <strong>${lineRef}</strong></span>
-            <button class="remark-sidebar-delete" data-ann-id="${ann.id}" title="Delete">✕</button>
+            <button class="remark-sidebar-delete" data-ann-id="${ann.id}" title="${t('remark_delete', 'Delete')}">✕</button>
           </div>
           <div class="remark-sidebar-quote">"${quote}"</div>
           ${noteHtml}
@@ -764,7 +795,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
           if ((e.target as HTMLElement | null)?.closest?.('.remark-sidebar-delete')) return;
           const id = (item as HTMLElement).dataset.annId;
           if (!id) return;
-          requestAnnotationFocus(id, e);
+          requestAnnotationFocus(id, e as MouseEvent);
         });
       });
 
@@ -792,7 +823,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         const ta = document.createElement('textarea');
         ta.className = 'remark-sidebar-note-editor';
         ta.value = ann.note;
-        ta.placeholder = 'Add a note…';
+        ta.placeholder = t('remark_add_note', 'Add a note…');
         ta.rows = 1;
         noteEl.replaceWith(ta);
 
@@ -863,7 +894,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
             badge.className = 'remark-badge';
             badge.dataset.annId = ann.id;
             badge.textContent = '✕';
-            badge.title = `${t('remark_delete', 'Delete')}: ${ann.note || COLOR_LABELS[ann.color]}`;
+            badge.title = `${t('remark_delete', 'Delete')}: ${ann.note || getColorLabel(ann.color)}`;
             badge.style.color = COLOR_MAP[ann.color].border;
             block.style.position = 'relative';
             badge.addEventListener('click', (e) => {
@@ -911,7 +942,16 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
       // Keep the best-effort fallback above.
     }
 
-    return formatExportText(annotations, filePath);
+    return formatExportText(annotations, filePath, {
+      intro: tf('remark_export_intro', 'I reviewed **{0}** and have the following feedback:', filePath),
+      noteLabel: t('remark_export_note', 'Note'),
+      colorLabels: {
+        yellow: getColorLabel('yellow'),
+        green: getColorLabel('green'),
+        blue: getColorLabel('blue'),
+        pink: getColorLabel('pink'),
+      },
+    });
   }
 
   async function exportToClipboard(): Promise<{ ok: boolean; reason?: string }> {
@@ -964,16 +1004,16 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         cursor: text;
       }
       .remark-mode-active [data-line][data-block-id]:not(:has(img, svg, canvas, figure, video)):hover {
-        outline: 1px dashed var(--color-primary, #2563eb);
+        outline: 1px dashed var(--color-nav-active-border, var(--color-theme-accent, var(--color-primary, #2563eb)));
         outline-offset: 2px;
         border-radius: 3px;
       }
       /* Temporary highlight on the block being annotated */
       .remark-popup-target {
-        outline: 2px dashed var(--color-primary, #2563eb) !important;
+        outline: 2px dashed var(--color-nav-active-border, var(--color-theme-accent, var(--color-primary, #2563eb))) !important;
         outline-offset: 3px;
         border-radius: 3px;
-        background: var(--color-primary-subtle, rgba(37, 99, 235, 0.06));
+        background: var(--color-nav-active-bg, var(--color-theme-accent-subtle, var(--color-primary-subtle, rgba(37, 99, 235, 0.06))));
       }
       .remark-highlighted {
         background: var(--remark-bg, rgba(250, 204, 21, 0.15));
@@ -1005,8 +1045,8 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         opacity: 1;
       }
       .remark-badge:hover {
-        background: rgba(239, 68, 68, 0.15);
-        color: #ef4444 !important;
+        background: var(--color-danger-bg, rgba(239, 68, 68, 0.15));
+        color: var(--color-danger, #ef4444) !important;
         transform: scale(1.1);
       }
 
@@ -1017,7 +1057,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         background: var(--color-bg-surface, #fff);
         border: 1px solid var(--color-border, #e2e8f0);
         border-radius: 6px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        box-shadow: var(--shadow-popover, 0 2px 8px rgba(0,0,0,0.12));
         padding: 8px 12px;
         max-width: 300px;
         font-size: 12px;
@@ -1075,12 +1115,12 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         transition: color 0.15s, background 0.15s;
       }
       .remark-sidebar-clear:hover {
-        color: #ef4444;
-        background: rgba(239, 68, 68, 0.08);
+        color: var(--color-danger, #ef4444);
+        background: var(--color-danger-bg, rgba(239, 68, 68, 0.08));
       }
       .remark-sidebar-clear.remark-confirm {
-        color: #ef4444;
-        border-color: #ef4444;
+        color: var(--color-danger, #ef4444);
+        border-color: var(--color-danger-border, #fecaca);
         animation: remark-pulse 1s ease-in-out infinite;
       }
       @keyframes remark-pulse {
@@ -1126,8 +1166,8 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         transition: color 0.15s, background 0.15s;
       }
       .remark-sidebar-delete:hover {
-        color: #ef4444;
-        background: rgba(239, 68, 68, 0.1);
+        color: var(--color-danger, #ef4444);
+        background: var(--color-danger-bg, rgba(239, 68, 68, 0.1));
       }
       /* Undo row after soft-deleted item */
       .remark-undo-row {
@@ -1150,7 +1190,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         cursor: pointer;
         font-size: 11px;
         padding: 2px 8px;
-        color: var(--color-primary, #2563eb);
+        color: var(--color-theme-accent, var(--color-primary, #2563eb));
       }
       .remark-undo-btn:hover { background: var(--gray-50, #f9fafb); }
       .remark-undo-actions {
@@ -1197,7 +1237,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         background: var(--color-bg-surface, #fff);
         border: 1px solid var(--color-border, #e2e8f0);
         border-radius: 8px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        box-shadow: var(--shadow-floating, 0 4px 16px rgba(0,0,0,0.15));
         padding: 12px;
         width: 320px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -1227,14 +1267,16 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         padding: 4px 8px;
         cursor: pointer;
         font-size: 16px;
+        color: var(--color-text-primary, #1a1a1a);
         transition: border-color 0.15s;
       }
       .remark-color-btn:hover {
         background: var(--gray-200, #e5e7eb);
       }
       .remark-color-btn.active {
-        border-color: var(--color-primary, #2563eb);
-        background: var(--color-primary-light, #eff6ff);
+        border-color: var(--color-nav-active-border, var(--color-theme-accent, var(--color-primary, #2563eb)));
+        background: var(--color-nav-active-bg, var(--color-theme-accent-bg, var(--color-primary-light, #eff6ff)));
+        color: var(--color-nav-active-text, var(--color-theme-accent, var(--color-primary, #2563eb)));
       }
       .remark-note-input {
         width: 100%;
@@ -1252,8 +1294,8 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
       }
       .remark-note-input:focus {
         outline: none;
-        border-color: var(--color-primary, #2563eb);
-        box-shadow: 0 0 0 2px var(--color-primary-subtle, #dbeafe);
+        border-color: var(--color-nav-active-border, var(--color-theme-accent, var(--color-primary, #2563eb)));
+        box-shadow: 0 0 0 2px var(--color-theme-accent-subtle, var(--color-primary-subtle, #dbeafe));
       }
       .remark-popup-actions {
         display: flex;
@@ -1274,18 +1316,18 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         background: var(--gray-200, #e5e7eb);
       }
       .remark-save-btn {
-        background: var(--color-primary, #2563eb) !important;
-        color: #fff !important;
-        border-color: var(--color-primary, #2563eb) !important;
+        background: var(--color-theme-accent, var(--color-primary, #2563eb)) !important;
+        color: var(--color-text-on-primary, #fff) !important;
+        border-color: var(--color-theme-accent, var(--color-primary, #2563eb)) !important;
       }
       .remark-save-btn:hover {
-        background: var(--color-primary-hover, #1d4ed8) !important;
+        background: var(--color-theme-accent-hover, var(--color-primary-hover, #1d4ed8)) !important;
       }
 
       /* Toolbar button active state */
       .toolbar-btn.remark-active {
-        background: var(--color-primary-light, #eff6ff);
-        color: var(--color-primary, #2563eb);
+        background: var(--color-nav-active-bg, var(--color-theme-accent-bg, var(--color-primary-light, #eff6ff)));
+        color: var(--color-nav-active-text, var(--color-theme-accent, var(--color-primary, #2563eb)));
       }
 
       /* Count badge on toolbar button */
@@ -1293,8 +1335,8 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         position: absolute;
         top: 2px;
         right: 2px;
-        background: #6b7280;
-        color: #fff;
+        background: var(--color-badge-bg, #6b7280);
+        color: var(--color-badge-text, #fff);
         font-size: 9px;
         font-weight: 700;
         min-width: 14px;
@@ -1319,7 +1361,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
       .remark-sidebar-note-editor {
         width: 100%;
         box-sizing: border-box;
-        border: 1px solid var(--color-primary, #2563eb);
+        border: 1px solid var(--color-nav-active-border, var(--color-theme-accent, var(--color-primary, #2563eb)));
         border-radius: 4px;
         padding: 4px 6px;
         font-size: 12px;
@@ -1329,7 +1371,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         margin-top: 4px;
         background: var(--color-bg-surface, #fff);
         color: var(--color-text-primary, #1a1a1a);
-        box-shadow: 0 0 0 2px var(--color-primary-subtle, #dbeafe);
+        box-shadow: 0 0 0 2px var(--color-theme-accent-subtle, var(--color-primary-subtle, #dbeafe));
         line-height: 18px;
       }
       .remark-sidebar-count {
@@ -1355,7 +1397,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
           animation: remark-ink 0.3s ease-out;
         }
         @keyframes remark-ink {
-          0% { box-shadow: 0 0 0 0 var(--color-primary-subtle, #dbeafe); }
+          0% { box-shadow: 0 0 0 0 var(--color-theme-accent-subtle, var(--color-primary-subtle, #dbeafe)); }
           70% { box-shadow: 0 0 0 6px transparent; }
           100% { box-shadow: none; }
         }
@@ -1377,7 +1419,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
         left: 0;
         height: 2px;
         width: 100%;
-        background: var(--color-primary, #2563eb);
+        background: var(--color-theme-accent, var(--color-primary, #2563eb));
         opacity: 0.4;
         pointer-events: none;
       }
@@ -1386,6 +1428,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
       .remark-color-label {
         font-size: 11px;
         vertical-align: middle;
+        color: inherit;
         opacity: 0.8;
       }
 

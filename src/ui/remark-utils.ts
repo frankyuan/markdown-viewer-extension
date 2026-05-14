@@ -36,6 +36,12 @@ export const COLOR_LABELS: Record<RemarkColor, string> = {
   pink: 'Concern',
 };
 
+export interface RemarkExportLabels {
+  intro?: string;
+  noteLabel?: string;
+  colorLabels?: Partial<Record<RemarkColor, string>>;
+}
+
 // Tags that should not be annotatable (images, charts, media)
 export const SKIP_ANNOTATION_TAGS = new Set(['IMG', 'SVG', 'CANVAS', 'VIDEO', 'AUDIO', 'IFRAME']);
 
@@ -100,8 +106,13 @@ export function isMediaBlock(el: HTMLElement): boolean {
 export function formatExportText(
   annotations: readonly RemarkAnnotation[],
   filePath: string,
+  labels: RemarkExportLabels = {},
 ): string {
   if (annotations.length === 0) return '';
+
+  const intro = labels.intro || `I reviewed **${filePath}** and have the following feedback:`;
+  const noteLabel = labels.noteLabel || 'Note';
+  const colorLabels = { ...COLOR_LABELS, ...(labels.colorLabels || {}) };
 
   const sorted = [...annotations].sort((a, b) => a.startLine - b.startLine);
 
@@ -118,22 +129,22 @@ export function formatExportText(
   }
 
   const lines: string[] = [];
-  lines.push(`I reviewed **${filePath}** and have the following feedback:\n`);
+  lines.push(`${intro}\n`);
 
   for (let i = 0; i < groups.length; i++) {
     const { lineRef, anns } = groups[i];
     for (let j = 0; j < anns.length; j++) {
       const ann = anns[j];
-      const label = COLOR_LABELS[ann.color];
+      const label = colorLabels[ann.color];
       const quote = truncate(ann.selectedText, 120);
 
       if (j === 0) {
         let line = `${i + 1}. [${COLOR_MAP[ann.color].emoji} ${label}] ${lineRef}: "${quote}"`;
-        if (ann.note) line += `\n   Note: "${ann.note}"`;
+        if (ann.note) line += `\n   ${noteLabel}: "${ann.note}"`;
         lines.push(line);
       } else {
         let line = `   [${COLOR_MAP[ann.color].emoji} ${label}] "${quote}"`;
-        if (ann.note) line += `\n   Note: "${ann.note}"`;
+        if (ann.note) line += `\n   ${noteLabel}: "${ann.note}"`;
         lines.push(line);
       }
     }

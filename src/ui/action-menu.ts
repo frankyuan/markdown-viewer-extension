@@ -43,11 +43,11 @@ function injectCSS(): void {
   min-width: 0;
   max-width: min(calc(100vw - 16px), 320px);
   padding: 4px 0;
-  background: var(--color-bg-surface, var(--vscode-menu-background, #ffffff));
-  color: var(--color-text-primary, var(--vscode-menu-foreground, #1a1a1a));
-  border: 1px solid var(--color-border, var(--vscode-menu-border, #e2e8f0));
+  background: var(--color-bg-surface, #ffffff);
+  color: var(--color-text-primary, #1a1a1a);
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-popover, 0 2px 8px rgba(0, 0, 0, 0.15));
   font-size: 13px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -76,8 +76,8 @@ function injectCSS(): void {
 }
 
 .mv-action-menu-item:hover:not(:disabled) {
-  background: var(--color-primary, var(--vscode-menu-selectionBackground, #2563eb));
-  color: var(--vscode-menu-selectionForeground, #ffffff);
+  background: var(--color-nav-active-bg, #eff6ff);
+  color: var(--color-nav-active-text, #2563eb);
 }
 
 .mv-action-menu-item:disabled {
@@ -88,7 +88,7 @@ function injectCSS(): void {
 .mv-action-menu-separator {
   height: 1px;
   margin: 4px 8px;
-  background: var(--color-border, var(--vscode-menu-separatorBackground, #e2e8f0));
+  background: var(--color-border, #e2e8f0);
 }
 
 .mv-action-menu.mv-action-menu-panel {
@@ -96,13 +96,13 @@ function injectCSS(): void {
   min-width: 240px;
   max-width: min(calc(100vw - 16px), 320px);
   padding: 6px;
-  background: var(--vscode-editorWidget-background, var(--color-bg-surface, #ffffff));
-  color: var(--vscode-foreground, var(--color-text-primary, #0f172a));
-  border: 1px solid var(--vscode-editorWidget-border, var(--color-border, #e2e8f0));
+  background: var(--color-bg-surface, #ffffff);
+  color: var(--color-text-primary, #0f172a);
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-popover, 0 2px 8px rgba(0, 0, 0, 0.15));
   font-size: 12px;
-  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-family: inherit;
 }
 
 .mv-action-menu.mv-action-menu-panel .mv-action-menu-item {
@@ -115,19 +115,19 @@ function injectCSS(): void {
 
 .mv-action-menu.mv-action-menu-panel .mv-action-menu-item:hover:not(:disabled),
 .mv-action-menu.mv-action-menu-panel .mv-action-menu-item:focus-visible:not(:disabled) {
-  background: var(--vscode-toolbar-hoverBackground, var(--color-border, #e2e8f0));
-  color: var(--vscode-foreground, var(--color-text-primary, #0f172a));
+  background: var(--gray-100, #f3f4f6);
+  color: var(--color-text-primary, #0f172a);
 }
 
 .mv-action-menu.mv-action-menu-panel .mv-action-menu-item:active:not(:disabled) {
-  border-left-color: var(--vscode-focusBorder, var(--color-primary, #2563eb));
-  background: var(--vscode-inputOption-activeBackground, var(--color-nav-active-bg, #eff6ff));
-  color: var(--vscode-inputOption-activeForeground, var(--color-nav-active-text, #2563eb));
+  border-left-color: var(--color-nav-active-border, #2563eb);
+  background: var(--color-nav-active-bg, #eff6ff);
+  color: var(--color-nav-active-text, #2563eb);
 }
 
 .mv-action-menu.mv-action-menu-panel .mv-action-menu-separator {
   margin: 6px 4px;
-  background: var(--vscode-editorWidget-border, var(--color-border, #e2e8f0));
+  background: var(--color-border, #e2e8f0);
 }
 `;
   document.head.appendChild(style);

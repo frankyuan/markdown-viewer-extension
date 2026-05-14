@@ -155,6 +155,10 @@
     "message": "Ver como Markdown",
     "description": "Context menu item to view any file as markdown"
   },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
+  },
   "copy_as_png": {
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
@@ -352,12 +356,16 @@
     "description": "Title for recent files section"
   },
   "remark_add_note": {
-    "message": "Añadir nota…",
+    "message": "Añadir una observación…",
     "description": "Placeholder for the note input in the annotation popup and sidebar"
   },
   "remark_cancel": {
-    "message": "Cancelar",
+    "message": "Cancelar y quitar",
     "description": "Cancel button in the annotation popup"
+  },
+  "remark_clear_all": {
+    "message": "Borrar todas las observaciones",
+    "description": "Tooltip for clearing all remarks"
   },
   "remark_color_blue": {
     "message": "Pregunta",
@@ -375,45 +383,65 @@
     "message": "Sugerencia",
     "description": "Label for the yellow annotation color"
   },
+  "remark_confirm_clear": {
+    "message": "Haz clic de nuevo para confirmar",
+    "description": "Tooltip shown before confirming clear-all remarks"
+  },
   "remark_copied": {
     "message": "¡Copiado!",
     "description": "Feedback shown after remarks are successfully copied"
   },
   "remark_copy_btn": {
-    "message": "Copiar anotaciones",
+    "message": "Copiar observaciones",
     "description": "Button label to copy all remarks to clipboard and exit Remark Mode"
   },
   "remark_copy_failed": {
-    "message": "Error",
+    "message": "Error al copiar",
     "description": "Feedback shown when copying remarks fails"
   },
   "remark_copy_tooltip": {
-    "message": "Copiar todas las anotaciones al portapapeles y salir del modo anotación",
+    "message": "Copiar todas las observaciones al portapapeles",
     "description": "Tooltip for the Copy remarks button"
+  },
+  "remark_delete": {
+    "message": "Eliminar",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Eliminado",
+    "description": "Status label shown after a remark is deleted"
   },
   "remark_edit_note": {
     "message": "Haz clic para editar",
     "description": "Tooltip on a remark note in the sidebar indicating it is editable"
   },
-  "remark_empty": {
-    "message": "Selecciona texto para añadir anotaciones",
-    "description": "Placeholder shown in sidebar when no remarks exist"
+  "remark_empty_hint": {
+    "message": "Selecciona texto para añadir observaciones",
+    "description": "Empty state hint in the remarks sidebar"
   },
   "remark_exit_mode": {
-    "message": "Salir del modo anotación",
+    "message": "Salir del modo de observaciones",
     "description": "Toolbar button tooltip to exit Remark Mode"
   },
+  "remark_export_intro": {
+    "message": "He revisado **{0}** y tengo los siguientes comentarios:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Nota",
+    "description": "Label preceding the note text in exported remarks"
+  },
   "remark_mode": {
-    "message": "Modo anotación",
+    "message": "Modo de observaciones",
     "description": "Toolbar button tooltip to enter Remark Mode"
   },
-  "remark_save": {
-    "message": "Guardar",
-    "description": "Save button in the annotation popup"
-  },
   "remark_sidebar_title": {
-    "message": "Anotaciones",
+    "message": "Observaciones",
     "description": "Title of the Remark Mode sidebar panel"
+  },
+  "remark_undo": {
+    "message": "Deshacer",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Eliminar de la lista",
@@ -762,9 +790,5 @@
   "zoom": {
     "message": "Zoom",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

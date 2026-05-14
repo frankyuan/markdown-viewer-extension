@@ -155,6 +155,10 @@
     "message": "View as Markdown",
     "description": "Context menu item to view any file as markdown"
   },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
+  },
   "copy_as_png": {
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
@@ -356,8 +360,12 @@
     "description": "Placeholder for the note input in the annotation popup and sidebar"
   },
   "remark_cancel": {
-    "message": "Cancel",
+    "message": "Cancel & remove",
     "description": "Cancel button in the annotation popup"
+  },
+  "remark_clear_all": {
+    "message": "Clear all remarks",
+    "description": "Tooltip for clearing all remarks"
   },
   "remark_color_blue": {
     "message": "Question",
@@ -375,6 +383,10 @@
     "message": "Suggestion",
     "description": "Label for the yellow annotation color"
   },
+  "remark_confirm_clear": {
+    "message": "Click again to confirm",
+    "description": "Tooltip shown before confirming clear-all remarks"
+  },
   "remark_copied": {
     "message": "Copied!",
     "description": "Feedback shown after remarks are successfully copied"
@@ -384,36 +396,52 @@
     "description": "Button label to copy all remarks to clipboard and exit Remark Mode"
   },
   "remark_copy_failed": {
-    "message": "Failed",
+    "message": "Copy failed",
     "description": "Feedback shown when copying remarks fails"
   },
   "remark_copy_tooltip": {
-    "message": "Copy all remarks to clipboard, then exit Remark Mode",
+    "message": "Copy all remarks to clipboard",
     "description": "Tooltip for the Copy remarks button"
+  },
+  "remark_delete": {
+    "message": "Delete",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Deleted",
+    "description": "Status label shown after a remark is deleted"
   },
   "remark_edit_note": {
     "message": "Click to edit",
     "description": "Tooltip on a remark note in the sidebar indicating it is editable"
   },
-  "remark_empty": {
+  "remark_empty_hint": {
     "message": "Select text to add remarks",
-    "description": "Placeholder shown in sidebar when no remarks exist"
+    "description": "Empty state hint in the remarks sidebar"
   },
   "remark_exit_mode": {
     "message": "Exit Remark Mode",
     "description": "Toolbar button tooltip to exit Remark Mode"
   },
+  "remark_export_intro": {
+    "message": "I reviewed **{0}** and have the following feedback:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Note",
+    "description": "Label preceding the note text in exported remarks"
+  },
   "remark_mode": {
     "message": "Remark Mode",
     "description": "Toolbar button tooltip to enter Remark Mode"
   },
-  "remark_save": {
-    "message": "Save",
-    "description": "Save button in the annotation popup"
-  },
   "remark_sidebar_title": {
     "message": "Remarks",
     "description": "Title of the Remark Mode sidebar panel"
+  },
+  "remark_undo": {
+    "message": "Undo",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Remove from list",
@@ -762,9 +790,5 @@
   "zoom": {
     "message": "Zoom",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

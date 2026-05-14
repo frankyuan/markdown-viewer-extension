@@ -86,13 +86,14 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     remarkController = createRemarkMode({
       getContainer: getRemarkContainer,
       getRawMarkdown: getRemarkRawMarkdown || (() => rawMarkdown),
+      translate,
       onModeChange: (isActive: boolean) => {
         const btn = document.getElementById('toggle-remark-btn');
         if (!btn) return;
         btn.classList.toggle('remark-active', isActive);
         const title = isActive
-          ? (chrome.i18n?.getMessage('remark_exit_mode') || 'Exit Remark Mode')
-          : (chrome.i18n?.getMessage('remark_mode') || 'Remark Mode');
+          ? translate('remark_exit_mode')
+          : translate('remark_mode');
         btn.title = title;
         btn.setAttribute('aria-label', title);
         btn.setAttribute('aria-pressed', String(isActive));
@@ -496,8 +497,8 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
       const isActive = remarkController?.isActive() ?? false;
       remarkToggleBtn.classList.toggle('remark-active', isActive);
       remarkToggleBtn.title = isActive
-        ? (chrome.i18n?.getMessage('remark_exit_mode') || 'Exit Remark Mode')
-        : (chrome.i18n?.getMessage('remark_mode') || 'Remark Mode');
+        ? translate('remark_exit_mode')
+        : translate('remark_mode');
       remarkToggleBtn.setAttribute('aria-label', remarkToggleBtn.title);
       remarkToggleBtn.setAttribute('aria-pressed', String(isActive));
     }
@@ -650,6 +651,7 @@ export function generateToolbarHTML(options: GenerateToolbarHTMLOptions): string
   const toolbarZoomInTitle = translate('toolbar_zoom_in_title');
   const toolbarDownloadTitle = translate('toolbar_download_title');
   const toolbarPrintTitle = translate('toolbar_print_title');
+  const remarkModeTitle = translate('remark_mode');
   const toolbarToggleGitbookTitle = 'Toggle GitBook Panel';
 
   const layoutTitleAttr = escapeHtml(toolbarLayoutTitleNormal);
@@ -658,6 +660,7 @@ export function generateToolbarHTML(options: GenerateToolbarHTMLOptions): string
   const zoomInTitleAttr = escapeHtml(toolbarZoomInTitle);
   const downloadTitleAttr = escapeHtml(toolbarDownloadTitle);
   const printTitleAttr = escapeHtml(toolbarPrintTitle);
+  const remarkModeTitleAttr = escapeHtml(remarkModeTitle);
   const toggleGitbookTitleAttr = escapeHtml(toolbarToggleGitbookTitle);
 
   return `
@@ -708,7 +711,7 @@ export function generateToolbarHTML(options: GenerateToolbarHTMLOptions): string
         <div class="toolbar-right">
           ${enableRemarkMode ? `
           <div style="position:relative;display:inline-flex;">
-          <button id="toggle-remark-btn" class="toolbar-btn" title="Remark Mode" aria-label="Remark Mode" aria-pressed="false">
+          <button id="toggle-remark-btn" class="toolbar-btn" title="${remarkModeTitleAttr}" aria-label="${remarkModeTitleAttr}" aria-pressed="false">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
               <path d="M13.5 3.5l3 3L7 16H4v-3L13.5 3.5Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
