@@ -38,6 +38,14 @@ export interface HistoryTabManager {
  * @returns History tab manager instance
  */
 export function createHistoryTabManager({ showMessage, showConfirm }: HistoryTabManagerOptions): HistoryTabManager {
+  async function removeHistoryItem(url: string): Promise<void> {
+    const result = await storageGet(['markdownHistory']);
+    const history = (result.markdownHistory || []) as HistoryItem[];
+    const nextHistory = history.filter((item) => item.url !== url);
+
+    await storageSet({ markdownHistory: nextHistory });
+  }
+
   /**
    * Extract filename from URL
    * @param url - URL to extract filename from
@@ -100,6 +108,7 @@ export function createHistoryTabManager({ showMessage, showConfirm }: HistoryTab
     itemsEl.dataset.empty = 'false';
 
     const accessedLabel = translate('cache_item_accessed_label');
+    const removeLabel = translate('remove_from_list');
     const locale = getUiLocale();
     const fragment = document.createDocumentFragment();
 
@@ -111,6 +120,7 @@ export function createHistoryTabManager({ showMessage, showConfirm }: HistoryTab
       const urlEl = historyItemEl.querySelector('.history-item-url');
       const titleEl = historyItemEl.querySelector('.history-item-title');
       const accessedEl = historyItemEl.querySelector('.history-item-accessed');
+      const removeBtn = historyItemEl.querySelector('.history-item-remove') as HTMLButtonElement | null;
 
       if (urlEl) {
         urlEl.textContent = item.title;
@@ -122,6 +132,22 @@ export function createHistoryTabManager({ showMessage, showConfirm }: HistoryTab
 
       if (accessedEl && item.lastAccess) {
         accessedEl.textContent = `${accessedLabel}: ${new Date(item.lastAccess).toLocaleString(locale)}`;
+      }
+
+      if (removeBtn) {
+        removeBtn.title = removeLabel;
+        removeBtn.setAttribute('aria-label', removeLabel);
+        removeBtn.addEventListener('click', async (event) => {
+          event.stopPropagation();
+
+          try {
+            await removeHistoryItem(item.url);
+            await loadHistoryData();
+          } catch (error) {
+            console.error('Failed to remove history item:', error);
+            showMessage(translate('history_clear_failed'), 'error');
+          }
+        });
       }
 
       // Add click handler to open the document

@@ -32,6 +32,12 @@ interface ContentSearchResult {
   lineNumber: number;
 }
 
+interface RecentWorkspaceItem {
+  name: string;
+  handle: FileSystemDirectoryHandle;
+  time: number;
+}
+
 type SearchMode = 'filename' | 'content';
 
 // ─── DOM refs ───
@@ -906,6 +912,18 @@ async function saveRecentWorkspace(handle: FileSystemDirectoryHandle) {
   } catch { /* ignore */ }
 }
 
+async function deleteRecentWorkspace(name: string): Promise<void> {
+  const db = await openDB();
+  const tx = db.transaction('recent', 'readwrite');
+  tx.objectStore('recent').delete(name);
+
+  await new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
 async function loadRecentWorkspaces() {
   try {
     const db = await openDB();
@@ -913,13 +931,24 @@ async function loadRecentWorkspaces() {
     const store = tx.objectStore('recent');
     const req = store.getAll();
     req.onsuccess = () => {
-      const items = (req.result || []).sort((a: any, b: any) => b.time - a.time).slice(0, 5);
-      if (items.length === 0) return;
+      const items = ((req.result || []) as RecentWorkspaceItem[])
+        .sort((a, b) => b.time - a.time)
+        .slice(0, 5);
+
+      $recentList.innerHTML = '';
+
+      if (items.length === 0) {
+        $recentWorkspaces.style.display = 'none';
+        return;
+      }
 
       $recentWorkspaces.style.display = '';
-      $recentList.innerHTML = '';
       for (const item of items) {
+        const row = document.createElement('div');
+        row.className = 'recent-item-row';
+
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'recent-item';
         btn.textContent = '📁 ' + item.name;
         btn.addEventListener('click', async () => {
@@ -932,7 +961,31 @@ async function loadRecentWorkspaces() {
             // User denied or handle expired
           }
         });
-        $recentList.appendChild(btn);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'recent-item-remove';
+        removeBtn.textContent = '×';
+        const removeLabel = Localization.translate('remove_from_list');
+        removeBtn.title = removeLabel;
+        removeBtn.setAttribute('aria-label', removeLabel);
+        removeBtn.addEventListener('click', async (event) => {
+          event.stopPropagation();
+
+          try {
+            await deleteRecentWorkspace(item.name);
+            if (sessionStorage.getItem('workspace-active') === item.name) {
+              sessionStorage.removeItem('workspace-active');
+            }
+            await loadRecentWorkspaces();
+          } catch {
+            // Ignore deletion failures to avoid interrupting the workspace UI.
+          }
+        });
+
+        row.appendChild(btn);
+        row.appendChild(removeBtn);
+        $recentList.appendChild(row);
       }
     };
   } catch { /* ignore */ }

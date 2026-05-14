@@ -71,10 +71,13 @@
       </div>
       <template id="history-item-template">
         <div class="cache-item history-item" data-cache-item="dynamic">
-          <div class="cache-item-key history-item-url"></div>
-          <div class="cache-item-info">
-            <span class="history-item-title"></span>
+          <div class="history-item-main">
+            <div class="cache-item-key history-item-url"></div>
+            <div class="cache-item-info">
+              <span class="history-item-title"></span>
+            </div>
           </div>
+          <button type="button" class="history-item-remove" aria-label="Remove from list">×</button>
           <div class="cache-item-meta history-item-accessed"></div>
         </div>
       </template>
