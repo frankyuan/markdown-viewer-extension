@@ -81,6 +81,28 @@ function normalizeRawGitHubRefUrl(url: string): string | null {
   }
 }
 
+function getRepositoryRootPath(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'raw.githubusercontent.com') {
+      const segments = parsed.pathname.split('/').filter(Boolean);
+      if (segments.length >= 5 && segments[2] === 'refs') {
+        return `/${segments.slice(0, 5).join('/')}/`;
+      } else if (segments.length >= 3) {
+        return `/${segments.slice(0, 3).join('/')}/`;
+      }
+    } else if (parsed.hostname === 'github.com') {
+      const segments = parsed.pathname.split('/').filter(Boolean);
+      if (segments.length >= 4 && (segments[2] === 'blob' || segments[2] === 'tree')) {
+        return `/${segments.slice(0, 4).join('/')}/`;
+      }
+    }
+    return '/';
+  } catch {
+    return '/';
+  }
+}
+
 function parseGitbookSummary(summaryContent: string, summaryUrl: string): GitbookNavItem[] {
   const items: GitbookNavItem[] = [];
   const lines = summaryContent.split(/\r?\n/);
@@ -172,12 +194,37 @@ async function loadGitbookNavigation(
   }
 
   const summaryNames = ['SUMMARY.md', 'summary.md'];
+  const visitedUrls = new Set<string>();
 
   let depth = 0;
   while (depth <= 20) {
+    let checkedAtLeastOne = false;
+
     for (const summaryName of summaryNames) {
       const relativePath = `${'../'.repeat(depth)}${summaryName}`;
       for (const baseUrl of baseUrls) {
+        let summaryParsedUrl: URL;
+        try {
+          summaryParsedUrl = new URL(relativePath, baseUrl);
+        } catch {
+          continue;
+        }
+
+        const summaryUrl = summaryParsedUrl.href;
+        
+        if (visitedUrls.has(summaryUrl)) {
+          continue;
+        }
+        visitedUrls.add(summaryUrl);
+
+        // Prevent traversing above repository root
+        const repoRoot = getRepositoryRootPath(baseUrl);
+        if (!summaryParsedUrl.pathname.startsWith(repoRoot)) {
+          continue;
+        }
+
+        checkedAtLeastOne = true;
+
         const loaded = await readSummaryByRelativePath(relativePath, baseUrl, readRelativeFile);
         if (!loaded) {
           continue;
@@ -192,6 +239,11 @@ async function loadGitbookNavigation(
           return navItems;
         }
       }
+    }
+
+    if (!checkedAtLeastOne && depth > 0) {
+      logDebug('Stopping GitBook discovery: reached repository root or URL root', { depth });
+      break;
     }
 
     depth += 1;
