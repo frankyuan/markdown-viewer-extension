@@ -358,6 +358,71 @@ function getParentDirFromPath(path: string): string {
   return slashIndex === -1 ? '' : path.slice(0, slashIndex + 1);
 }
 
+function getAncestorDirectoryPaths(filePath: string): string[] {
+  const segments = filePath.split('/').filter(Boolean);
+  const paths: string[] = [];
+
+  for (let i = 0; i < segments.length - 1; i++) {
+    paths.push(segments.slice(0, i + 1).join('/') + '/');
+  }
+
+  return paths;
+}
+
+async function ensureTreePathExpanded(filePath: string): Promise<void> {
+  if (!rootDirHandle || !filePath) {
+    return;
+  }
+
+  const ancestorPaths = getAncestorDirectoryPaths(filePath);
+  if (ancestorPaths.length === 0) {
+    return;
+  }
+
+  let currentNodes = workspaceTree;
+
+  for (const dirPath of ancestorPaths) {
+    const directoryNode = currentNodes.find((node) => node.kind === 'directory' && node.path === dirPath);
+    if (!directoryNode) {
+      return;
+    }
+
+    expandedPaths.add(dirPath);
+
+    if (!directoryNode.childrenLoaded && !directoryNode.childrenLoading) {
+      directoryNode.childrenLoading = true;
+      try {
+        directoryNode.children = await getCachedDirectoryEntries(directoryNode.handle as FileSystemDirectoryHandle, directoryNode.path);
+        directoryNode.childrenLoaded = true;
+      } catch {
+        directoryNode.children = [];
+        directoryNode.childrenLoaded = true;
+      } finally {
+        directoryNode.childrenLoading = false;
+      }
+    }
+
+    currentNodes = directoryNode.children || [];
+  }
+}
+
+function revealActiveTreeItem(): void {
+  requestAnimationFrame(() => {
+    const activeItem = $fileTree.querySelector('.tree-item.active') as HTMLElement | null;
+    activeItem?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  });
+}
+
+async function syncTreeToActiveFile(filePath: string): Promise<void> {
+  if (!filePath) {
+    return;
+  }
+
+  await ensureTreePathExpanded(filePath);
+  renderTreeView();
+  revealActiveTreeItem();
+}
+
 function nodeNameMatches(node: TreeNode, query: string): boolean {
   return node.name.toLowerCase().includes(query);
 }
@@ -573,7 +638,7 @@ function renderContentSearchResults(container: HTMLElement): void {
     item.addEventListener('click', () => {
       activeFilePath = result.node.path;
       currentFileDir = getParentDirFromPath(result.node.path);
-      renderTreeView();
+      void syncTreeToActiveFile(result.node.path);
       openFile(result.node.handle as FileSystemFileHandle, { targetLine: Math.max(0, result.lineNumber - 1) });
     });
 
@@ -674,7 +739,7 @@ function renderTree(nodes: TreeNode[], container: HTMLElement, depth = 0, forceV
       item.addEventListener('click', () => {
         activeFilePath = node.path;
         currentFileDir = getParentDirFromPath(node.path);
-        renderTreeView();
+        void syncTreeToActiveFile(node.path);
         openFile(node.handle as FileSystemFileHandle);
       });
     }
@@ -1099,7 +1164,7 @@ async function restoreLastFile(filePath: string): Promise<void> {
     const fh = await dir.getFileHandle(fileName);
     currentFileDir = dirPath;
     activeFilePath = filePath;
-    renderTreeView();
+    await syncTreeToActiveFile(filePath);
     await openFile(fh);
   } catch { /* file no longer exists */ }
 }
