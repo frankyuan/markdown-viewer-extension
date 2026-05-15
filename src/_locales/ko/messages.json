@@ -387,6 +387,10 @@
     "message": "메모 추가…",
     "description": "Placeholder for the note input in the annotation popup and sidebar"
   },
+  "remark_all_cleared": {
+    "message": "모든 주석을 지웠습니다",
+    "description": "Temporary success state after clearing all remarks"
+  },
   "remark_cancel": {
     "message": "취소하고 제거",
     "description": "Cancel button in the annotation popup"
@@ -410,10 +414,6 @@
   "remark_color_yellow": {
     "message": "제안",
     "description": "Label for the yellow annotation color"
-  },
-  "remark_confirm_clear": {
-    "message": "다시 클릭하여 확인",
-    "description": "Tooltip shown before confirming clear-all remarks"
   },
   "remark_copied": {
     "message": "복사됨!",

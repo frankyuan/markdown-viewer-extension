@@ -387,6 +387,10 @@
     "message": "注釈を追加…",
     "description": "Placeholder for the note input in the annotation popup and sidebar"
   },
+  "remark_all_cleared": {
+    "message": "すべての注釈を削除しました",
+    "description": "Temporary success state after clearing all remarks"
+  },
   "remark_cancel": {
     "message": "取り消して削除",
     "description": "Cancel button in the annotation popup"
@@ -410,10 +414,6 @@
   "remark_color_yellow": {
     "message": "提案",
     "description": "Label for the yellow annotation color"
-  },
-  "remark_confirm_clear": {
-    "message": "もう一度クリックして確認",
-    "description": "Tooltip shown before confirming clear-all remarks"
   },
   "remark_copied": {
     "message": "コピーしました！",

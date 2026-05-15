@@ -387,6 +387,10 @@
     "message": "เพิ่มหมายเหตุ…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
+  "remark_all_cleared": {
+    "message": "ล้างหมายเหตุทั้งหมดแล้ว",
+    "description": "Temporary success state after clearing all remarks"
+  },
   "remark_cancel": {
     "message": "ยกเลิกและลบ",
     "description": "Button text for cancelling a new remark and removing the temporary mark"
@@ -410,10 +414,6 @@
   "remark_color_yellow": {
     "message": "ข้อเสนอแนะ",
     "description": "Label for the yellow remark category"
-  },
-  "remark_confirm_clear": {
-    "message": "คลิกอีกครั้งเพื่อยืนยัน",
-    "description": "Tooltip shown before confirming clear-all remarks"
   },
   "remark_copied": {
     "message": "คัดลอกแล้ว!",

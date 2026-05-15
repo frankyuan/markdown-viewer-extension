@@ -387,6 +387,10 @@
     "message": "Tambah catatan…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
+  "remark_all_cleared": {
+    "message": "Semua catatan telah dikosongkan",
+    "description": "Temporary success state after clearing all remarks"
+  },
   "remark_cancel": {
     "message": "Batal dan buang",
     "description": "Button text for cancelling a new remark and removing the temporary mark"
@@ -410,10 +414,6 @@
   "remark_color_yellow": {
     "message": "Cadangan",
     "description": "Label for the yellow remark category"
-  },
-  "remark_confirm_clear": {
-    "message": "Klik sekali lagi untuk mengesahkan",
-    "description": "Tooltip shown before confirming clear-all remarks"
   },
   "remark_copied": {
     "message": "Disalin!",

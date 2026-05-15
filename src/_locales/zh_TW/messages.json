@@ -387,6 +387,10 @@
     "message": "新增批註…",
     "description": "Placeholder for the note input in the annotation popup and sidebar"
   },
+  "remark_all_cleared": {
+    "message": "所有批註已清除",
+    "description": "Temporary success state after clearing all remarks"
+  },
   "remark_cancel": {
     "message": "取消並移除",
     "description": "Cancel button in the annotation popup"
@@ -410,10 +414,6 @@
   "remark_color_yellow": {
     "message": "建議",
     "description": "Label for the yellow annotation color"
-  },
-  "remark_confirm_clear": {
-    "message": "再次點擊以確認",
-    "description": "Tooltip shown before confirming clear-all remarks"
   },
   "remark_copied": {
     "message": "已複製！",

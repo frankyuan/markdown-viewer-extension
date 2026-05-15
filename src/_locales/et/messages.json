@@ -387,6 +387,10 @@
     "message": "Lisa märkus…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
+  "remark_all_cleared": {
+    "message": "Kõik märkmed on kustutatud",
+    "description": "Temporary success state after clearing all remarks"
+  },
   "remark_cancel": {
     "message": "Tühista ja eemalda",
     "description": "Button text for cancelling a new remark and removing the temporary mark"
@@ -410,10 +414,6 @@
   "remark_color_yellow": {
     "message": "Soovitus",
     "description": "Label for the yellow remark category"
-  },
-  "remark_confirm_clear": {
-    "message": "Kinnitamiseks klõpsa uuesti",
-    "description": "Tooltip shown before confirming clear-all remarks"
   },
   "remark_copied": {
     "message": "Kopeeritud!",

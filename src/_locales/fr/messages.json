@@ -387,6 +387,10 @@
     "message": "Ajouter une remarque…",
     "description": "Placeholder for the note input in the annotation popup and sidebar"
   },
+  "remark_all_cleared": {
+    "message": "Toutes les remarques ont été effacées",
+    "description": "Temporary success state after clearing all remarks"
+  },
   "remark_cancel": {
     "message": "Annuler et supprimer",
     "description": "Cancel button in the annotation popup"
@@ -410,10 +414,6 @@
   "remark_color_yellow": {
     "message": "Proposition",
     "description": "Label for the yellow annotation color"
-  },
-  "remark_confirm_clear": {
-    "message": "Cliquez à nouveau pour confirmer",
-    "description": "Tooltip shown before confirming clear-all remarks"
   },
   "remark_copied": {
     "message": "Copié !",

@@ -387,6 +387,10 @@
     "message": "Добавить заметку…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
+  "remark_all_cleared": {
+    "message": "Все заметки очищены",
+    "description": "Temporary success state after clearing all remarks"
+  },
   "remark_cancel": {
     "message": "Отменить и удалить",
     "description": "Button text for cancelling a new remark and removing the temporary mark"
@@ -410,10 +414,6 @@
   "remark_color_yellow": {
     "message": "Предложение",
     "description": "Label for the yellow remark category"
-  },
-  "remark_confirm_clear": {
-    "message": "Нажмите ещё раз для подтверждения",
-    "description": "Tooltip shown before confirming clear-all remarks"
   },
   "remark_copied": {
     "message": "Скопировано!",

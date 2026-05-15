@@ -387,6 +387,10 @@
     "message": "Adicionar observação…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
+  "remark_all_cleared": {
+    "message": "Todas as observações foram limpas",
+    "description": "Temporary success state after clearing all remarks"
+  },
   "remark_cancel": {
     "message": "Cancelar e remover",
     "description": "Button text for cancelling a new remark and removing the temporary mark"
@@ -410,10 +414,6 @@
   "remark_color_yellow": {
     "message": "Sugestão",
     "description": "Label for the yellow remark category"
-  },
-  "remark_confirm_clear": {
-    "message": "Clique novamente para confirmar",
-    "description": "Tooltip shown before confirming clear-all remarks"
   },
   "remark_copied": {
     "message": "Copiado!",
