@@ -240,11 +240,20 @@ function generateFontAndLayoutCSS(fontScheme: FontScheme, layoutScheme: LayoutSc
   background-color: ${colorScheme.background.page};` : ''}
 }`);
 
-  // Expose surface/page as CSS variables for custom blocks
-  if (colorScheme.background.page || colorScheme.background.surface) {
+  // Expose theme colors as global CSS variables for viewer chrome and custom blocks.
+  if (colorScheme.background.page || colorScheme.background.surface || colorScheme.accent.link || colorScheme.accent.linkHover) {
     const vars: string[] = [];
     if (colorScheme.background.page) vars.push(`  --md-page-bg: ${colorScheme.background.page};`);
     if (colorScheme.background.surface) vars.push(`  --md-surface: ${colorScheme.background.surface};`);
+    if (colorScheme.accent.link) {
+      const accentBase = colorScheme.accent.link;
+      const accentSurface = colorScheme.background.surface || colorScheme.background.page || 'transparent';
+      vars.push(`  --md-accent: ${accentBase};`);
+      vars.push(`  --md-accent-bg: color-mix(in srgb, ${accentBase} 16%, ${accentSurface});`);
+      vars.push(`  --md-accent-subtle: color-mix(in srgb, ${accentBase} 22%, transparent);`);
+    }
+    if (colorScheme.accent.linkHover) vars.push(`  --md-accent-hover: ${colorScheme.accent.linkHover};`);
+    css.push(`:root {\n${vars.join('\n')}\n}`);
     css.push(`#markdown-content {\n${vars.join('\n')}\n}`);
   }
 

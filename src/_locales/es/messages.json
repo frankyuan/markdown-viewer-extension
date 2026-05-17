@@ -151,9 +151,25 @@
     "message": "Cerrar",
     "description": "Close button text/tooltip"
   },
+  "code_copied": {
+    "message": "Copiado",
+    "description": "Tooltip shown after a code block has been copied"
+  },
+  "code_copy": {
+    "message": "Copiar código",
+    "description": "Tooltip for the button that copies a code block"
+  },
+  "code_copy_failed": {
+    "message": "Error al copiar",
+    "description": "Tooltip shown when copying a code block fails"
+  },
   "contextMenu_viewAsMarkdown": {
     "message": "Ver como Markdown",
     "description": "Context menu item to view any file as markdown"
+  },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
   },
   "copy_as_png": {
     "message": "Copy as PNG",
@@ -307,6 +323,22 @@
     "message": "Idioma",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "Cerrar",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "Ajustar a la pantalla",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "Acercar",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "Alejar",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "Más",
     "description": "More menu tooltip"
@@ -350,6 +382,94 @@
   "recent_files": {
     "message": "Archivos recientes",
     "description": "Title for recent files section"
+  },
+  "remark_add_note": {
+    "message": "Añadir una observación…",
+    "description": "Placeholder for the note input in the annotation popup and sidebar"
+  },
+  "remark_all_cleared": {
+    "message": "Todas las observaciones se borraron",
+    "description": "Temporary success state after clearing all remarks"
+  },
+  "remark_cancel": {
+    "message": "Cancelar y quitar",
+    "description": "Cancel button in the annotation popup"
+  },
+  "remark_clear_all": {
+    "message": "Borrar todas las observaciones",
+    "description": "Tooltip for clearing all remarks"
+  },
+  "remark_color_blue": {
+    "message": "Pregunta",
+    "description": "Label for the blue annotation color"
+  },
+  "remark_color_green": {
+    "message": "Mantener",
+    "description": "Label for the green annotation color"
+  },
+  "remark_color_pink": {
+    "message": "Preocupación",
+    "description": "Label for the pink annotation color"
+  },
+  "remark_color_yellow": {
+    "message": "Sugerencia",
+    "description": "Label for the yellow annotation color"
+  },
+  "remark_copied": {
+    "message": "¡Copiado!",
+    "description": "Feedback shown after remarks are successfully copied"
+  },
+  "remark_copy_btn": {
+    "message": "Copiar observaciones",
+    "description": "Button label to copy all remarks to clipboard and exit Remark Mode"
+  },
+  "remark_copy_failed": {
+    "message": "Error al copiar",
+    "description": "Feedback shown when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "Copiar todas las observaciones al portapapeles",
+    "description": "Tooltip for the Copy remarks button"
+  },
+  "remark_delete": {
+    "message": "Eliminar",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Eliminado",
+    "description": "Status label shown after a remark is deleted"
+  },
+  "remark_edit_note": {
+    "message": "Haz clic para editar",
+    "description": "Tooltip on a remark note in the sidebar indicating it is editable"
+  },
+  "remark_empty_hint": {
+    "message": "Selecciona texto para añadir observaciones",
+    "description": "Empty state hint in the remarks sidebar"
+  },
+  "remark_exit_mode": {
+    "message": "Salir del modo de observaciones",
+    "description": "Toolbar button tooltip to exit Remark Mode"
+  },
+  "remark_export_intro": {
+    "message": "He revisado **{0}** y tengo los siguientes comentarios:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Nota",
+    "description": "Label preceding the note text in exported remarks"
+  },
+  "remark_mode": {
+    "message": "Modo de observaciones",
+    "description": "Toolbar button tooltip to enter Remark Mode"
+  },
+  "remark_sidebar_title": {
+    "message": "Observaciones",
+    "description": "Title of the Remark Mode sidebar panel"
+  },
+  "remark_undo": {
+    "message": "Deshacer",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Eliminar de la lista",
@@ -698,9 +818,5 @@
   "zoom": {
     "message": "Zoom",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

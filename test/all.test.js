@@ -8,3 +8,4 @@ import './markdown-document.test.js';
 import './docx-math-converter.test.js';
 import './heading-numbering.test.ts';
 import './remark-super-sub.test.js';
+import './remark-mode.test.ts';

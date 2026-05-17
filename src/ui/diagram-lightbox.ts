@@ -4,7 +4,7 @@ export interface DiagramLightboxOptions {
 }
 
 const MAX_ZOOM = 8;
-const ZOOM_STEP = 0.25;
+const ZOOM_STEP_FACTOR = 1.2;
 
 let cssInjected = false;
 
@@ -263,9 +263,29 @@ function applyTransform(state: ZoomState): void {
   }
 }
 
-function zoomAt(state: ZoomState, delta: number, cx: number, cy: number): void {
+export function getSteppedZoom(
+  currentZoom: number,
+  direction: 1 | -1,
+  minZoom: number,
+  maxZoom: number,
+): number {
+  const nextZoom = direction > 0
+    ? currentZoom * ZOOM_STEP_FACTOR
+    : currentZoom / ZOOM_STEP_FACTOR;
+  return clamp(nextZoom, minZoom, maxZoom);
+}
+
+export function getScaledZoom(
+  currentZoom: number,
+  scale: number,
+  minZoom: number,
+  maxZoom: number,
+): number {
+  return clamp(currentZoom * scale, minZoom, maxZoom);
+}
+
+function zoomTo(state: ZoomState, newZoom: number, cx: number, cy: number): void {
   const oldZoom = state.zoom;
-  const newZoom = clamp(oldZoom + delta, state.minZoom, MAX_ZOOM);
   if (newZoom === oldZoom) return;
 
   const { viewport, img } = state;
@@ -291,12 +311,16 @@ function zoomAt(state: ZoomState, delta: number, cx: number, cy: number): void {
   applyTransform(state);
 }
 
+function zoomByStep(state: ZoomState, direction: 1 | -1, cx: number, cy: number): void {
+  zoomTo(state, getSteppedZoom(state.zoom, direction, state.minZoom, MAX_ZOOM), cx, cy);
+}
+
 function buildControls(state: ZoomState, translate: (key: string) => string): HTMLElement {
   const controls = document.createElement('div');
   controls.className = 'mv-lightbox-controls';
 
   const zoomOut = createButton('−', translate('lightbox_zoom_out'), () => {
-    zoomAt(state, -ZOOM_STEP, state.viewport.clientWidth / 2, state.viewport.clientHeight / 2);
+    zoomByStep(state, -1, state.viewport.clientWidth / 2, state.viewport.clientHeight / 2);
   });
 
   const zoomLabel = document.createElement('span');
@@ -307,7 +331,7 @@ function buildControls(state: ZoomState, translate: (key: string) => string): HT
   state.zoomLabel = zoomLabel;
 
   const zoomIn = createButton('+', translate('lightbox_zoom_in'), () => {
-    zoomAt(state, ZOOM_STEP, state.viewport.clientWidth / 2, state.viewport.clientHeight / 2);
+    zoomByStep(state, 1, state.viewport.clientWidth / 2, state.viewport.clientHeight / 2);
   });
 
   controls.appendChild(zoomOut);
@@ -342,8 +366,7 @@ function bindInteractions(state: ZoomState, viewport: HTMLElement): () => void {
     const rect = viewport.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
-    const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
-    zoomAt(state, delta, cx, cy);
+    zoomByStep(state, e.deltaY < 0 ? 1 : -1, cx, cy);
   };
   viewport.addEventListener('wheel', onWheel, { passive: false });
 
@@ -409,8 +432,7 @@ function bindInteractions(state: ZoomState, viewport: HTMLElement): () => void {
       const dist = touchDistance(e.touches);
       const center = touchCenter(e.touches, viewport);
       const scale = dist / lastTouchDist;
-      const delta = (scale - 1) * state.zoom;
-      zoomAt(state, delta, center.x, center.y);
+      zoomTo(state, getScaledZoom(state.zoom, scale, state.minZoom, MAX_ZOOM), center.x, center.y);
       lastTouchDist = dist;
     } else if (e.touches.length === 1 && touchDragging) {
       state.panX = panStartX + (e.touches[0].clientX - dragStartX);
@@ -432,9 +454,9 @@ function bindInteractions(state: ZoomState, viewport: HTMLElement): () => void {
     if (e.key === 'Escape') {
       closeLightbox();
     } else if (e.key === '+' || e.key === '=') {
-      zoomAt(state, ZOOM_STEP, viewport.clientWidth / 2, viewport.clientHeight / 2);
+      zoomByStep(state, 1, viewport.clientWidth / 2, viewport.clientHeight / 2);
     } else if (e.key === '-') {
-      zoomAt(state, -ZOOM_STEP, viewport.clientWidth / 2, viewport.clientHeight / 2);
+      zoomByStep(state, -1, viewport.clientWidth / 2, viewport.clientHeight / 2);
     } else if (e.key === '0') {
       fitToViewport(state);
     }

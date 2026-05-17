@@ -151,9 +151,25 @@
     "message": "Tutup",
     "description": "Close button text/tooltip"
   },
+  "code_copied": {
+    "message": "Tersalin",
+    "description": "Tooltip shown after a code block has been copied"
+  },
+  "code_copy": {
+    "message": "Salin kode",
+    "description": "Tooltip for the button that copies a code block"
+  },
+  "code_copy_failed": {
+    "message": "Gagal menyalin",
+    "description": "Tooltip shown when copying a code block fails"
+  },
   "contextMenu_viewAsMarkdown": {
     "message": "Lihat sebagai Markdown",
     "description": "Context menu item to view any file as markdown"
+  },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
   },
   "copy_as_png": {
     "message": "Copy as PNG",
@@ -307,6 +323,22 @@
     "message": "Bahasa",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "Tutup",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "Sesuaikan ke layar",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "Perbesar",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "Perkecil",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "More",
     "description": "More menu tooltip"
@@ -350,6 +382,94 @@
   "recent_files": {
     "message": "File terbaru",
     "description": "Title for recent files section"
+  },
+  "remark_add_note": {
+    "message": "Tambahkan catatan…",
+    "description": "Placeholder and tooltip for adding a remark note"
+  },
+  "remark_all_cleared": {
+    "message": "Semua catatan dibersihkan",
+    "description": "Temporary success state after clearing all remarks"
+  },
+  "remark_cancel": {
+    "message": "Batal dan hapus",
+    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  },
+  "remark_clear_all": {
+    "message": "Hapus semua catatan",
+    "description": "Tooltip for clearing all remarks"
+  },
+  "remark_color_blue": {
+    "message": "Pertanyaan",
+    "description": "Label for the blue remark category"
+  },
+  "remark_color_green": {
+    "message": "Pertahankan",
+    "description": "Label for the green remark category"
+  },
+  "remark_color_pink": {
+    "message": "Kekhawatiran",
+    "description": "Label for the pink remark category"
+  },
+  "remark_color_yellow": {
+    "message": "Saran",
+    "description": "Label for the yellow remark category"
+  },
+  "remark_copied": {
+    "message": "Tersalin!",
+    "description": "Temporary success state after copying remarks"
+  },
+  "remark_copy_btn": {
+    "message": "Salin catatan",
+    "description": "Button text for copying all remarks"
+  },
+  "remark_copy_failed": {
+    "message": "Gagal menyalin",
+    "description": "Temporary error state when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "Salin semua catatan ke clipboard",
+    "description": "Tooltip for copying all remarks"
+  },
+  "remark_delete": {
+    "message": "Hapus",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Dihapus",
+    "description": "Status label shown after a remark is deleted"
+  },
+  "remark_edit_note": {
+    "message": "Klik untuk mengedit",
+    "description": "Tooltip for editing an existing remark note"
+  },
+  "remark_empty_hint": {
+    "message": "Pilih teks untuk menambahkan catatan",
+    "description": "Empty state hint in the remarks sidebar"
+  },
+  "remark_exit_mode": {
+    "message": "Keluar dari mode catatan",
+    "description": "Toolbar button title for leaving remark mode"
+  },
+  "remark_export_intro": {
+    "message": "Saya meninjau **{0}** dan memiliki masukan berikut:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Catatan",
+    "description": "Label preceding the note text in exported remarks"
+  },
+  "remark_mode": {
+    "message": "Mode catatan",
+    "description": "Toolbar button title for entering remark mode"
+  },
+  "remark_sidebar_title": {
+    "message": "Catatan",
+    "description": "Sidebar title for the remarks panel"
+  },
+  "remark_undo": {
+    "message": "Urungkan",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Remove from list",
@@ -698,9 +818,5 @@
   "zoom": {
     "message": "Zoom",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

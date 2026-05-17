@@ -151,9 +151,25 @@
     "message": "Kapat",
     "description": "Close button text/tooltip"
   },
+  "code_copied": {
+    "message": "Kopyalandı",
+    "description": "Tooltip shown after a code block has been copied"
+  },
+  "code_copy": {
+    "message": "Kodu kopyala",
+    "description": "Tooltip for the button that copies a code block"
+  },
+  "code_copy_failed": {
+    "message": "Kopyalama başarısız",
+    "description": "Tooltip shown when copying a code block fails"
+  },
   "contextMenu_viewAsMarkdown": {
     "message": "Markdown olarak görüntüle",
     "description": "Context menu item to view any file as markdown"
+  },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
   },
   "copy_as_png": {
     "message": "Copy as PNG",
@@ -307,6 +323,22 @@
     "message": "Dil",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "Kapat",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "Ekrana sığdır",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "Yakınlaştır",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "Uzaklaştır",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "More",
     "description": "More menu tooltip"
@@ -350,6 +382,94 @@
   "recent_files": {
     "message": "Son dosyalar",
     "description": "Title for recent files section"
+  },
+  "remark_add_note": {
+    "message": "Not ekle…",
+    "description": "Placeholder and tooltip for adding a remark note"
+  },
+  "remark_all_cleared": {
+    "message": "Tüm notlar temizlendi",
+    "description": "Temporary success state after clearing all remarks"
+  },
+  "remark_cancel": {
+    "message": "İptal et ve kaldır",
+    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  },
+  "remark_clear_all": {
+    "message": "Tüm notları temizle",
+    "description": "Tooltip for clearing all remarks"
+  },
+  "remark_color_blue": {
+    "message": "Soru",
+    "description": "Label for the blue remark category"
+  },
+  "remark_color_green": {
+    "message": "Kalsın",
+    "description": "Label for the green remark category"
+  },
+  "remark_color_pink": {
+    "message": "Endişe",
+    "description": "Label for the pink remark category"
+  },
+  "remark_color_yellow": {
+    "message": "Öneri",
+    "description": "Label for the yellow remark category"
+  },
+  "remark_copied": {
+    "message": "Kopyalandı!",
+    "description": "Temporary success state after copying remarks"
+  },
+  "remark_copy_btn": {
+    "message": "Notları kopyala",
+    "description": "Button text for copying all remarks"
+  },
+  "remark_copy_failed": {
+    "message": "Kopyalama başarısız",
+    "description": "Temporary error state when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "Tüm notları panoya kopyala",
+    "description": "Tooltip for copying all remarks"
+  },
+  "remark_delete": {
+    "message": "Sil",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Silindi",
+    "description": "Status label shown after a remark is deleted"
+  },
+  "remark_edit_note": {
+    "message": "Düzenlemek için tıkla",
+    "description": "Tooltip for editing an existing remark note"
+  },
+  "remark_empty_hint": {
+    "message": "Not eklemek için metin seç",
+    "description": "Empty state hint in the remarks sidebar"
+  },
+  "remark_exit_mode": {
+    "message": "Not modundan çık",
+    "description": "Toolbar button title for leaving remark mode"
+  },
+  "remark_export_intro": {
+    "message": "**{0}** dosyasını inceledim ve geri bildirimlerim şöyle:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Not",
+    "description": "Label preceding the note text in exported remarks"
+  },
+  "remark_mode": {
+    "message": "Not modu",
+    "description": "Toolbar button title for entering remark mode"
+  },
+  "remark_sidebar_title": {
+    "message": "Notlar",
+    "description": "Sidebar title for the remarks panel"
+  },
+  "remark_undo": {
+    "message": "Geri al",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Remove from list",
@@ -698,9 +818,5 @@
   "zoom": {
     "message": "Yakınlaştır",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

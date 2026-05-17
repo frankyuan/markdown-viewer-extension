@@ -151,9 +151,25 @@
     "message": "Đóng",
     "description": "Close button text/tooltip"
   },
+  "code_copied": {
+    "message": "Đã sao chép",
+    "description": "Tooltip shown after a code block has been copied"
+  },
+  "code_copy": {
+    "message": "Sao chép mã",
+    "description": "Tooltip for the button that copies a code block"
+  },
+  "code_copy_failed": {
+    "message": "Sao chép thất bại",
+    "description": "Tooltip shown when copying a code block fails"
+  },
   "contextMenu_viewAsMarkdown": {
     "message": "Xem dưới dạng Markdown",
     "description": "Context menu item to view any file as markdown"
+  },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
   },
   "copy_as_png": {
     "message": "Copy as PNG",
@@ -307,6 +323,22 @@
     "message": "Ngôn ngữ",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "Đóng",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "Vừa màn hình",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "Phóng to",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "Thu nhỏ",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "More",
     "description": "More menu tooltip"
@@ -350,6 +382,94 @@
   "recent_files": {
     "message": "Tệp gần đây",
     "description": "Title for recent files section"
+  },
+  "remark_add_note": {
+    "message": "Thêm ghi chú…",
+    "description": "Placeholder and tooltip for adding a remark note"
+  },
+  "remark_all_cleared": {
+    "message": "Đã xóa tất cả ghi chú",
+    "description": "Temporary success state after clearing all remarks"
+  },
+  "remark_cancel": {
+    "message": "Hủy và xóa",
+    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  },
+  "remark_clear_all": {
+    "message": "Xóa tất cả ghi chú",
+    "description": "Tooltip for clearing all remarks"
+  },
+  "remark_color_blue": {
+    "message": "Câu hỏi",
+    "description": "Label for the blue remark category"
+  },
+  "remark_color_green": {
+    "message": "Giữ lại",
+    "description": "Label for the green remark category"
+  },
+  "remark_color_pink": {
+    "message": "Lo ngại",
+    "description": "Label for the pink remark category"
+  },
+  "remark_color_yellow": {
+    "message": "Gợi ý",
+    "description": "Label for the yellow remark category"
+  },
+  "remark_copied": {
+    "message": "Đã sao chép!",
+    "description": "Temporary success state after copying remarks"
+  },
+  "remark_copy_btn": {
+    "message": "Sao chép ghi chú",
+    "description": "Button text for copying all remarks"
+  },
+  "remark_copy_failed": {
+    "message": "Sao chép thất bại",
+    "description": "Temporary error state when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "Sao chép tất cả ghi chú vào bảng tạm",
+    "description": "Tooltip for copying all remarks"
+  },
+  "remark_delete": {
+    "message": "Xóa",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Đã xóa",
+    "description": "Status label shown after a remark is deleted"
+  },
+  "remark_edit_note": {
+    "message": "Nhấp để chỉnh sửa",
+    "description": "Tooltip for editing an existing remark note"
+  },
+  "remark_empty_hint": {
+    "message": "Chọn văn bản để thêm ghi chú",
+    "description": "Empty state hint in the remarks sidebar"
+  },
+  "remark_exit_mode": {
+    "message": "Thoát chế độ ghi chú",
+    "description": "Toolbar button title for leaving remark mode"
+  },
+  "remark_export_intro": {
+    "message": "Tôi đã xem xét **{0}** và có các nhận xét sau:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Ghi chú",
+    "description": "Label preceding the note text in exported remarks"
+  },
+  "remark_mode": {
+    "message": "Chế độ ghi chú",
+    "description": "Toolbar button title for entering remark mode"
+  },
+  "remark_sidebar_title": {
+    "message": "Ghi chú",
+    "description": "Sidebar title for the remarks panel"
+  },
+  "remark_undo": {
+    "message": "Hoàn tác",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Remove from list",
@@ -698,9 +818,5 @@
   "zoom": {
     "message": "Thu phóng",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

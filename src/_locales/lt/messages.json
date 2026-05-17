@@ -151,9 +151,25 @@
     "message": "Uždaryti",
     "description": "Close button text/tooltip"
   },
+  "code_copied": {
+    "message": "Nukopijuota",
+    "description": "Tooltip shown after a code block has been copied"
+  },
+  "code_copy": {
+    "message": "Kopijuoti kodą",
+    "description": "Tooltip for the button that copies a code block"
+  },
+  "code_copy_failed": {
+    "message": "Nepavyko nukopijuoti",
+    "description": "Tooltip shown when copying a code block fails"
+  },
   "contextMenu_viewAsMarkdown": {
     "message": "Peržiūrėti kaip Markdown",
     "description": "Context menu item to view any file as markdown"
+  },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
   },
   "copy_as_png": {
     "message": "Copy as PNG",
@@ -307,6 +323,22 @@
     "message": "Kalba",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "Uždaryti",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "Pritaikyti ekranui",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "Didinti",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "Mažinti",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "Daugiau",
     "description": "More options menu"
@@ -350,6 +382,94 @@
   "recent_files": {
     "message": "Naujausi failai",
     "description": "Title for recent files section"
+  },
+  "remark_add_note": {
+    "message": "Pridėti pastabą…",
+    "description": "Placeholder and tooltip for adding a remark note"
+  },
+  "remark_all_cleared": {
+    "message": "Visos pastabos išvalytos",
+    "description": "Temporary success state after clearing all remarks"
+  },
+  "remark_cancel": {
+    "message": "Atšaukti ir pašalinti",
+    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  },
+  "remark_clear_all": {
+    "message": "Išvalyti visas pastabas",
+    "description": "Tooltip for clearing all remarks"
+  },
+  "remark_color_blue": {
+    "message": "Klausimas",
+    "description": "Label for the blue remark category"
+  },
+  "remark_color_green": {
+    "message": "Palikti",
+    "description": "Label for the green remark category"
+  },
+  "remark_color_pink": {
+    "message": "Susirūpinimas",
+    "description": "Label for the pink remark category"
+  },
+  "remark_color_yellow": {
+    "message": "Siūlymas",
+    "description": "Label for the yellow remark category"
+  },
+  "remark_copied": {
+    "message": "Nukopijuota!",
+    "description": "Temporary success state after copying remarks"
+  },
+  "remark_copy_btn": {
+    "message": "Nukopijuoti pastabas",
+    "description": "Button text for copying all remarks"
+  },
+  "remark_copy_failed": {
+    "message": "Nukopijuoti nepavyko",
+    "description": "Temporary error state when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "Nukopijuoti visas pastabas į iškarpinę",
+    "description": "Tooltip for copying all remarks"
+  },
+  "remark_delete": {
+    "message": "Ištrinti",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Ištrinta",
+    "description": "Status label shown after a remark is deleted"
+  },
+  "remark_edit_note": {
+    "message": "Spustelėkite, kad redaguotumėte",
+    "description": "Tooltip for editing an existing remark note"
+  },
+  "remark_empty_hint": {
+    "message": "Pasirinkite tekstą pastaboms pridėti",
+    "description": "Empty state hint in the remarks sidebar"
+  },
+  "remark_exit_mode": {
+    "message": "Išeiti iš pastabų režimo",
+    "description": "Toolbar button title for leaving remark mode"
+  },
+  "remark_export_intro": {
+    "message": "Peržiūrėjau **{0}** ir turiu tokių pastabų:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Pastaba",
+    "description": "Label preceding the note text in exported remarks"
+  },
+  "remark_mode": {
+    "message": "Pastabų režimas",
+    "description": "Toolbar button title for entering remark mode"
+  },
+  "remark_sidebar_title": {
+    "message": "Pastabos",
+    "description": "Sidebar title for the remarks panel"
+  },
+  "remark_undo": {
+    "message": "Anuliuoti",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Pašalinti iš sąrašo",
@@ -698,9 +818,5 @@
   "zoom": {
     "message": "Mastelis",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

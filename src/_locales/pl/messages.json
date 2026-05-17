@@ -151,9 +151,25 @@
     "message": "Zamknij",
     "description": "Close button text/tooltip"
   },
+  "code_copied": {
+    "message": "Skopiowano",
+    "description": "Tooltip shown after a code block has been copied"
+  },
+  "code_copy": {
+    "message": "Kopiuj kod",
+    "description": "Tooltip for the button that copies a code block"
+  },
+  "code_copy_failed": {
+    "message": "Kopiowanie nie powiodło się",
+    "description": "Tooltip shown when copying a code block fails"
+  },
   "contextMenu_viewAsMarkdown": {
     "message": "Wyświetl jako Markdown",
     "description": "Context menu item to view any file as markdown"
+  },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
   },
   "copy_as_png": {
     "message": "Copy as PNG",
@@ -307,6 +323,22 @@
     "message": "Język",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "Zamknij",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "Dopasuj do ekranu",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "Powiększ",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "Pomniejsz",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "More",
     "description": "More menu tooltip"
@@ -350,6 +382,94 @@
   "recent_files": {
     "message": "Ostatnie pliki",
     "description": "Title for recent files section"
+  },
+  "remark_add_note": {
+    "message": "Dodaj uwagę…",
+    "description": "Placeholder and tooltip for adding a remark note"
+  },
+  "remark_all_cleared": {
+    "message": "Wszystkie uwagi zostały wyczyszczone",
+    "description": "Temporary success state after clearing all remarks"
+  },
+  "remark_cancel": {
+    "message": "Anuluj i usuń",
+    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  },
+  "remark_clear_all": {
+    "message": "Wyczyść wszystkie uwagi",
+    "description": "Tooltip for clearing all remarks"
+  },
+  "remark_color_blue": {
+    "message": "Pytanie",
+    "description": "Label for the blue remark category"
+  },
+  "remark_color_green": {
+    "message": "Zachowaj",
+    "description": "Label for the green remark category"
+  },
+  "remark_color_pink": {
+    "message": "Obawa",
+    "description": "Label for the pink remark category"
+  },
+  "remark_color_yellow": {
+    "message": "Sugestia",
+    "description": "Label for the yellow remark category"
+  },
+  "remark_copied": {
+    "message": "Skopiowano!",
+    "description": "Temporary success state after copying remarks"
+  },
+  "remark_copy_btn": {
+    "message": "Skopiuj uwagi",
+    "description": "Button text for copying all remarks"
+  },
+  "remark_copy_failed": {
+    "message": "Kopiowanie nie powiodło się",
+    "description": "Temporary error state when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "Skopiuj wszystkie uwagi do schowka",
+    "description": "Tooltip for copying all remarks"
+  },
+  "remark_delete": {
+    "message": "Usuń",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Usunięto",
+    "description": "Status label shown after a remark is deleted"
+  },
+  "remark_edit_note": {
+    "message": "Kliknij, aby edytować",
+    "description": "Tooltip for editing an existing remark note"
+  },
+  "remark_empty_hint": {
+    "message": "Zaznacz tekst, aby dodać uwagi",
+    "description": "Empty state hint in the remarks sidebar"
+  },
+  "remark_exit_mode": {
+    "message": "Wyjdź z trybu uwag",
+    "description": "Toolbar button title for leaving remark mode"
+  },
+  "remark_export_intro": {
+    "message": "Przejrzałem **{0}** i mam następujące uwagi:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Uwaga",
+    "description": "Label preceding the note text in exported remarks"
+  },
+  "remark_mode": {
+    "message": "Tryb uwag",
+    "description": "Toolbar button title for entering remark mode"
+  },
+  "remark_sidebar_title": {
+    "message": "Uwagi",
+    "description": "Sidebar title for the remarks panel"
+  },
+  "remark_undo": {
+    "message": "Cofnij",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Remove from list",
@@ -698,9 +818,5 @@
   "zoom": {
     "message": "Powiększenie",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }

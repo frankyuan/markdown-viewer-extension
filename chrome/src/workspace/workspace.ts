@@ -32,6 +32,20 @@ interface ContentSearchResult {
   lineNumber: number;
 }
 
+interface RecentWorkspaceItem {
+  name: string;
+  handle: FileSystemDirectoryHandle;
+  time: number;
+}
+
+interface PendingWorkspaceOpenRequest {
+  workspaceName: string;
+  filePath: string;
+  requestedAt: number;
+}
+
+const PENDING_WORKSPACE_OPEN_KEY = 'markdownViewerPendingWorkspaceOpen';
+
 type SearchMode = 'filename' | 'content';
 
 // ─── DOM refs ───
@@ -344,6 +358,71 @@ function getParentDirFromPath(path: string): string {
   return slashIndex === -1 ? '' : path.slice(0, slashIndex + 1);
 }
 
+function getAncestorDirectoryPaths(filePath: string): string[] {
+  const segments = filePath.split('/').filter(Boolean);
+  const paths: string[] = [];
+
+  for (let i = 0; i < segments.length - 1; i++) {
+    paths.push(segments.slice(0, i + 1).join('/') + '/');
+  }
+
+  return paths;
+}
+
+async function ensureTreePathExpanded(filePath: string): Promise<void> {
+  if (!rootDirHandle || !filePath) {
+    return;
+  }
+
+  const ancestorPaths = getAncestorDirectoryPaths(filePath);
+  if (ancestorPaths.length === 0) {
+    return;
+  }
+
+  let currentNodes = workspaceTree;
+
+  for (const dirPath of ancestorPaths) {
+    const directoryNode = currentNodes.find((node) => node.kind === 'directory' && node.path === dirPath);
+    if (!directoryNode) {
+      return;
+    }
+
+    expandedPaths.add(dirPath);
+
+    if (!directoryNode.childrenLoaded && !directoryNode.childrenLoading) {
+      directoryNode.childrenLoading = true;
+      try {
+        directoryNode.children = await getCachedDirectoryEntries(directoryNode.handle as FileSystemDirectoryHandle, directoryNode.path);
+        directoryNode.childrenLoaded = true;
+      } catch {
+        directoryNode.children = [];
+        directoryNode.childrenLoaded = true;
+      } finally {
+        directoryNode.childrenLoading = false;
+      }
+    }
+
+    currentNodes = directoryNode.children || [];
+  }
+}
+
+function revealActiveTreeItem(): void {
+  requestAnimationFrame(() => {
+    const activeItem = $fileTree.querySelector('.tree-item.active') as HTMLElement | null;
+    activeItem?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  });
+}
+
+async function syncTreeToActiveFile(filePath: string): Promise<void> {
+  if (!filePath) {
+    return;
+  }
+
+  await ensureTreePathExpanded(filePath);
+  renderTreeView();
+  revealActiveTreeItem();
+}
+
 function nodeNameMatches(node: TreeNode, query: string): boolean {
   return node.name.toLowerCase().includes(query);
 }
@@ -559,7 +638,7 @@ function renderContentSearchResults(container: HTMLElement): void {
     item.addEventListener('click', () => {
       activeFilePath = result.node.path;
       currentFileDir = getParentDirFromPath(result.node.path);
-      renderTreeView();
+      void syncTreeToActiveFile(result.node.path);
       openFile(result.node.handle as FileSystemFileHandle, { targetLine: Math.max(0, result.lineNumber - 1) });
     });
 
@@ -660,7 +739,7 @@ function renderTree(nodes: TreeNode[], container: HTMLElement, depth = 0, forceV
       item.addEventListener('click', () => {
         activeFilePath = node.path;
         currentFileDir = getParentDirFromPath(node.path);
-        renderTreeView();
+        void syncTreeToActiveFile(node.path);
         openFile(node.handle as FileSystemFileHandle);
       });
     }
@@ -778,7 +857,7 @@ async function showImagePreview(_file: File, name: string, _ext: string): Promis
 }
 
 // ─── File preview via embedded viewer ───
-function sendToViewer(content: string, filename: string, codeView = false, targetLine?: number) {
+function sendToViewer(content: string, filename: string, codeView = false, targetLine?: number, workspaceFilePath?: string) {
   // Keep iframe visible so rendering updates (including TOC generation) are
   // visible during loading instead of appearing only after full completion.
   $previewEmpty.style.display = 'none';
@@ -794,6 +873,8 @@ function sendToViewer(content: string, filename: string, codeView = false, targe
         content,
         filename,
         fileDir: currentFileDir,
+        workspaceName: rootDirHandle?.name || '',
+        workspaceFilePath: workspaceFilePath || '',
         codeView,
         targetLine,
       }, '*');
@@ -822,9 +903,10 @@ async function postThemeToViewer(themeId?: string): Promise<void> {
 async function openFile(fileHandle: FileSystemFileHandle, options?: { targetLine?: number }) {
   const file = await fileHandle.getFile();
   const name = fileHandle.name;
+  const workspaceFilePath = currentFileDir + name;
 
   // Save last opened file path
-  sessionStorage.setItem(`workspace-last-file:${rootDirHandle?.name}`, currentFileDir + name);
+  sessionStorage.setItem(`workspace-last-file:${rootDirHandle?.name}`, workspaceFilePath);
 
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
 
@@ -842,7 +924,7 @@ async function openFile(fileHandle: FileSystemFileHandle, options?: { targetLine
 
   if (isSupportedFile(name)) {
     const text = await file.text();
-    sendToViewer(text, name, false, options?.targetLine);
+    sendToViewer(text, name, false, options?.targetLine, workspaceFilePath);
     return;
   }
 
@@ -850,7 +932,7 @@ async function openFile(fileHandle: FileSystemFileHandle, options?: { targetLine
     // Text/code files: pass raw content; reader-side shared module decides
     // whether to render in code-reading mode.
     const text = await file.text();
-    sendToViewer(text, name, false, options?.targetLine);
+    sendToViewer(text, name, false, options?.targetLine, workspaceFilePath);
     return;
   }
 
@@ -906,6 +988,18 @@ async function saveRecentWorkspace(handle: FileSystemDirectoryHandle) {
   } catch { /* ignore */ }
 }
 
+async function deleteRecentWorkspace(name: string): Promise<void> {
+  const db = await openDB();
+  const tx = db.transaction('recent', 'readwrite');
+  tx.objectStore('recent').delete(name);
+
+  await new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
 async function loadRecentWorkspaces() {
   try {
     const db = await openDB();
@@ -913,13 +1007,24 @@ async function loadRecentWorkspaces() {
     const store = tx.objectStore('recent');
     const req = store.getAll();
     req.onsuccess = () => {
-      const items = (req.result || []).sort((a: any, b: any) => b.time - a.time).slice(0, 5);
-      if (items.length === 0) return;
+      const items = ((req.result || []) as RecentWorkspaceItem[])
+        .sort((a, b) => b.time - a.time)
+        .slice(0, 5);
+
+      $recentList.innerHTML = '';
+
+      if (items.length === 0) {
+        $recentWorkspaces.style.display = 'none';
+        return;
+      }
 
       $recentWorkspaces.style.display = '';
-      $recentList.innerHTML = '';
       for (const item of items) {
+        const row = document.createElement('div');
+        row.className = 'recent-item-row';
+
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'recent-item';
         btn.textContent = '📁 ' + item.name;
         btn.addEventListener('click', async () => {
@@ -932,7 +1037,31 @@ async function loadRecentWorkspaces() {
             // User denied or handle expired
           }
         });
-        $recentList.appendChild(btn);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'recent-item-remove';
+        removeBtn.textContent = '×';
+        const removeLabel = Localization.translate('remove_from_list');
+        removeBtn.title = removeLabel;
+        removeBtn.setAttribute('aria-label', removeLabel);
+        removeBtn.addEventListener('click', async (event) => {
+          event.stopPropagation();
+
+          try {
+            await deleteRecentWorkspace(item.name);
+            if (sessionStorage.getItem('workspace-active') === item.name) {
+              sessionStorage.removeItem('workspace-active');
+            }
+            await loadRecentWorkspaces();
+          } catch {
+            // Ignore deletion failures to avoid interrupting the workspace UI.
+          }
+        });
+
+        row.appendChild(btn);
+        row.appendChild(removeBtn);
+        $recentList.appendChild(row);
       }
     };
   } catch { /* ignore */ }
@@ -1035,7 +1164,7 @@ async function restoreLastFile(filePath: string): Promise<void> {
     const fh = await dir.getFileHandle(fileName);
     currentFileDir = dirPath;
     activeFilePath = filePath;
-    renderTreeView();
+    await syncTreeToActiveFile(filePath);
     await openFile(fh);
   } catch { /* file no longer exists */ }
 }
@@ -1073,6 +1202,61 @@ async function restoreLastWorkspace(): Promise<boolean> {
       req.onerror = () => resolve(false);
     });
   } catch { return false; }
+}
+
+async function consumePendingWorkspaceOpen(): Promise<boolean> {
+  try {
+    const storageLocal = webExtensionApi.storage.local as {
+      get: (keys: string | string[] | Record<string, unknown>) => Promise<Record<string, unknown>>;
+      remove?: (keys: string | string[]) => Promise<void>;
+      set?: (items: Record<string, unknown>) => Promise<void>;
+    };
+
+    const result = await storageLocal.get([PENDING_WORKSPACE_OPEN_KEY]);
+    const pending = result[PENDING_WORKSPACE_OPEN_KEY] as PendingWorkspaceOpenRequest | undefined;
+
+    if (!pending?.workspaceName || !pending?.filePath) {
+      return false;
+    }
+
+    if (typeof storageLocal.remove === 'function') {
+      await storageLocal.remove(PENDING_WORKSPACE_OPEN_KEY);
+    } else if (typeof storageLocal.set === 'function') {
+      await storageLocal.set({ [PENDING_WORKSPACE_OPEN_KEY]: null });
+    }
+
+    const db = await openDB();
+    const tx = db.transaction('recent', 'readonly');
+    const store = tx.objectStore('recent');
+    const req = store.get(pending.workspaceName);
+
+    return await new Promise<boolean>((resolve) => {
+      req.onsuccess = async () => {
+        const item = req.result as RecentWorkspaceItem | undefined;
+        if (!item) {
+          resolve(false);
+          return;
+        }
+
+        try {
+          const perm = await item.handle.queryPermission({ mode: 'read' });
+          if (perm !== 'granted') {
+            resolve(false);
+            return;
+          }
+
+          await openWorkspace(item.handle);
+          await restoreLastFile(pending.filePath);
+          resolve(true);
+        } catch {
+          resolve(false);
+        }
+      };
+      req.onerror = () => resolve(false);
+    });
+  } catch {
+    return false;
+  }
 }
 
 // ─── Init ───
@@ -1143,7 +1327,7 @@ Localization.init().then(async () => {
   });
 
   applyI18nText();
-  const restored = await restoreLastWorkspace();
+  const restored = await consumePendingWorkspaceOpen() || await restoreLastWorkspace();
   if (!restored) {
     loadRecentWorkspaces();
   }

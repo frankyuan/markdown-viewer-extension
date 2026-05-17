@@ -151,9 +151,25 @@
     "message": "Закрыць",
     "description": "Close button text/tooltip"
   },
+  "code_copied": {
+    "message": "Скапіявана",
+    "description": "Tooltip shown after a code block has been copied"
+  },
+  "code_copy": {
+    "message": "Капіяваць код",
+    "description": "Tooltip for the button that copies a code block"
+  },
+  "code_copy_failed": {
+    "message": "Не ўдалося скапіяваць",
+    "description": "Tooltip shown when copying a code block fails"
+  },
   "contextMenu_viewAsMarkdown": {
     "message": "Прагляд як Markdown",
     "description": "Context menu item to view any file as markdown"
+  },
+  "contextMenu_viewAsRaw": {
+    "message": "View as Raw",
+    "description": "Context menu item to restore the page to its original state"
   },
   "copy_as_png": {
     "message": "Copy as PNG",
@@ -307,6 +323,22 @@
     "message": "Мова",
     "description": "Menu item for language"
   },
+  "lightbox_close": {
+    "message": "Закрыць",
+    "description": "Tooltip for closing the diagram lightbox"
+  },
+  "lightbox_fit": {
+    "message": "Падагнаць да экрана",
+    "description": "Tooltip for fitting the diagram to the lightbox viewport"
+  },
+  "lightbox_zoom_in": {
+    "message": "Павялічыць маштаб",
+    "description": "Tooltip for zooming in in the diagram lightbox"
+  },
+  "lightbox_zoom_out": {
+    "message": "Паменшыць маштаб",
+    "description": "Tooltip for zooming out in the diagram lightbox"
+  },
   "more": {
     "message": "Больш",
     "description": "More options menu"
@@ -350,6 +382,94 @@
   "recent_files": {
     "message": "Нядаўнія файлы",
     "description": "Title for recent files section"
+  },
+  "remark_add_note": {
+    "message": "Дадаць заўвагу…",
+    "description": "Placeholder and tooltip for adding a remark note"
+  },
+  "remark_all_cleared": {
+    "message": "Усе заўвагі ачышчаны",
+    "description": "Temporary success state after clearing all remarks"
+  },
+  "remark_cancel": {
+    "message": "Скасаваць і выдаліць",
+    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  },
+  "remark_clear_all": {
+    "message": "Ачысціць усе заўвагі",
+    "description": "Tooltip for clearing all remarks"
+  },
+  "remark_color_blue": {
+    "message": "Пытанне",
+    "description": "Label for the blue remark category"
+  },
+  "remark_color_green": {
+    "message": "Пакінуць",
+    "description": "Label for the green remark category"
+  },
+  "remark_color_pink": {
+    "message": "Асцярога",
+    "description": "Label for the pink remark category"
+  },
+  "remark_color_yellow": {
+    "message": "Прапанова",
+    "description": "Label for the yellow remark category"
+  },
+  "remark_copied": {
+    "message": "Скапіявана!",
+    "description": "Temporary success state after copying remarks"
+  },
+  "remark_copy_btn": {
+    "message": "Скапіяваць заўвагі",
+    "description": "Button text for copying all remarks"
+  },
+  "remark_copy_failed": {
+    "message": "Не ўдалося скапіяваць",
+    "description": "Temporary error state when copying remarks fails"
+  },
+  "remark_copy_tooltip": {
+    "message": "Скапіяваць усе заўвагі ў буфер абмену",
+    "description": "Tooltip for copying all remarks"
+  },
+  "remark_delete": {
+    "message": "Выдаліць",
+    "description": "Tooltip for deleting a remark"
+  },
+  "remark_deleted": {
+    "message": "Выдалена",
+    "description": "Status label shown after a remark is deleted"
+  },
+  "remark_edit_note": {
+    "message": "Націсніце, каб рэдагаваць",
+    "description": "Tooltip for editing an existing remark note"
+  },
+  "remark_empty_hint": {
+    "message": "Вылучыце тэкст, каб дадаць заўвагі",
+    "description": "Empty state hint in the remarks sidebar"
+  },
+  "remark_exit_mode": {
+    "message": "Выйсці з рэжыму заўваг",
+    "description": "Toolbar button title for leaving remark mode"
+  },
+  "remark_export_intro": {
+    "message": "Я прагледзеў **{0}** і маю наступныя заўвагі:",
+    "description": "Intro line for exported remarks. {0} is the file path or title."
+  },
+  "remark_export_note": {
+    "message": "Заўвага",
+    "description": "Label preceding the note text in exported remarks"
+  },
+  "remark_mode": {
+    "message": "Рэжым заўваг",
+    "description": "Toolbar button title for entering remark mode"
+  },
+  "remark_sidebar_title": {
+    "message": "Заўвагі",
+    "description": "Sidebar title for the remarks panel"
+  },
+  "remark_undo": {
+    "message": "Адмяніць",
+    "description": "Button text for undoing remark deletion"
   },
   "remove_from_list": {
     "message": "Выдаліць са спісу",
@@ -698,9 +818,5 @@
   "zoom": {
     "message": "Маштаб",
     "description": "Menu item for zoom"
-  },
-  "contextMenu_viewAsRaw": {
-    "message": "View as Raw",
-    "description": "Context menu item to restore the page to its original state"
   }
 }
