@@ -52,6 +52,23 @@ function ensureSlidevAssets() {
   execSync('npx tsx slidev-shell/build-themes.ts', { stdio: 'inherit' });
 }
 
+function createZipPackage(sourceDir, zipPath) {
+  if (process.platform === 'win32') {
+    const escapedSourceDir = sourceDir.replace(/'/g, "''");
+    const escapedZipPath = zipPath.replace(/'/g, "''");
+    execSync(
+      `powershell -NoProfile -Command "Compress-Archive -Path '${escapedSourceDir}\\*' -DestinationPath '${escapedZipPath}' -Force"`,
+      { stdio: 'ignore' }
+    );
+    return;
+  }
+
+  execSync(`zip -r "${zipPath}" .`, {
+    cwd: sourceDir,
+    stdio: 'ignore'
+  });
+}
+
 // Production build
 const version = syncVersion();
 console.log(`🔨 Building Chrome Extension... v${version}\n`);
@@ -96,7 +113,7 @@ try {
   }
   
   // Create zip from inside the chrome directory (so manifest.json is at root)
-  execSync(`cd "${outdir}" && zip -r "${zipPath}" .`, { stdio: 'ignore' });
+  createZipPackage(outdir, zipPath);
   
   // Show zip file size
   const zipStats = fs.statSync(zipPath);
