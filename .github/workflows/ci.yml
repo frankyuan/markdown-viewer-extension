@@ -35,7 +35,14 @@ jobs:
     name: fibjs tests + Node.js Playwright E2E
     runs-on: ubuntu-latest
     steps:
+      # The homepage-i18n gate reads docs/index.html and docs/assets/js/i18n/*.js,
+      # which live in the `docs` submodule: without submodules the directory is
+      # empty and the gate cannot run. Both submodule remotes are SSH URLs, but
+      # the repos are public and actions/checkout rewrites git@github.com:… to
+      # HTTPS when no ssh-key is supplied, so no credentials are needed here.
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       # Extract fibjs (dev build incl. CSSOM) from the fibjs/dev image
       - name: Extract fibjs from fibjs/dev image

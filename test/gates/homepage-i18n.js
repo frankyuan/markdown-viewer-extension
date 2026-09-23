@@ -11,8 +11,28 @@ import path from 'node:path';
 import vm from 'node:vm';
 
 const repoRoot = path.join(import.meta.dirname, '../..');
-const indexPath = path.join(repoRoot, 'docs', 'index.html');
-const i18nDir = path.join(repoRoot, 'docs', 'assets', 'js', 'i18n');
+const docsRoot = path.join(repoRoot, 'docs');
+const indexPath = path.join(docsRoot, 'index.html');
+const i18nDir = path.join(docsRoot, 'assets', 'js', 'i18n');
+
+/**
+ * docs/ is a git submodule, so a clone without `--recurse-submodules` (or a CI
+ * checkout without `submodules: true`) leaves it empty. Say that instead of
+ * dying on ENOENT — the gate must never look green because its input is absent,
+ * and the fix is one command.
+ * @param {string} target
+ */
+function requireDocsSubmodule(target) {
+  if (!fs.existsSync(target)) {
+    throw new Error(
+      `${path.relative(repoRoot, target)} is missing — the docs submodule is not checked out.\n` +
+      'Run: git submodule update --init docs'
+    );
+  }
+}
+
+requireDocsSubmodule(indexPath);
+requireDocsSubmodule(i18nDir);
 
 const html = fs.readFileSync(indexPath, 'utf8');
 

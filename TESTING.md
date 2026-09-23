@@ -144,6 +144,7 @@ contract is defined.
 Install dependencies and build the artifacts needed by the tests:
 
 ```bash
+git submodule update --init docs   # homepage-i18n gate reads docs/index.html + docs/assets/js/i18n
 npm install
 npm run build:cli
 npm run build:chrome
@@ -226,14 +227,17 @@ deterministic assertions.
 
 `.github/workflows/ci.yml` must keep the following order:
 
-1. Install Node.js dependencies.
-2. Provide the fibjs build that supplies the CSSOM behavior required by the
+1. Check out the repository with submodules (`actions/checkout` with
+   `submodules: true`): the homepage-i18n gate reads `docs/index.html` and
+   `docs/assets/js/i18n/*.js`, so a bare checkout fails it.
+2. Install Node.js dependencies.
+3. Provide the fibjs build that supplies the CSSOM behavior required by the
    compatibility suite.
-3. Install Google Chrome for contract suites that use the `chrome` channel.
-4. Install the Playwright-compatible Chromium revision for extension E2E.
-5. Build `dist/cli` and `dist/chrome`.
-6. Run `npm run test:unit`.
-7. Run `npm run test:e2e` in a separate native Node.js process.
+4. Install Google Chrome for contract suites that use the `chrome` channel.
+5. Install the Playwright-compatible Chromium revision for extension E2E.
+6. Build `dist/cli` and `dist/chrome`.
+7. Run `npm run test:unit`.
+8. Run `npm run test:e2e` in a separate native Node.js process.
 
 The CI gate must fail when either test layer fails. `MV_SKIP_EXT_TESTS=1` is a
 local diagnostic escape hatch only and must not be used by CI.
