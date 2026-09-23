@@ -182,10 +182,10 @@ export function themeToDOCXStyles(
 
   // TableText paragraph spacing used to compensate cell margins so the
   // total visual gap (margin + paragraph before/after) stays symmetric.
-  // Tables use a tighter line-height (default 1.15) than body text so they
-  // read as a distinct block; blocks.table.lineHeight overrides per theme.
+  // Tables use a slightly tighter line-height (default 1.4) than body text so
+  // they read as a distinct block; blocks.table.lineHeight overrides per theme.
   const bodyLineSpacing = Math.round(layoutScheme.body.lineHeight * 240);
-  const tableLineHeight = layoutScheme.blocks.table?.lineHeight ?? 1.15;
+  const tableLineHeight = layoutScheme.blocks.table?.lineHeight ?? 1.4;
   const tableLineSpacing = Math.round(tableLineHeight * 240);
   const tableTextSpacing = compensateParagraphSpacing(3, 3, tableLineSpacing);
 

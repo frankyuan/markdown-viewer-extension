@@ -177,7 +177,7 @@ describe('Baseline: fixed theme "default"', () => {
       );
       const table = firstOf(m, '#markdown-content table');
       assert.equal(table.display, 'table', 'Full-width table should be a real table layout box');
-      assert.ok(table.width > 800, `Full-width table should span the content width (got ${table.width}px)`);
+      assert.ok(table.width > 680, `Full-width table should span the content width (got ${table.width}px)`);
       assert.equal(table.marginLeft, '0px', 'Full-width table must not have centering margins');
     });
   });
@@ -215,9 +215,9 @@ describe('Baseline: fixed theme "default"', () => {
       const paragraph = firstOf(m, '#markdown-content p');
       // Default theme drives paragraph spacing through line-height (margin 0);
       // a refactor that silently changes either dimension fails here.
-      // 14pt body (db81b3c): 14pt = 18.6667px, line-height 1.5 = 28px.
+      // 14pt body: 14pt = 18.6667px, line-height 1.7 = 31.7333px.
       assert.equal(paragraph.fontSize, '18.6667px');
-      assert.equal(paragraph.lineHeight, '28px');
+      assert.equal(paragraph.lineHeight, '31.7333px');
       assert.equal(paragraph.marginTop, '0px');
       assert.equal(paragraph.marginBottom, '0px');
       assert.notEqual(paragraph.color, 'rgba(0, 0, 0, 0)', 'Body text color should be set');

@@ -144,9 +144,9 @@ describe('EPUB reader environment matrix (full style suite)', () => {
     {
       const m = await harness.measureEpubReader(path.join(LAYOUT_DIR, 'body-text.md'), ['#markdown-content p'], env, { ...FIXED_PARAMS, ...CENTER });
       const p = firstOf(m, '#markdown-content p');
-      // 14pt body theme (db81b3c): 14pt = 18.6667px, line-height 1.5 = 28px.
+      // 14pt body theme: 14pt = 18.6667px, line-height 1.7 = 31.7333px.
       assert.equal(p.fontSize, '18.6667px', ctx('body font size should stay 18.6667px'));
-      assert.equal(p.lineHeight, '28px', ctx('body line-height should stay 1.5 (28px)'));
+      assert.equal(p.lineHeight, '31.7333px', ctx('body line-height should stay 1.7 (31.7333px)'));
       assert.equal(p.marginTop, '0px', ctx('body paragraph margin-top should stay 0'));
       assert.equal(p.marginBottom, '0px', ctx('body paragraph margin-bottom should stay 0'));
       assert.notEqual(p.color, 'rgba(0, 0, 0, 0)', ctx('body text color should be set'));

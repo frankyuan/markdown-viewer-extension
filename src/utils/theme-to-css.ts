@@ -849,7 +849,7 @@ ${styles.join('\n')}
     const marginAfter = toPx(blocks.table.spacingAfter);
     const bodyPt = parseFloat(layoutScheme.body.fontSize);
     const tableScale = blocks.table.fontScale ?? 0.85;
-    const tableLineHeight = blocks.table.lineHeight ?? 1.15;
+    const tableLineHeight = blocks.table.lineHeight ?? 1.4;
     const tableStyles: string[] = [
       `  margin: ${marginBefore} auto ${marginAfter} auto;`,
       `  font-size: ${themeManager.ptToPx(`${bodyPt * tableScale}pt`)};`,

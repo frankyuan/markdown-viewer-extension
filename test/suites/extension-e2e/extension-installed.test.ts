@@ -478,9 +478,9 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
         await waitForContent(mode, 'p');
         const m = await measure(mode, [`${contentSel(mode)} p`]);
         const p = firstOf(m, `${contentSel(mode)} p`);
-        // 14pt body theme (db81b3c): 14pt = 18.6667px, line-height 1.5 = 28px.
+        // 14pt body theme: 14pt = 18.6667px, line-height 1.7 = 31.7333px.
         assert.equal(p.fontSize, '18.6667px', ctx('body font size should stay 18.6667px'));
-        assert.equal(p.lineHeight, '28px', ctx('body line-height should stay 1.5 (28px)'));
+        assert.equal(p.lineHeight, '31.7333px', ctx('body line-height should stay 1.7 (31.7333px)'));
         assert.notEqual(p.color, 'rgba(0, 0, 0, 0)', ctx('body text color should be set'));
         assert.ok(p.fontFamily.includes('FangSong'), ctx('body font stack should keep FangSong first'));
       },

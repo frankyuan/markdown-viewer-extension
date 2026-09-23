@@ -210,7 +210,7 @@ export interface LayoutBlockConfig {
    *  back to a global default so tables read distinct from body text across
    *  every theme. Applied in web rendering and DOCX export alike. */
   fontScale?: number;
-  /** Block text line-height multiplier (e.g. 1.15 for tables). Falls back to
+  /** Block text line-height multiplier (e.g. 1.4 for tables). Falls back to
    *  a global table default, or the body line-height for other blocks. */
   lineHeight?: number;
 }

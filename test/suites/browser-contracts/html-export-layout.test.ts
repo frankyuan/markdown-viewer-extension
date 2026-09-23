@@ -181,8 +181,8 @@ describe('HTML export layout contract (single CSS source)', () => {
     assert.equal(content.paddingTop, '0px', 'Content root must be pure content (no padding)');
     assert.equal(
       page.paddingTop,
-      '20px',
-      'Page container must carry a modest card gutter (20px, matching the panel layouts)',
+      '24px',
+      'Page container must carry the reading card gutter (24px vertical / 48px horizontal)',
     );
   });
 
