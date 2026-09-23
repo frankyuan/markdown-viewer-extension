@@ -17,10 +17,10 @@
   },
   
   "background": {
-    "page": "#fdf8f3",
-    "surface": "#faeedf",
-    "code": "#faf5f0",
-    "blockquote": "#fbead6"
+    "page": "#fefcf9",
+    "surface": "#f4efe7",
+    "code": "#f1eee7",
+    "blockquote": "#f5f2ec"
   },
   
   "blockquote": {
@@ -29,9 +29,9 @@
   
   "table": {
     "border": "#a8a29e",
-    "headerBackground": "#fef3e2",
+    "headerBackground": "#f1ede5",
     "headerText": "#1c1917",
-    "zebraEven": "#fffbf5",
-    "zebraOdd": "#fffcf7"
+    "zebraEven": "#fdfbf8",
+    "zebraOdd": "#ffffff"
   }
 }

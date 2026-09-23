@@ -19,8 +19,8 @@
   "background": {
     "page": "#f6fbf5",
     "surface": "#e4f3e6",
-    "code": "#f0fdf4",
-    "blockquote": "#dcfce7"
+    "code": "#eaf1ec",
+    "blockquote": "#e6efe8"
   },
   
   "blockquote": {
@@ -29,9 +29,9 @@
   
   "table": {
     "border": "#4ade80",
-    "headerBackground": "#bbf7d0",
+    "headerBackground": "#d8e8dc",
     "headerText": "#14532d",
-    "zebraEven": "#f0fdf4",
-    "zebraOdd": "#fefce8"
+    "zebraEven": "#eef5f0",
+    "zebraOdd": "#ffffff"
   }
 }
