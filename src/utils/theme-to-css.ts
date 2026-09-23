@@ -155,6 +155,26 @@ function mixColors(first: string, firstWeightPercent: number, second: string): s
   return formatColor({ r, g, b, a: 1 });
 }
 
+/**
+ * Perceived brightness of a color (ITU-R BT.601 luma, 0..255).
+ * Used to pick an ink that stays legible on top of a theme color.
+ */
+function brightness(color: string): number {
+  const rgb = parseColor(color);
+  if (!rgb) {
+    return 255;
+  }
+  return 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b;
+}
+
+/**
+ * Ink color to draw on top of `background`: the dark ink on light fills, the
+ * light ink on dark fills.
+ */
+function contrastInk(background: string, light = '#ffffff', dark = '#1f1f1f'): string {
+  return brightness(background) > 150 ? dark : light;
+}
+
 // ============================================================================
 // Type Definitions
 // ============================================================================
@@ -355,6 +375,9 @@ export function themeToCSS(
   css.push(generateBlockSpacingCSS(layoutScheme, colorScheme, firstLineIndent));
 
   css.push(generateFootnoteCSS());
+
+  // GFM task-list checkboxes (li.task-list-item)
+  css.push(generateTaskListCSS(colorScheme));
 
   // GitHub-style alerts (blockquote.markdown-alert)
   css.push(generateAlertCSS(colorScheme));
@@ -925,6 +948,85 @@ function generateFootnoteCSS(): string {
 }
 #markdown-content section.footnotes .footnote-item > .footnote-content > :last-child {
   margin-bottom: 0;
+}
+`.trim();
+}
+
+/**
+ * Box edge length in em of the body font — the native checkbox proportion.
+ */
+const TASK_BOX_EM = 0.75;
+/**
+ * Marker gutter the box hangs in: the top-level list padding (1em, see
+ * `#markdown-content ul` in styles.css). remark-gfm puts a space between the
+ * box and the label, so pulling the box by exactly the gutter width puts the
+ * box's left edge on the gutter's left edge AND lands the label on the list's
+ * text edge — mixed bullet/task items stay aligned, and the gap scales with
+ * the body font instead of being a hard-coded value.
+ */
+const TASK_BOX_GUTTER_EM = 1;
+
+/**
+ * Generate CSS for GFM task-list checkboxes (`#markdown-content li.task-list-item`).
+ *
+ * remark-gfm renders `- [x]` as `<input type="checkbox" disabled>` inside
+ * `li.task-list-item` — a direct child in a tight list, inside the item's first
+ * `<p>` in a loose one, so the box is matched as a descendant. Left to the UA, a
+ * disabled checkbox is painted from the platform's control palette, never from
+ * the theme: with the OS in dark mode the box is a near-black square whose check
+ * mark is a barely lighter gray (issue #131 — checked and unchecked are
+ * indistinguishable), and even in the light palette the checked state is a
+ * washed-out gray. The box is therefore drawn explicitly from the color scheme,
+ * so both states stay legible and on theme in every host (browser, standalone
+ * HTML, EPUB). The check mark is an inline SVG so no font or image file is
+ * needed.
+ *
+ * @param colorScheme - Color scheme configuration (page/accent/text colours)
+ * @returns CSS string for task-list checkbox styling
+ */
+function generateTaskListCSS(colorScheme: ColorScheme): string {
+  const page = colorScheme.background.page || '#ffffff';
+  const accent = colorScheme.accent.link;
+  // Mid-tone derived from the body ink: visible on the page and on tinted
+  // surfaces (blockquotes, zebra rows) without competing with body text.
+  const borderColor = mixColors(colorScheme.text.primary, 28, page);
+  // `#` must be percent-encoded for use inside a CSS url().
+  const checkColor = contrastInk(accent).replace('#', '%23');
+  const checkMark = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='${checkColor}' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E")`;
+
+  return `
+#markdown-content li.task-list-item {
+  /* GitHub convention: a task item shows its box instead of a bullet/number. */
+  list-style: none;
+}
+#markdown-content li.task-list-item input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  /* Form controls don't inherit the document font: without this the em values
+     below resolve against the UA's control font (~13px) instead of the body
+     font, so the box and its gutter pull would both come out too small. */
+  font-size: inherit;
+  width: ${TASK_BOX_EM}em;
+  height: ${TASK_BOX_EM}em;
+  /* Hang the box in the marker gutter: its left edge sits on the gutter's left
+     edge and the label keeps the list's text edge (remark-gfm's own space is
+     the gap). See TASK_BOX_GUTTER_EM. */
+  margin: 0 0 0 -${TASK_BOX_GUTTER_EM}em;
+  border: 1px solid ${borderColor};
+  border-radius: 0.2em;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100%;
+  vertical-align: -0.05em;
+  /* remark-gfm marks the box disabled: keep it looking like a live control
+     instead of the UA's dimmed/grayed rendering. */
+  opacity: 1;
+}
+#markdown-content li.task-list-item input[type="checkbox"]:checked {
+  border-color: ${accent};
+  background-color: ${accent};
+  background-image: ${checkMark};
 }
 `.trim();
 }

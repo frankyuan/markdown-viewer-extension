@@ -249,3 +249,175 @@ describe('List indentation contract (E2E)', () => {
     }
   });
 });
+
+/**
+ * GFM task items render a checkbox instead of a bullet/number (GitHub
+ * convention). The box must hang in the marker gutter, so the label text keeps
+ * the same left edge as a plain list item — a mixed bullet/task list must not
+ * look ragged — and the box must not stick out of the list box.
+ */
+const TASK_LIST_FIXTURE = path.resolve('test/fixtures/layout/task-list.md');
+
+describe('Task-list marker contract (web preview)', () => {
+  let harness: BrowserRenderHarness;
+
+  before(async () => {
+    harness = await createBrowserRenderHarness({ inputPath: TASK_LIST_FIXTURE });
+  });
+
+  after(async () => {
+    await harness.dispose();
+  });
+
+  it('hangs the box in the marker gutter and keeps the label on the list text edge', async () => {
+    await harness.measureLayout(TASK_LIST_FIXTURE, [ROOT_SELECTOR], { ...FIXED_PARAMS, firstLineIndent: 0 });
+
+    // Measured in-page: geometry of a plain bullet item vs the tight and loose
+    // task items, plus the first text character of each item (via a Range, so
+    // the marker — not the li box — is what we compare).
+    const metrics = await harness.evaluateInPage(() => {
+      const content = document.getElementById('markdown-content');
+      if (!content) throw new Error('#markdown-content is missing');
+
+      const textLeft = (root: Element): number | null => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode();
+        while (node && !/\S/.test(node.textContent ?? '')) node = walker.nextNode();
+        if (!node) return null;
+        const text = node.textContent ?? '';
+        const index = text.search(/\S/);
+        const range = document.createRange();
+        range.setStart(node as Text, index);
+        range.setEnd(node as Text, index + 1);
+        return range.getBoundingClientRect().left;
+      };
+
+      const topLists = Array.from(content.querySelectorAll('ul')).filter((ul) => !ul.closest('li'));
+      const plainItem = topLists
+        .flatMap((ul) => Array.from(ul.children))
+        .find((li) => !li.classList.contains('task-list-item'));
+      const taskItem = (kind: 'tight' | 'loose'): Element | undefined =>
+        topLists
+          .flatMap((ul) => Array.from(ul.children))
+          .find((li) => {
+            if (!li.classList.contains('task-list-item')) return false;
+            return kind === 'tight'
+              ? Boolean(li.querySelector(':scope > input[type="checkbox"]'))
+              : Boolean(li.querySelector(':scope > p > input[type="checkbox"]'));
+          });
+
+      const describeItem = (li: Element | undefined, kind: 'plain' | 'tight' | 'loose') => {
+        if (!li) return null;
+        const box = li.querySelector('input[type="checkbox"]');
+        const boxRect = box?.getBoundingClientRect();
+        return {
+          kind,
+          marker: getComputedStyle(li).listStyleType,
+          liLeft: li.getBoundingClientRect().left,
+          textLeft: textLeft(li),
+          boxLeft: boxRect ? boxRect.left : null,
+          boxRight: boxRect ? boxRect.right : null,
+          boxWidth: boxRect ? boxRect.width : null,
+          listLeft: li.parentElement ? li.parentElement.getBoundingClientRect().left : null,
+        };
+      };
+
+      return {
+        bodyFontPx: parseFloat(getComputedStyle(content).fontSize),
+        plain: describeItem(plainItem, 'plain'),
+        tight: describeItem(taskItem('tight'), 'tight'),
+        loose: describeItem(taskItem('loose'), 'loose'),
+      };
+    });
+
+    const { plain, tight, loose, bodyFontPx } = metrics;
+    assert.ok(plain?.textLeft != null, 'fixture must contain a plain bullet item');
+    assert.ok(tight?.textLeft != null && tight.boxLeft != null, 'fixture must contain a tight task item');
+    assert.ok(loose?.textLeft != null && loose.boxLeft != null, 'fixture must contain a loose task item');
+
+    const tolerance = 1.5;
+    for (const item of [tight, loose]) {
+      assert.equal(item.marker, 'none', `task item (${item.kind}) must not paint a bullet/number marker`);
+      assert.ok(
+        Math.abs(item.textLeft! - plain.textLeft!) <= tolerance,
+        `task item (${item.kind}) label starts at ${item.textLeft}, plain list item at ${plain.textLeft} — ` +
+          `the box must hang in the marker gutter, not push the text right`,
+      );
+      assert.ok(
+        item.boxRight! <= item.textLeft! + tolerance,
+        `task item (${item.kind}) box must end before its label starts`,
+      );
+      assert.ok(
+        item.boxLeft! >= item.listLeft! - tolerance,
+        `task item (${item.kind}) box must not overhang the list's left edge`,
+      );
+    }
+
+    // Box metrics come from the theme CSS: a 0.75em square pulled by exactly
+    // the 1em top-level marker gutter — its left edge sits on the gutter's
+    // left edge (where a "10." marker starts) and the label keeps the list's
+    // text edge.
+    assert.ok(
+      Math.abs(tight.boxWidth! - 0.75 * bodyFontPx) <= 1,
+      `box width ${tight.boxWidth} should be 0.75em of ${bodyFontPx}px body text`,
+    );
+    assert.ok(
+      Math.abs(tight.boxLeft! - tight.listLeft!) <= 1.5,
+      `box left ${tight.boxLeft} should sit on the list's left edge ${tight.listLeft}`,
+    );
+  });
+
+  it('nested task items keep the same gutter behaviour', async () => {
+    await harness.measureLayout(TASK_LIST_FIXTURE, [ROOT_SELECTOR], { ...FIXED_PARAMS, firstLineIndent: 0 });
+
+    const nested = await harness.evaluateInPage(() => {
+      const content = document.getElementById('markdown-content');
+      if (!content) throw new Error('#markdown-content is missing');
+
+      // Second level in the mixed list: a plain bullet and a task item sit in
+      // the same level, so the task label must line up with the bullet's.
+      const items = Array.from(content.querySelectorAll('li li'));
+      const nestedTask = items.find((li) => li.classList.contains('task-list-item'));
+      const nestedPlain = items.find((li) => !li.classList.contains('task-list-item'));
+      const box = nestedTask?.querySelector('input[type="checkbox"]');
+      if (!nestedTask || !nestedPlain || !box) return null;
+
+      const textLeft = (root: Element): number | null => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode();
+        while (node && !/\S/.test(node.textContent ?? '')) node = walker.nextNode();
+        if (!node) return null;
+        const text = node.textContent ?? '';
+        const index = text.search(/\S/);
+        const range = document.createRange();
+        range.setStart(node as Text, index);
+        range.setEnd(node as Text, index + 1);
+        return range.getBoundingClientRect().left;
+      };
+
+      return {
+        marker: getComputedStyle(nestedTask).listStyleType,
+        textLeft: textLeft(nestedTask),
+        plainTextLeft: textLeft(nestedPlain),
+        boxLeft: box.getBoundingClientRect().left,
+        boxRight: box.getBoundingClientRect().right,
+        listLeft: nestedTask.parentElement ? nestedTask.parentElement.getBoundingClientRect().left : null,
+      };
+    });
+
+    assert.ok(nested, 'fixture must contain a nested task item next to a plain bullet');
+    assert.equal(nested!.marker, 'none', 'nested task item must not paint a marker either');
+    assert.ok(
+      Math.abs(nested!.textLeft! - nested!.plainTextLeft!) <= 1.5,
+      `nested task label starts at ${nested!.textLeft}, plain nested bullet at ${nested!.plainTextLeft}`,
+    );
+    assert.ok(
+      nested!.boxLeft! >= nested!.listLeft! - 1.5,
+      'nested box must not overhang its own (2em) list gutter',
+    );
+    assert.ok(
+      nested!.boxLeft! < nested!.textLeft! && nested!.boxRight! <= nested!.textLeft! + 1.5,
+      'nested box must hang left of its label text',
+    );
+  });
+});

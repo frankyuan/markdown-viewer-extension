@@ -127,6 +127,22 @@
   --gray-900: #e6e6e6;
 }
 
+/* The viewer paints every colour it shows, so the used color-scheme must
+   follow the THEME, not the OS. The takeover page preloads
+   `:root { color-scheme: light dark }` (so the boot canvas is dark in dark
+   mode), which hands UA-painted widgets to the OS: on a light theme in dark
+   mode the browser paints OS-dark native controls — e.g. a task-list checkbox
+   as a near-black square whose check mark is a barely lighter gray. `only`
+   also opts the content out of UA forced-darkening, since the theme is
+   already the source of truth for both schemes. */
+:root.light {
+  color-scheme: only light;
+}
+
+:root.dark {
+  color-scheme: only dark;
+}
+
 /* Dark scrollbars — WebKit/Chromium only. Falls back silently elsewhere. */
 :root.dark ::-webkit-scrollbar {
   width: 10px;
