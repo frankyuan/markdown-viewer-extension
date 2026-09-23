@@ -1,8 +1,16 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
+/**
+ * Docs homepage i18n gate — every language in the menu must have pageMeta,
+ * translations, and a full set of the keys used by docs/index.html, and the
+ * values must not be copy-pasted English or in an unexpected writing system.
+ *
+ * Consumed by test/suites/project-gates/homepage-i18n.test.ts.
+ */
 
-const repoRoot = path.resolve(__dirname, '..');
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+
+const repoRoot = path.join(import.meta.dirname, '../..');
 const indexPath = path.join(repoRoot, 'docs', 'index.html');
 const i18nDir = path.join(repoRoot, 'docs', 'assets', 'js', 'i18n');
 
@@ -211,40 +219,19 @@ function parseObjectEntries(source, objectStart, objectEnd) {
   return entries;
 }
 
-function findRootObjectBounds(source) {
-  const assignIndex = source.indexOf('=');
-  if (assignIndex === -1) {
-    throw new Error('Missing DOCUMD_HOMEPAGE_I18N assignment');
-  }
 
-  const objectStart = source.indexOf('{', assignIndex);
-  if (objectStart === -1) {
-    throw new Error('Missing root object literal');
-  }
-
-  return {
-    start: objectStart,
-    end: readBalancedEnd(source, objectStart, source.length),
-  };
-}
-
-function collectDuplicateLocaleKeys(source, sectionName) {
-  const rootBounds = findRootObjectBounds(source);
-  const rootEntries = parseObjectEntries(source, rootBounds.start, rootBounds.end);
-  const section = rootEntries.find((entry) => entry.name === sectionName);
-  if (!section || !section.isObject) {
-    return [];
-  }
-
-  const localeEntries = parseObjectEntries(source, section.valueStart, section.valueEnd);
+// The i18n bundles assign per-locale objects (`root.translations["en"] = {…}`),
+// so duplicates can only be found inside those object literals — a repeated key
+// there silently drops the earlier value. Exported for the gate's self-test.
+export function detectDuplicateLocaleKeys(source, sectionName) {
+  const assignment = new RegExp(`root\\.${sectionName}\\s*\\[\\s*['"]([^'"]+)['"]\\s*\\]\\s*=\\s*\\{`, 'g');
   const duplicates = [];
+  let match;
 
-  for (const localeEntry of localeEntries) {
-    if (!localeEntry.isObject) {
-      continue;
-    }
-
-    const keyEntries = parseObjectEntries(source, localeEntry.valueStart, localeEntry.valueEnd);
+  while ((match = assignment.exec(source)) !== null) {
+    const objectStart = source.indexOf('{', match.index + match[0].length - 1);
+    const objectEnd = readBalancedEnd(source, objectStart, source.length);
+    const keyEntries = parseObjectEntries(source, objectStart, objectEnd);
     const seen = new Set();
     const repeated = [];
 
@@ -259,7 +246,7 @@ function collectDuplicateLocaleKeys(source, sectionName) {
     if (repeated.length > 0) {
       duplicates.push({
         section: sectionName,
-        locale: localeEntry.name,
+        locale: match[1],
         keys: repeated,
       });
     }
@@ -521,7 +508,12 @@ const translatableKeys = requiredKeys.filter((key) => !EXCLUDED_KEYS.has(key));
 const menuLanguages = extractMenuLanguages(html);
 
 const issues = [];
-const duplicateIssues = [];
+const duplicateIssues = fs
+  .readdirSync(i18nDir)
+  .filter((file) => file.endsWith('.js'))
+  .flatMap((file) =>
+    detectDuplicateLocaleKeys(fs.readFileSync(path.join(i18nDir, file), 'utf-8'), 'translations')
+  );
 const scriptMismatchIssues = collectScriptMismatchIssues(translations);
 const crossLocaleCopyIssues = collectCrossLocaleCopyIssues(translations, fallbackLocales);
 const untranslatedIssues = collectUntranslatedKeys(translations);
@@ -593,17 +585,19 @@ for (const untranslated of untranslatedIssues) {
   );
 }
 
-console.log(`Homepage i18n keys: ${requiredKeys.length}`);
-console.log(`Homepage language menu: ${menuLanguages.length}`);
-
-if (issues.length === 0) {
-  console.log('All homepage i18n keys are covered.');
-  process.exit(0);
+/**
+ * @returns {{ issues: string[], keyCount: number, menuLanguages: string[],
+ *   duplicateCount: number, scriptMismatchCount: number,
+ *   crossLocaleCopyCount: number, untranslatedCount: number }}
+ */
+export function checkHomepageI18n() {
+  return {
+    issues,
+    keyCount: requiredKeys.length,
+    menuLanguages,
+    duplicateCount: duplicateIssues.length,
+    scriptMismatchCount: scriptMismatchIssues.length,
+    crossLocaleCopyCount: crossLocaleCopyIssues.length,
+    untranslatedCount: untranslatedIssues.length,
+  };
 }
-
-console.log('Homepage i18n coverage issues:');
-for (const issue of issues) {
-  console.log(`- ${issue}`);
-}
-
-process.exitCode = 1;

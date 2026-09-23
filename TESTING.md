@@ -24,7 +24,7 @@ The project has two explicit test commands:
 
 | Command | Runtime | Scope |
 |---|---|---|
-| `npm run test:unit` | fibjs | Compatibility-sensitive unit, DOM, browser-contract, and export-contract suites registered by `test/all.test.js` |
+| `npm run test:unit` | fibjs | Compatibility-sensitive unit, DOM, browser-contract, export-contract and repository-gate suites registered by `test/all.test.js` — the gates (theme system + design, settings centralization, locale coverage, homepage i18n) run here instead of as separate manual check scripts |
 | `npm run test:e2e` | Node.js + Playwright | The real built Chrome extension, including extension pages, file opening modes, workspace previews, SUMMARY navigation, context menus, clipboard payloads, and downloads |
 | `npm test` | both | Runs `test:unit` first, then the independent extension E2E command |
 
@@ -112,6 +112,7 @@ Use the existing directories as the default module boundaries:
 | `src/ui/` | Viewer and interaction UI behavior |
 | `chrome/src/` | Chrome extension shell, workspace, popup, and webview adapters |
 | `test/helpers/` | Reusable test harnesses and mechanics |
+| `test/gates/` | Repository gate libraries (theme, settings, locale, homepage i18n) imported by the `project-gates` suite and by the platform builds |
 | `test/suites/` | Capability-focused unit, contract, and E2E suites |
 | `test/fixtures/` | Versioned local test inputs and assets |
 

@@ -23,5 +23,6 @@ import './suites/table-export/index.js';
 import './suites/plugin-rewrites/index.js';
 import './suites/renderers-theme/index.js';
 import './suites/charset-recovery/index.js';
+import './suites/project-gates/index.js';
 import './suites/browser-contracts/index.js';
 import './suites/export-contracts/index.js';

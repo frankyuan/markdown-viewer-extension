@@ -45,7 +45,9 @@ function syncVersion() {
 async function checkMissingKeys() {
   console.log('📦 Checking translations...');
   try {
-    await import('../scripts/check-missing-keys.js');
+    // Shared with the unit suite (test/suites/project-gates/i18n-keys.test.ts)
+    const { checkI18nKeys, printI18nKeyReport } = await import('../test/gates/i18n-keys.js');
+    printI18nKeyReport(checkI18nKeys());
   } catch (error) {
     console.error('⚠️  Warning: Failed to check translation keys:', error.message);
   }
