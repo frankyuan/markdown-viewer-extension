@@ -8,3 +8,10 @@ function hello(name) {
 ```
 
 Inline `code` inside a paragraph.
+
+```markdown
+# Heading in a fence
+
+- [x] task with **strong**
+```
+

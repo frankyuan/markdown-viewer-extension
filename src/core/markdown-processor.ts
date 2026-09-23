@@ -16,7 +16,7 @@ import rehypeSlugShared from './rehype-slug-shared';
 import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeStringify from 'rehype-stringify';
-import { codeToHast, createShikiInternalSync } from '@shikijs/core';
+import { codeToHast, createShikiInternalSync, type ShikiTransformer } from '@shikijs/core';
 import { createJavaScriptRegexEngine } from '@shikijs/engine-javascript';
 import langMarkdown from '@shikijs/langs/markdown';
 import themeVitesseDark from '@shikijs/themes/vitesse-dark';
@@ -554,11 +554,43 @@ function isDarkThemeActive(): boolean {
   return Boolean(document?.documentElement?.classList?.contains('dark'));
 }
 
+/**
+ * Hand the code surface back to the theme.
+ *
+ * Shiki paints its own `background-color` (vitesse white/black) inline on the
+ * `<pre>`, and an inline declaration beats the viewer's
+ * `#markdown-content pre { background-color: … }` rule — so a ```markdown
+ * fence used to sit on Shiki's colour while every other code block sat on the
+ * theme's code background. Only the background is dropped: the token colours
+ * (inline on the spans) are what makes the fence syntax highlighted.
+ */
+const themeOwnedCodeBackground: ShikiTransformer = {
+  name: 'documd-theme-owned-code-background',
+  pre(node) {
+    const style = node.properties?.style;
+    if (typeof style !== 'string') {
+      return;
+    }
+
+    const declarations = style
+      .split(';')
+      .map((declaration) => declaration.trim())
+      .filter((declaration) => declaration !== '' && !/^background(-color)?\s*:/i.test(declaration));
+
+    if (declarations.length > 0) {
+      node.properties.style = declarations.join(';');
+    } else {
+      delete node.properties.style;
+    }
+  },
+};
+
 function getMarkdownShikiPre(code: string): any | null {
   try {
     const root = codeToHast(markdownShikiInternal, code, {
       lang: 'markdown',
       theme: isDarkThemeActive() ? themeVitesseDark : themeVitesseLight,
+      transformers: [themeOwnedCodeBackground],
     });
     return root.children.find((child: any) => child?.type === 'element' && child?.tagName === 'pre') || null;
   } catch {

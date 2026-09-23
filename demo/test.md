@@ -504,6 +504,28 @@ ORDER BY post_count DESC
 LIMIT 20;
 ```
 
+**MarkDown：**
+```markdown
+# <想法 slug>
+> 状态：评估中 / go / needs-clarification / kill · 日期 · 评估人
+> 输入：<文本 / 链接 / 工单 / 代码指针>
+
+## intake — 原始想法（**不改写**）
+## research
+### 支持证据
+- <陈述> — 来源 <…> — 置信度 <cited / ASSUMPTION>
+### 反对证据（**必须有**）
+- <陈述> — 来源 <…> — 置信度 <…>
+## problem
+- 受影响用户 · 目标 · **非目标** · 成功度量 · **不作为的代价**
+## concept（2–3 个）
+| 方案 | 一句话 | appetite（时间/成本上限） | 取舍 | 可逆性 |
+## decide
+| 判据 | 评级 strong / adequate / weak / unknown | 理由（指回上面的产物） |
+**裁决**：<go / needs-clarification / kill> — <一句话理由>
+**交接**：<go → 给 requirements.md 的摘要；kill → 归档位置>
+```
+
 ---
 
 ## 6. 数学公式 (KaTeX)

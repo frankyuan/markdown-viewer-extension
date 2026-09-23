@@ -16,7 +16,7 @@
     "vscode/src/webview/main.ts",
     "vscode/src/host/extension.ts",
     "scripts/*.js",
-    "test/*.test.{js,ts}"
+    "test/**/*.test.{js,ts}"
   ],
   "ignore": [
     "temp/**",

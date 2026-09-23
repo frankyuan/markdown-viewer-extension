@@ -375,6 +375,26 @@ describe('Baseline: fixed theme "default"', () => {
       assert.notEqual(pre.backgroundColor, 'rgba(0, 0, 0, 0)', 'pre should have a background');
     });
 
+    it('markdown fences sit on the code surface, not on Shiki’s own background', async () => {
+      const m = await harness.measureLayout(
+        path.join(LAYOUT_DIR, 'code-block.md'),
+        ['#markdown-content pre', '#markdown-content pre.shiki'],
+        { ...FIXED_PARAMS, ...CENTER },
+      );
+      // Shiki renders ```markdown blocks itself (highlight.js tokenizes fenced
+      // markdown poorly) and used to inline its own pre background, which beat
+      // #markdown-content pre — the fence lost the code surface every other
+      // block sits on.
+      const plainBlock = firstOf(m, '#markdown-content pre');
+      const markdownFence = firstOf(m, '#markdown-content pre.shiki');
+      assert.notEqual(markdownFence.backgroundColor, 'rgba(0, 0, 0, 0)', 'markdown fence should have a background');
+      assert.equal(
+        markdownFence.backgroundColor,
+        plainBlock.backgroundColor,
+        'markdown fence should share the code background with other code blocks',
+      );
+    });
+
     it('code blocks are not scroll containers (pagination-compatible overflow)', async () => {
       const m = await harness.measureLayout(
         path.join(LAYOUT_DIR, 'code-block.md'),

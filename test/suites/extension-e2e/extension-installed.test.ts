@@ -551,11 +551,22 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
       run: async (mode) => {
         const ctx = (n: string) => `[${mode}] code-block: ${n}`;
         await waitForContent(mode, 'pre');
-        const m = await measure(mode, [`${contentSel(mode)} pre`]);
+        const m = await measure(mode, [`${contentSel(mode)} pre`, `${contentSel(mode)} pre.shiki`]);
         const pre = firstOf(m, `${contentSel(mode)} pre`);
         assert.equal(pre.overflowX, 'visible', ctx('pre must not be a horizontal scroll container (pagination)'));
         assert.equal(pre.overflowY, 'visible', ctx('pre must not be a vertical scroll container (pagination)'));
         assert.notEqual(pre.backgroundColor, 'rgba(0, 0, 0, 0)', ctx('pre should have a background'));
+        // ```markdown fences are rendered by Shiki (better tokenizer than
+        // highlight.js); Shiki used to inline its own white/black pre
+        // background, which beat the theme rule and left the fence without the
+        // code surface every other block sits on.
+        const fence = firstOf(m, `${contentSel(mode)} pre.shiki`);
+        assert.notEqual(fence.backgroundColor, 'rgba(0, 0, 0, 0)', ctx('markdown fence should have a background'));
+        assert.equal(
+          fence.backgroundColor,
+          pre.backgroundColor,
+          ctx('markdown fence should share the code background with other code blocks'),
+        );
       },
     },
     {

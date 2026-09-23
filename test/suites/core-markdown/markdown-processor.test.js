@@ -211,6 +211,24 @@ describe('markdown-processor', () => {
       assert.ok(output.includes('# not heading'), 'Should preserve fenced code content');
       assert.ok(!output.includes('hljs-bullet'), 'Should no longer use the fallback highlight.js markdown tokenizer');
     });
+
+    it('should leave the code background to the theme, not Shiki', async () => {
+      const processor = createMarkdownProcessor(
+        { render: async () => null },
+        new AsyncTaskManager(),
+      );
+
+      const output = String(await processor.process('```markdown\n# Title\n```\n'));
+      const preTag = output.match(/<pre[^>]*>/)?.[0] ?? '';
+
+      assert.ok(preTag.includes('class="shiki vitesse-light"'), 'Should render the Shiki pre');
+      // #markdown-content pre carries the theme's code background; Shiki's
+      // inline background (vitesse white) used to win over it, so the fence
+      // lost the document's code surface.
+      assert.ok(!/background/i.test(preTag), 'Shiki must not inline a code background');
+      assert.ok(preTag.includes('color:'), 'Should keep the Shiki foreground on the pre');
+      assert.ok(/<span[^>]*style="[^"]*color:/.test(output), 'Should keep inline token colours');
+    });
   });
 
   describe('hashCode', () => {
