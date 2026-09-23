@@ -43,7 +43,8 @@ extension is a known output format; the input extension must be a known input
 format (.md/.markdown/.mdown/.mkd/.txt or a diagram source like .puml/.mmd/...).
 
 Output formats (--format; inferred from the output extension when omitted):
-  html, epub, docx, pdf        markdown / SUMMARY.md (--book) documents
+  html, epub, docx, pdf, png   markdown / SUMMARY.md (--book) documents
+                               (png = full-page screenshot of the rendered page)
   svg, png, drawio             diagram sources (PlantUML/Mermaid/DOT/Vega/...)
 
 Exporting figures and images (--assets, Markdown input):
@@ -77,6 +78,8 @@ Options:
       --diagram-layout <mode> left or center (default: ${DEFAULT_RENDER_SETTINGS.diagramLayout})
       --merge-empty-cells   Merge empty Markdown table cells (default: on)
       --first-line-indent <n>  First-line indent in characters, 0-4 (default: ${DEFAULT_RENDER_SETTINGS.firstLineIndent})
+      --png-width <px>      Viewport width for --format png on a document (default: 1180)
+      --png-scale <n>       Device pixel ratio for --format png, 1-4 (default: 2)
       --chrome <path>       Explicit Chrome/Chromium binary (DOCUMD_CHROME_PATH)
       --browser-arg <flag>  Extra Chromium flag, repeatable (DOCUMD_CHROME_ARGS)
       --timeout <seconds>   Overall render timeout (default: 120)
@@ -229,6 +232,20 @@ export function parseArgs(args) {
       }
       options.firstLineIndent = chars;
       i += 1;
+    } else if (arg === '--png-width') {
+      const width = Number(takeValue(args, i, arg));
+      if (!Number.isFinite(width) || width < 200 || width > 4000) {
+        throw new Error('--png-width must be a number between 200 and 4000 (pixels)');
+      }
+      options.pngWidth = width;
+      i += 1;
+    } else if (arg === '--png-scale') {
+      const scale = Number(takeValue(args, i, arg));
+      if (!Number.isFinite(scale) || scale < 1 || scale > 4) {
+        throw new Error('--png-scale must be a number between 1 and 4');
+      }
+      options.pngScale = scale;
+      i += 1;
     } else if (arg === '--chrome') {
       options.chromePath = takeValue(args, i, arg);
       i += 1;
@@ -354,7 +371,11 @@ export function parseArgs(args) {
   }
 
   const diagramInput = isDiagramInput(options.input);
-  if (DIAGRAM_FORMATS.includes(options.format)) {
+  if (options.format === 'png') {
+    // png serves both inputs: a diagram source exports its single figure, a
+    // document exports a full-page screenshot of the rendered viewer page.
+    options.diagramMode = diagramInput;
+  } else if (DIAGRAM_FORMATS.includes(options.format)) {
     if (!diagramInput) {
       throw new Error(`Format "${options.format}" requires a diagram input (PlantUML/Mermaid/DOT/Vega/...); "${options.input}" is not one`);
     }
@@ -907,6 +928,83 @@ export async function renderMarkdownFile(options) {
 
     await ensureOutputDirectory(outputPath);
     await fs.writeFile(outputPath, html, 'utf8');
+    return { outputPath, browserErrors, diagnostics: await readPageDiagnostics(page) };
+  } finally {
+    await browser?.close();
+    await server.close();
+  }
+}
+
+/**
+ * Full-page PNG screenshot of the rendered document — the viewer card with its
+ * page / code / blockquote / table backgrounds captured as they look on screen,
+ * so a theme or visual audit needs no separate browser screenshot step.
+ */
+export async function exportMarkdownPng(options) {
+  const inputPath = path.resolve(options.input);
+  const outputPath = outputPathFor(inputPath, options.output, 'png');
+  const markdown = await fs.readFile(inputPath, 'utf8');
+
+  await fs.access(path.join(cliAssetDir, 'browser-renderer.js')).catch(() => {
+    throw new Error('CLI browser assets are missing. Run "npm run build:cli" first.');
+  });
+
+  const server = await startAssetServer(path.dirname(inputPath));
+  let browser;
+  try {
+    browser = await launchBrowser(options);
+
+    const page = await browser.newPage({
+      viewport: { width: options.pngWidth || 1180, height: 1200 },
+      deviceScaleFactor: options.pngScale || 2,
+    });
+    const browserErrors = [];
+    page.on('console', (message) => {
+      if ((message.type() === 'error' || message.type() === 'warning') && !browserErrors.includes(message.text())) {
+        browserErrors.push(message.text());
+      }
+    });
+    page.on('pageerror', (error) => browserErrors.push(error.message));
+
+    await page.goto(server.pageUrl, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof window.markdownCli?.snapshotDom === 'function');
+
+    await withTimeout(page.evaluate((request) => {
+      return window.markdownCli.snapshotDom(request);
+    }, {
+      markdown,
+      filename: path.basename(inputPath),
+      title: options.title,
+      theme: options.theme,
+      language: options.language,
+      frontmatterDisplay: options.frontmatterDisplay,
+      tableMergeEmpty: options.tableMergeEmpty,
+      tableLayout: options.tableLayout,
+      imageLayout: options.imageLayout,
+      diagramLayout: options.diagramLayout,
+      firstLineIndent: options.firstLineIndent,
+      documentPath: inputPath,
+      documentDir: path.dirname(inputPath),
+      documentBaseUrl: server.documentBaseUrl,
+      fileReadUrl: server.fileReadUrl,
+      resourceBaseUrl: server.resourceBaseUrl,
+    }), options.timeoutMs);
+
+    // The renderer page shell pins body to the viewport (height:100vh,
+    // overflow:hidden) for the live app; relax it so a full-page screenshot
+    // captures the whole card, with a vertical gutter so the page background
+    // reads distinctly from the frame surface.
+    await page.evaluate(() => {
+      const body = document.body;
+      body.style.height = 'auto';
+      body.style.minHeight = '100vh';
+      body.style.overflow = 'visible';
+      body.style.padding = '32px 0';
+    });
+
+    const png = await withTimeout(page.screenshot({ fullPage: true, type: 'png' }), options.timeoutMs);
+    await ensureOutputDirectory(outputPath);
+    await fs.writeFile(outputPath, png);
     return { outputPath, browserErrors, diagnostics: await readPageDiagnostics(page) };
   } finally {
     await browser?.close();
@@ -1726,6 +1824,10 @@ async function main() {
     }
     if (options.format === 'pdf') {
       finishExport('Exported', await exportMarkdownPdf(options), options);
+      return;
+    }
+    if (options.format === 'png' && !options.diagramMode) {
+      finishExport('Rendered', await exportMarkdownPng(options), options);
       return;
     }
     if (options.diagramMode) {
