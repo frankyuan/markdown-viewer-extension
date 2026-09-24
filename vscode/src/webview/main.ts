@@ -14,26 +14,29 @@ import type { ScrollSyncController } from '../../../src/core/line-based-scroll';
 import type { EmojiStyle } from '../../../src/types/docx.js';
 // Shared modules (same as Chrome/Mobile)
 import Localization from '../../../src/utils/localization';
-import themeManager from '../../../src/utils/theme-manager';
+import themeManager, { type FontConfigFile, type ThemeRegistry } from '../../../src/utils/theme-manager';
 import { loadAndApplyTheme } from '../../../src/utils/theme-to-css';
 import { initSlidevViewer } from '../../../src/slidev/slidev-viewer';
+import { resolveTocPresentation, type ViewerContainerMode } from '../../../src/core/viewer/viewer-session-contract';
+import { normalizeSetting, DEFAULT_SETTINGS } from '../../../src/config/settings.generated';
 
 // Shared utilities from viewer-host
 import {
   createViewerScrollSync,
   createPluginRenderer,
-  setCurrentFileKey,
-  renderMarkdownFlow,
   handleThemeSwitchFlow,
   exportDocxFlow,
+  exportEpubFlow,
   exportHtmlFlow,
 } from '../../../src/core/viewer/viewer-host';
+import { createPanelViewer, type PanelViewerController } from '../../../src/core/viewer/panel-viewer';
 
 // VSCode-specific UI components
 import { createSettingsPanel, type SettingsPanel, type ThemeOption, type LocaleOption } from './settings-panel';
 import { createSearchPanel, type SearchPanel, type HighlightMatch, type SearchOptions } from './search-panel';
 import { createTocPanel, type TocPanel } from '../../../src/ui/toc-panel';
 import { setupImageContextMenu } from '../../../src/ui/image-context-menu';
+import { setupTableContextMenu } from '../../../src/ui/table-context-menu';
 import { setupDiagramLightbox } from '../../../src/ui/diagram-lightbox';
 import { setupCodeBlockCopy } from '../../../src/ui/code-block-copy';
 import { createExportMenu, type ExportMenu } from '../../../src/ui/export-menu';
@@ -45,6 +48,10 @@ declare global {
   var VSCODE_WEBVIEW_BASE_URI: string;
   var VSCODE_NONCE: string;
   var VSCODE_CONFIG: Record<string, unknown>;
+  var VSCODE_THEME_BOOTSTRAP: {
+    fontConfig?: FontConfigFile | null;
+    registry?: ThemeRegistry | null;
+  };
 }
 
 // Make platform globally available (required by loadAndApplyTheme)
@@ -54,13 +61,26 @@ globalThis.platform = platform;
 // Global State (same pattern as Mobile)
 // ============================================================================
 
-let currentMarkdown = '';
-let currentFilename = '';
+interface CurrentDocumentState {
+  sourceContent: string;
+  renderedMarkdown: string;
+  filename: string;
+  documentKey: string;
+  baseUri: string;
+}
+
+const currentDocument: CurrentDocumentState = {
+  sourceContent: '',
+  renderedMarkdown: '',
+  filename: '',
+  documentKey: '',
+  baseUri: '',
+};
+
 let currentThemeId = 'default';
-let currentTaskManager: AsyncTaskManager | null = null;
 let currentZoomLevel = 1;
-let currentDocumentBaseUri = '';  // Base URI for resolving relative paths (images, links)
 let isSlidevMode = false;  // Whether currently showing a Slidev presentation
+let panelViewer: PanelViewerController | null = null;
 
 // Render queue for serializing updates (prevents concurrent update bugs)
 let renderQueue: Promise<void> = Promise.resolve();
@@ -71,9 +91,13 @@ let searchPanel: SearchPanel | null = null;
 let tocPanel: TocPanel | null = null;
 let exportMenu: ExportMenu | null = null;
 let currentHighlights: Map<HTMLElement, HTMLElement> = new Map(); // Original element → wrapper
+const VIEWER_CONTAINER_MODE: ViewerContainerMode = 'panel';
 
 // Create plugin renderer using shared utility
 const pluginRenderer = createPluginRenderer(platform);
+let settingsThemesLoaded = false;
+let settingsThemesLoading: Promise<void> | null = null;
+let settingsLocalesLoaded = false;
 
 // ============================================================================
 // Initialization (similar to Mobile)
@@ -85,7 +109,7 @@ async function initialize(): Promise<void> {
     platform.fileState.setBridge(vscodeBridge);
 
     // Listen for messages from extension host FIRST - before any async operations
-    // This ensures we don't miss early messages like SCROLL_TO_LINE
+    // This ensures we don't miss early messages like SYNC_HOST_NAVIGATION
     vscodeBridge.addListener((message) => {
       handleExtensionMessage(message as ExtensionMessage);
     });
@@ -98,6 +122,11 @@ async function initialize(): Promise<void> {
     // Initialize platform (includes renderer initialization)
     await platform.init();
 
+    const bootstrap = window.VSCODE_THEME_BOOTSTRAP;
+    if (bootstrap?.fontConfig && bootstrap?.registry) {
+      themeManager.initializeWithData(bootstrap.fontConfig, null, bootstrap.registry);
+    }
+
     // Initialize localization (shared with Chrome/Mobile)
     await Localization.init();
 
@@ -108,6 +137,35 @@ async function initialize(): Promise<void> {
 
     // Initialize toolbar and settings panel (after theme is loaded)
     initializeUI();
+
+    // Shared panel viewer: the document state machine over the unified
+    // renderMarkdownFlow (same controller as <markdown-viewer> elements and
+    // Obsidian). Slidev files are taken over by the hooks below; scroll
+    // persistence is handled by the external createViewerScrollSync.
+    const contentContainer = document.getElementById('markdown-content');
+    if (contentContainer) {
+      panelViewer = createPanelViewer({
+        container: contentContainer,
+        platform,
+        renderer: pluginRenderer,
+        translate: (key, subs) => Localization.translate(key, subs),
+        persistScroll: false,
+        scrollController: scrollSyncController,
+        deferAsyncRenderUntilFirstPaint: window.VSCODE_CONFIG?.deferAsyncRenderUntilFirstPaint === true,
+        onHeadings: (headings) => {
+          tocPanel?.setHeadings(headings as HeadingInfo[]);
+          updateActiveTocHeading();
+          vscodeBridge.postMessage('HEADINGS_UPDATED', headings);
+        },
+        onProgress: (completed, total) => {
+          vscodeBridge.postMessage('RENDER_PROGRESS', { completed, total });
+        },
+        applyTheme: (themeId) => loadAndApplyTheme(themeId),
+        saveTheme: (themeId) => themeManager.saveSelectedTheme(themeId),
+        isSlidevFile: (filename) => filename.toLowerCase().endsWith('.slides.md'),
+        onSlidevFile: handleSlidevFile,
+      });
+    }
 
     // Pre-initialize render iframe in background to reduce first diagram/html render latency
     platform.renderer.ensureReady().catch((error: Error) => {
@@ -121,15 +179,23 @@ async function initialize(): Promise<void> {
       console.warn('[VSCode Webview] Failed to load theme, using defaults:', error);
     }
 
-    // Load themes and locales for settings panel
-    loadThemesForSettings();
-    loadLocalesForSettings();
-    loadCacheStats();
-
     // Notify extension that webview is ready
     vscodeBridge.postMessage('READY', {});
+
+    void warmSettingsPanelData();
   } catch (error) {
     console.error('[VSCode Webview] Init failed:', error);
+  }
+}
+
+async function warmSettingsPanelData(): Promise<void> {
+  try {
+    await Promise.all([
+      loadThemesForSettings(),
+      loadLocalesForSettings(),
+      loadCacheStats(),
+    ]);
+  } catch {
   }
 }
 
@@ -145,6 +211,16 @@ interface ExtensionMessage {
 interface UpdateContentPayload {
   content: string;
   filename?: string;
+  documentKey?: string;
+  documentBaseUri?: string;
+  forceRender?: boolean;
+  scrollLine?: number;
+}
+
+interface OpenDocumentPayload {
+  content: string;
+  filename?: string;
+  documentKey?: string;
   documentBaseUri?: string;
   forceRender?: boolean;
   scrollLine?: number;
@@ -158,8 +234,46 @@ interface SetZoomPayload {
   zoom: number;
 }
 
-interface ScrollToLinePayload {
+interface SyncHostNavigationPayload {
   line: number;
+}
+
+function hasCurrentDocument(): boolean {
+  return currentDocument.filename.length > 0
+    || currentDocument.documentKey.length > 0
+    || currentDocument.sourceContent.length > 0;
+}
+
+function getCurrentDocumentPayload(overrides: {
+  forceRender?: boolean;
+  scrollLine?: number;
+} = {}): UpdateContentPayload {
+  return {
+    content: currentDocument.sourceContent,
+    filename: currentDocument.filename,
+    documentKey: currentDocument.documentKey,
+    documentBaseUri: currentDocument.baseUri || undefined,
+    ...overrides,
+  };
+}
+
+async function rerenderCurrentDocument(overrides: {
+  forceRender?: boolean;
+  scrollLine?: number;
+} = {}): Promise<void> {
+  if (!hasCurrentDocument()) {
+    return;
+  }
+
+  await handleUpdateContent(getCurrentDocumentPayload(overrides));
+}
+
+function getCurrentScrollLine(): number {
+  return scrollSyncController?.getCurrentLine() ?? 0;
+}
+
+async function rerenderCurrentDocumentPreservingScroll(): Promise<void> {
+  await rerenderCurrentDocument({ forceRender: true, scrollLine: getCurrentScrollLine() });
 }
 
 function handleExtensionMessage(message: ExtensionMessage): void {
@@ -173,6 +287,10 @@ function handleExtensionMessage(message: ExtensionMessage): void {
       renderQueue = renderQueue.then(() => handleUpdateContent(payload as UpdateContentPayload));
       break;
 
+    case 'OPEN_DOCUMENT':
+      renderQueue = renderQueue.then(() => handleOpenDocument(payload as OpenDocumentPayload));
+      break;
+
     case 'EXPORT_DOCX':
       handleExportDocx();
       break;
@@ -182,11 +300,7 @@ function handleExtensionMessage(message: ExtensionMessage): void {
       break;
 
     case 'PRINT':
-      handlePrint(payload as { inlineCSS?: string } | undefined);
-      break;
-
-    case 'SET_THEME':
-      handleSetTheme(payload as SetThemePayload);
+      handlePrint();
       break;
 
     case 'SET_ZOOM':
@@ -201,8 +315,8 @@ function handleExtensionMessage(message: ExtensionMessage): void {
       handleOpenSearch();
       break;
 
-    case 'SCROLL_TO_LINE':
-      handleScrollToLine(payload as ScrollToLinePayload);
+    case 'SYNC_HOST_NAVIGATION':
+      handleSyncHostNavigation(payload as SyncHostNavigationPayload);
       break;
 
     default:
@@ -216,9 +330,20 @@ function handleExtensionMessage(message: ExtensionMessage): void {
 // ============================================================================
 
 async function handleUpdateContent(payload: UpdateContentPayload): Promise<void> {
+  await handleDocumentUpdate(payload, false);
+}
+
+async function handleOpenDocument(payload: OpenDocumentPayload): Promise<void> {
+  await handleDocumentUpdate(payload, true);
+}
+
+async function handleDocumentUpdate(
+  payload: UpdateContentPayload | OpenDocumentPayload,
+  forceOpenDocument: boolean,
+): Promise<void> {
   const { content, filename, documentBaseUri, forceRender, scrollLine } = payload;
   const container = document.getElementById('markdown-content');
-  
+
   if (!container) {
     console.error('[VSCode Webview] Content container not found');
     return;
@@ -226,32 +351,71 @@ async function handleUpdateContent(payload: UpdateContentPayload): Promise<void>
 
   // Store document base URI for resolving relative paths
   if (typeof documentBaseUri === 'string') {
-    currentDocumentBaseUri = documentBaseUri;
-  }
-
-  // Update DocumentService with document path and base URI
-  // This enables rehype-image-uri plugin to rewrite relative image paths
-  if (filename && platform.document) {
-    platform.document.setDocumentPath(filename, currentDocumentBaseUri);
+    currentDocument.baseUri = documentBaseUri;
   }
 
   // Check if file changed
   const newFilename = filename || 'document.md';
-  const fileChanged = currentFilename !== newFilename;
+  const newDocumentKey = payload.documentKey || newFilename;
 
-  currentMarkdown = content;
-  currentFilename = newFilename;
+  currentDocument.sourceContent = content;
+  currentDocument.filename = newFilename;
+  currentDocument.documentKey = newDocumentKey;
 
-  // ── Slidev mode: .slides.md files render as presentations ────────────
-  const lowerFilename = newFilename.toLowerCase();
-  const isSlidevByExtension = lowerFilename.endsWith('.slides.md');
-  if (isSlidevByExtension) {
+  // Restore normal layout if switching from slidev mode
+  if (isSlidevMode) {
+    isSlidevMode = false;
+    const slidevContainer = document.getElementById('slidev-container');
+    if (slidevContainer) slidevContainer.remove();
+    const wrapper = document.getElementById('markdown-wrapper');
+    if (wrapper) wrapper.style.display = '';
+    const contentArea = document.getElementById('vscode-content');
+    if (contentArea) contentArea.style.display = '';
+    const root = document.getElementById('vscode-root');
+    if (root) root.style.cssText = '';
+    document.documentElement.style.cssText = '';
+    document.body.style.cssText = '';
+  }
+
+  // Keep the wrapped copy for export flows (the panel viewer wraps the same
+  // content internally when rendering).
+  currentDocument.renderedMarkdown = wrapFileContent(content, newFilename);
+
+  // Render through the shared panel viewer (document state machine +
+  // wrapFileContent + renderMarkdownFlow). Slidev files are taken over by
+  // the isSlidevFile/onSlidevFile hooks below.
+  if (!panelViewer) {
+    console.error('[VSCode Webview] panel viewer not initialized');
+    return;
+  }
+  const updateOptions = {
+    documentKey: newDocumentKey,
+    scrollLine,
+    forceRender: forceRender ?? false,
+    documentBaseUri,
+  };
+  if (forceOpenDocument) {
+    await panelViewer.openDocument(content, newFilename, updateOptions);
+  } else {
+    await panelViewer.updateContent(content, newFilename, updateOptions);
+  }
+}
+
+/**
+ * Slidev hook: .slides.md files render as presentations instead of markdown.
+ * Called by the shared panel viewer via isSlidevFile/onSlidevFile.
+ */
+async function handleSlidevFile(filename: string, content: string): Promise<void> {
+  try {
     isSlidevMode = true;
     tocPanel?.setHeadings([]);
 
-    // Hide normal markdown wrapper, use vscode-root as container
+    // Hide normal markdown wrapper and content container,
+    // use vscode-root directly as the slidev viewport
     const wrapper = document.getElementById('markdown-wrapper');
     if (wrapper) wrapper.style.display = 'none';
+    const contentArea = document.getElementById('vscode-content');
+    if (contentArea) contentArea.style.display = 'none';
 
     const root = document.getElementById('vscode-root')!;
     root.style.cssText = 'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
@@ -280,90 +444,69 @@ async function handleUpdateContent(payload: UpdateContentPayload): Promise<void>
       return themeBundles;
     }
 
-    await initSlidevViewer({
-      rawContent: content,
-      container: slidevContainer,
-      mode: 'list',
-      renderDiagram: (type, code) =>
-        platform.renderer.render(type, code).then((r) => ({
-          base64: r.base64!,
-          width: r.width,
-          height: r.height,
-        })),
-      onThemeReady: async (name) => {
-        const bundles = await fetchBundles();
-        const entry = bundles?.[name];
-        if (entry?.fonts) {
-          platform.renderer.setThemeConfig({
-            ...platform.renderer.getThemeConfig(),
-            fontFamily: entry.fonts.sans || entry.fonts.serif || undefined,
-            fontUrl: entry.fontUrl,
-            colorSchema: entry.colorSchema as 'light' | 'dark' | 'both' | undefined,
-          });
-        }
-      },
-      getShellHtml: async () => {
-        const resp = await fetch(`${baseUri}/slidev-shell-inline.html`);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const html = await resp.text();
-        return html.replaceAll('__SLIDEV_NONCE__', nonce);
-      },
-      getThemeCode: async (name) => {
-        const bundles = await fetchBundles();
-        return bundles?.[name]?.code;
-      },
-    });
-    return;
-  }
-
-  // ── Normal markdown mode ─────────────────────────────────────────────
-  // Restore normal layout if switching from slidev mode
-  if (isSlidevMode) {
+    const SLIDEV_TIMEOUT_MS = 15000;
+    await Promise.race([
+      initSlidevViewer({
+        rawContent: content,
+        container: slidevContainer,
+        mode: 'list',
+        renderDiagram: (type, code) =>
+          platform.renderer.render(type, code).then((r) => ({
+            base64: r.base64!,
+            width: r.width,
+            height: r.height,
+          })),
+        onThemeReady: async (name) => {
+          const bundles = await fetchBundles();
+          const entry = bundles?.[name];
+          if (entry?.fonts) {
+            platform.renderer.setThemeConfig({
+              ...platform.renderer.getThemeConfig(),
+              fontFamily: entry.fonts.sans || entry.fonts.serif || undefined,
+              fontUrl: entry.fontUrl,
+              colorSchema: entry.colorSchema as 'light' | 'dark' | 'both' | undefined,
+            });
+          }
+        },
+        getShellHtml: async () => {
+          const resp = await fetch(`${baseUri}/slidev-shell-inline.html`);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const html = await resp.text();
+          return html.replaceAll('__SLIDEV_NONCE__', nonce);
+        },
+        getThemeCode: async (name) => {
+          const bundles = await fetchBundles();
+          return bundles?.[name]?.code;
+        },
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Slidev init timed out after ${SLIDEV_TIMEOUT_MS}ms`)), SLIDEV_TIMEOUT_MS)
+      ),
+    ]);
+  } catch (err) {
+    console.error('[Slidev] Failed to initialize:', err);
+    // Restore normal layout and fall through to regular markdown rendering
     isSlidevMode = false;
-    const slidevContainer = document.getElementById('slidev-container');
-    if (slidevContainer) slidevContainer.remove();
     const wrapper = document.getElementById('markdown-wrapper');
     if (wrapper) wrapper.style.display = '';
+    const contentArea = document.getElementById('vscode-content');
+    if (contentArea) contentArea.style.display = '';
     const root = document.getElementById('vscode-root');
     if (root) root.style.cssText = '';
     document.documentElement.style.cssText = '';
     document.body.style.cssText = '';
+    const sc = document.getElementById('slidev-container');
+    if (sc) sc.remove();
+    // Fall through to normal markdown rendering for this document
+    if (panelViewer) {
+      await panelViewer.openDocument(content, filename || 'document.md', {
+        documentKey: currentDocument.documentKey || undefined,
+        scrollLine: undefined,
+        forceRender: true,
+        documentBaseUri: currentDocument.baseUri || undefined,
+      });
+    }
   }
-
-  // Wrap non-markdown file content (mermaid, vega, graphviz, infographic)
-  const wrappedContent = wrapFileContent(content, newFilename);
-  
-  currentMarkdown = wrappedContent;
-
-  // Set file key for scroll position persistence (consistent with Chrome/Mobile)
-  setCurrentFileKey(newFilename);
-
-  // Render using shared flow
-  // VSCode: targetLine is passed as scrollLine for anchor navigation and theme switch,
-  // or set via SCROLL_TO_LINE message for normal editor scroll sync
-  await renderMarkdownFlow({
-    markdown: wrappedContent,
-    container: container as HTMLElement,
-    fileChanged,
-    forceRender: forceRender ?? false,
-    zoomLevel: currentZoomLevel,
-    scrollController: scrollSyncController,
-    renderer: pluginRenderer,
-    translate: (key: string, subs?: string[]) => Localization.translate(key, subs),
-    platform,
-    currentTaskManagerRef: { current: currentTaskManager },
-    targetLine: scrollLine,
-    deferAsyncRenderUntilFirstPaint: window.VSCODE_CONFIG?.deferAsyncRenderUntilFirstPaint === true,
-    onHeadings: (headings) => {
-      tocPanel?.setHeadings(headings as HeadingInfo[]);
-      updateActiveTocHeading();
-      vscodeBridge.postMessage('HEADINGS_UPDATED', headings);
-    },
-    onProgress: (completed, total) => {
-      vscodeBridge.postMessage('RENDER_PROGRESS', { completed, total });
-    },
-  });
-
 }
 
 function updateActiveTocHeading(): void {
@@ -416,7 +559,7 @@ function scrollToHeadingById(headingId: string): void {
   const targetTop = targetRect.top - wrapperRect.top + wrapper.scrollTop;
   wrapper.scrollTo({
     top: Math.max(0, targetTop),
-    behavior: 'smooth'
+    behavior: 'auto'
   });
 }
 
@@ -437,9 +580,7 @@ async function handleSetTheme(payload: SetThemePayload): Promise<void> {
       saveTheme: (id) => themeManager.saveSelectedTheme(id),
       rerender: async (scrollLine) => {
         // Re-render if we have content - force render to regenerate diagrams
-        if (currentMarkdown) {
-          await handleUpdateContent({ content: currentMarkdown, filename: currentFilename, forceRender: true, scrollLine });
-        }
+        await rerenderCurrentDocument({ forceRender: true, scrollLine });
       },
     });
 
@@ -455,8 +596,8 @@ async function handleSetTheme(payload: SetThemePayload): Promise<void> {
 
 async function handleExportDocx(): Promise<void> {
   await exportDocxFlow({
-    markdown: currentMarkdown,
-    filename: currentFilename,
+    markdown: currentDocument.renderedMarkdown,
+    filename: currentDocument.filename,
     renderer: pluginRenderer,
     onProgress: (completed, total) => {
       vscodeBridge.postMessage('EXPORT_PROGRESS', { completed, total, phase: 'processing', format: 'docx' });
@@ -478,8 +619,8 @@ async function handleExportHtml(): Promise<void> {
 
   await exportHtmlFlow({
     container: page,
-    filename: currentFilename,
-    title: currentFilename || document.title || 'Markdown Viewer',
+    filename: currentDocument.filename,
+    title: currentDocument.filename || document.title || 'Markdown Viewer',
     platform,
     onProgress: (completed, total, phase) => {
       vscodeBridge.postMessage('EXPORT_PROGRESS', {
@@ -498,12 +639,40 @@ async function handleExportHtml(): Promise<void> {
   });
 }
 
+async function handleExportEpub(): Promise<void> {
+  const page = document.getElementById('markdown-page') as HTMLElement | null;
+  if (!page) {
+    return;
+  }
+
+  await exportEpubFlow({
+    container: page,
+    filename: currentDocument.filename,
+    title: currentDocument.filename || document.title || 'Markdown Viewer',
+    platform,
+    onProgress: (completed, total, phase) => {
+      vscodeBridge.postMessage('EXPORT_PROGRESS', {
+        completed,
+        total,
+        phase: phase || 'processing',
+        format: 'epub',
+      });
+    },
+    onSuccess: (filename) => {
+      vscodeBridge.postMessage('EXPORT_EPUB_RESULT', { success: true, filename });
+    },
+    onError: (error) => {
+      vscodeBridge.postMessage('EXPORT_EPUB_RESULT', { success: false, error });
+    },
+  });
+}
+
 async function handlePrint(): Promise<void> {
   const page = document.getElementById('markdown-page') as HTMLElement | null;
   if (!page) {
     return;
   }
-  await printElement(page, currentFilename || document.title || 'Markdown Viewer');
+  await printElement(page, currentDocument.filename || document.title || 'Markdown Viewer');
 }
 
 // ============================================================================
@@ -533,24 +702,12 @@ function handleSetZoom(payload: SetZoomPayload): void {
 
 declare global {
   interface Window {
-    loadMarkdown: (content: string, filename?: string, themeId?: string, scrollLine?: number) => void;
-    setTheme: (themeId: string) => void;
     setZoom: (zoom: number) => void;
     exportDocx: () => void;
     openSearch: () => void;
     closeSearch: () => void;
   }
 }
-
-window.loadMarkdown = (content: string, filename?: string, _themeId?: string, _scrollLine?: number) => {
-  // themeId and scrollLine are ignored in VSCode - theme is managed separately
-  // and scroll sync is handled via SCROLL_TO_LINE messages
-  renderQueue = renderQueue.then(() => handleUpdateContent({ content, filename }));
-};
-
-window.setTheme = (themeId: string) => {
-  handleSetTheme({ themeId });
-};
 
 window.setZoom = (zoom: number) => {
   handleSetZoom({ zoom });
@@ -577,6 +734,8 @@ window.closeSearch = () => {
 // ============================================================================
 
 function initializeUI(): void {
+  const usesFloatingToc = resolveTocPresentation(VIEWER_CONTAINER_MODE) === 'floating';
+
   // Setup keyboard shortcut for search (Cmd/Ctrl+F)
   document.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
@@ -591,7 +750,9 @@ function initializeUI(): void {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
       e.preventDefault();
       e.stopPropagation();
-      tocPanel?.toggle();
+      if (usesFloatingToc) {
+        tocPanel?.toggle();
+      }
     }
   });
 
@@ -617,7 +778,7 @@ function initializeUI(): void {
         const targetId = decodeURIComponent(href.slice(1));
         const targetEl = document.getElementById(targetId);
         if (targetEl) {
-          targetEl.scrollIntoView({ behavior: 'smooth' });
+          targetEl.scrollIntoView({ behavior: 'auto' });
         }
       }
       // Relative links (including .md files)
@@ -638,12 +799,15 @@ function initializeUI(): void {
   // Create settings panel (needs to be in DOM for positioning)
   settingsPanel = createSettingsPanel({
     currentTheme: currentThemeId,
-    currentLocale: window.VSCODE_CONFIG?.locale as string || 'auto',
-    docxHrDisplay: (window.VSCODE_CONFIG?.docxHrDisplay as 'pageBreak' | 'line' | 'hide') || 'hide',
-    docxEmojiStyle: (window.VSCODE_CONFIG?.docxEmojiStyle as EmojiStyle) || 'system',
-    frontmatterDisplay: (window.VSCODE_CONFIG?.frontmatterDisplay as FrontmatterDisplay) || 'hide',
-    tableMergeEmpty: window.VSCODE_CONFIG?.tableMergeEmpty !== false,
-    tableLayout: (window.VSCODE_CONFIG?.tableLayout as 'left' | 'center' | 'center-full-width') || 'center',
+    currentLocale: window.VSCODE_CONFIG?.locale as string || DEFAULT_SETTINGS.preferredLocale,
+    docxHrDisplay: normalizeSetting('docxHrDisplay', window.VSCODE_CONFIG?.docxHrDisplay),
+    docxEmojiStyle: normalizeSetting('docxEmojiStyle', window.VSCODE_CONFIG?.docxEmojiStyle),
+    frontmatterDisplay: normalizeSetting('frontmatterDisplay', window.VSCODE_CONFIG?.frontmatterDisplay),
+    tableMergeEmpty: normalizeSetting('tableMergeEmpty', window.VSCODE_CONFIG?.tableMergeEmpty),
+    tableLayout: normalizeSetting('tableLayout', window.VSCODE_CONFIG?.tableLayout),
+    imageLayout: normalizeSetting('imageLayout', window.VSCODE_CONFIG?.imageLayout),
+    diagramLayout: normalizeSetting('diagramLayout', window.VSCODE_CONFIG?.diagramLayout),
+    firstLineIndent: normalizeSetting('firstLineIndent', window.VSCODE_CONFIG?.firstLineIndent),
     onThemeChange: async (themeId) => {
       // handleSetTheme saves via themeManager.saveSelectedTheme (same as Chrome)
       await handleSetTheme({ themeId });
@@ -665,9 +829,7 @@ function initializeUI(): void {
       await loadThemesForSettings();
       
       // Re-render to apply new locale
-      if (currentMarkdown) {
-        await handleUpdateContent({ content: currentMarkdown, filename: currentFilename });
-      }
+      await rerenderCurrentDocument();
     },
     onDocxHrDisplayChange: (display) => {
       vscodeBridge.postMessage('SAVE_SETTING', { key: 'docxHrDisplay', value: display });
@@ -675,18 +837,22 @@ function initializeUI(): void {
     onTableMergeEmptyChange: async (enabled) => {
       vscodeBridge.postMessage('SAVE_SETTING', { key: 'tableMergeEmpty', value: enabled });
       // Re-render to apply new table merge setting
-      if (currentMarkdown) {
-        const scrollLine = scrollSyncController?.getCurrentLine() ?? 0;
-        await handleUpdateContent({ content: currentMarkdown, filename: currentFilename, forceRender: true, scrollLine });
-      }
+      await rerenderCurrentDocumentPreservingScroll();
     },
     onTableLayoutChange: async (layout) => {
       vscodeBridge.postMessage('SAVE_SETTING', { key: 'tableLayout', value: layout });
       // Re-render to apply new table layout setting
-      if (currentMarkdown) {
-        const scrollLine = scrollSyncController?.getCurrentLine() ?? 0;
-        await handleUpdateContent({ content: currentMarkdown, filename: currentFilename, forceRender: true, scrollLine });
-      }
+      await rerenderCurrentDocumentPreservingScroll();
+    },
+    onImageLayoutChange: async (layout) => {
+      vscodeBridge.postMessage('SAVE_SETTING', { key: 'imageLayout', value: layout });
+      // Re-render to apply new image layout setting
+      await rerenderCurrentDocumentPreservingScroll();
+    },
+    onDiagramLayoutChange: async (layout) => {
+      vscodeBridge.postMessage('SAVE_SETTING', { key: 'diagramLayout', value: layout });
+      // Re-render to apply new diagram layout setting
+      await rerenderCurrentDocumentPreservingScroll();
     },
     onDocxEmojiStyleChange: (style) => {
       vscodeBridge.postMessage('SAVE_SETTING', { key: 'docxEmojiStyle', value: style });
@@ -694,19 +860,27 @@ function initializeUI(): void {
     onFrontmatterDisplayChange: async (display) => {
       vscodeBridge.postMessage('SAVE_SETTING', { key: 'frontmatterDisplay', value: display });
       // Re-render to apply new frontmatter display setting
-      if (currentMarkdown) {
-        const scrollLine = scrollSyncController?.getCurrentLine() ?? 0;
-        await handleUpdateContent({ content: currentMarkdown, filename: currentFilename, forceRender: true, scrollLine });
-      }
+      await rerenderCurrentDocumentPreservingScroll();
+    },
+    onFirstLineIndentChange: async (indent) => {
+      vscodeBridge.postMessage('SAVE_SETTING', { key: 'firstLineIndent', value: indent });
+      // firstLineIndent is baked into theme CSS via loadAndApplyTheme, so we must
+      // re-apply the theme to regenerate text-indent before re-rendering content.
+      await loadAndApplyTheme(currentThemeId);
+      await rerenderCurrentDocumentPreservingScroll();
     },
     onClearCache: async () => {
       await platform.cache.clear();
       // Reload cache stats
       await loadCacheStats();
     },
-    onShow: () => {
+    onShow: async () => {
+      await Promise.all([
+        loadThemesForSettings(),
+        loadLocalesForSettings(),
+      ]);
       // Refresh cache stats when panel is shown
-      loadCacheStats();
+      await loadCacheStats();
     }
   });
   document.body.appendChild(settingsPanel.getElement());
@@ -714,6 +888,7 @@ function initializeUI(): void {
   exportMenu = createExportMenu({
     translate: (key) => Localization.translate(key),
     onExportDocx: () => handleExportDocx(),
+    onExportEpub: () => handleExportEpub(),
     onExportHtml: () => handleExportHtml(),
   });
 
@@ -734,12 +909,14 @@ function initializeUI(): void {
   });
   document.body.appendChild(searchPanel.getElement());
 
-  tocPanel = createTocPanel({
-    onSelectHeading: (headingId) => {
-      scrollToHeadingById(headingId);
-    }
-  });
-  document.body.appendChild(tocPanel.getElement());
+  if (usesFloatingToc) {
+    tocPanel = createTocPanel({
+      onSelectHeading: (headingId) => {
+        scrollToHeadingById(headingId);
+      }
+    });
+    document.body.appendChild(tocPanel.getElement());
+  }
 
   const wrapper = document.getElementById('markdown-wrapper');
   if (wrapper) {
@@ -751,6 +928,15 @@ function initializeUI(): void {
   // Setup image context menu for saving images (shared cross-platform implementation)
   if (contentContainer) {
     setupImageContextMenu({
+      container: contentContainer,
+      onDownload: ({ filename, data, mimeType }) => {
+        vscodeBridge.sendRequest('DOWNLOAD_FILE', { filename, data, mimeType });
+      },
+      translate: (key) => Localization.translate(key),
+    });
+
+    // Setup table context menu for copy/Excel export (shared cross-platform)
+    setupTableContextMenu({
       container: contentContainer,
       onDownload: ({ filename, data, mimeType }) => {
         vscodeBridge.sendRequest('DOWNLOAD_FILE', { filename, data, mimeType });
@@ -808,8 +994,13 @@ function handleOpenSearch(): void {
  */
 async function loadThemesForSettings(): Promise<void> {
   if (!settingsPanel) return;
+  if (settingsThemesLoaded) return;
+  if (settingsThemesLoading) {
+    await settingsThemesLoading;
+    return;
+  }
 
-  try {
+  settingsThemesLoading = (async () => {
     // Fetch theme registry
     const registryUrl = platform.resource.getURL('themes/registry.json');
     const response = await fetch(registryUrl);
@@ -852,7 +1043,13 @@ async function loadThemesForSettings(): Promise<void> {
       });
     
     settingsPanel.setThemes(themes);
+    settingsThemesLoaded = true;
+  })();
+
+  try {
+    await settingsThemesLoading;
   } catch (error) {
+    settingsThemesLoading = null;
     console.warn('[VSCode Webview] Failed to load themes:', error);
   }
 }
@@ -862,10 +1059,12 @@ async function loadThemesForSettings(): Promise<void> {
  */
 async function loadLocalesForSettings(): Promise<void> {
   if (!settingsPanel) return;
+  if (settingsLocalesLoaded) return;
 
   const registry = Localization.getLocaleRegistry();
   if (registry) {
     settingsPanel.setLocales(registry.locales);
+    settingsLocalesLoaded = true;
   } else {
     console.warn('[VSCode Webview] Locale registry not available');
   }
@@ -1072,7 +1271,7 @@ function scrollToHighlight(index: number): void {
     el.classList.add('current');
     
     // Scroll into view
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.scrollIntoView({ behavior: 'auto', block: 'center' });
   }
 }
 
@@ -1087,7 +1286,7 @@ let scrollSyncController: ScrollSyncController | null = null;
  * Uses shared createViewerScrollSync from viewer-host.
  * The FileStateService handles communication with extension host:
  * - User scroll → FileStateService.set() → REVEAL_LINE message (Preview → Editor)
- * - Editor scroll → SCROLL_TO_LINE message → FileStateService → scrollController (Editor → Preview)
+ * - Editor scroll → SYNC_HOST_NAVIGATION message → FileStateService → scrollController (Editor → Preview)
  */
 function initScrollSyncController(): void {
   // Dispose previous controller if exists
@@ -1110,12 +1309,13 @@ function initScrollSyncController(): void {
  * Handle scroll to line from editor (Editor → Preview)
  * Updates FileStateService so scroll position can be used by rendering
  */
-function handleScrollToLine(payload: ScrollToLinePayload): void {
+function handleSyncHostNavigation(payload: SyncHostNavigationPayload): void {
   const { line } = payload;
   
   // Update FileStateService (for consistency with Chrome/Mobile)
-  if (currentFilename) {
-    platform.fileState.setScrollLineFromHost(currentFilename, line);
+  const documentKey = currentDocument.documentKey || currentDocument.filename;
+  if (documentKey) {
+    platform.fileState.setScrollLineFromHost(documentKey, line);
   }
   
   if (scrollSyncController) {

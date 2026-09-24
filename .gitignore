@@ -2,7 +2,6 @@
 .DS_Store
 .idea/
 .vscode/
-.github/
 .shared/
 .claude/
 temp/
@@ -28,6 +27,9 @@ pubspec.lock
 dist
 /mobile/build/
 
+# Downloaded browser builds (scripts/chrome-test-matrix.js)
+.cache/
+
 # Logs
 *.log
 
@@ -42,6 +44,7 @@ dist
 .pub-cache/
 .pub/
 /coverage/
+test-results/
 **/doc/api/
 
 # Certificates and private keys
@@ -84,3 +87,8 @@ src/fonts/*.ttf
 !src/fonts/.gitkeep
 .agent/*
 .agents/*
+
+# Obsidian plugin release assets (attached to GitHub Release, not committed)
+/main.js
+/styles.css
+/plans/

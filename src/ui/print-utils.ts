@@ -1,16 +1,47 @@
-export async function printElement(element: HTMLElement, title = document.title): Promise<void> {
+/**
+ * Check if print is available in the current browsing context.
+ * Returns false if the page is sandboxed (e.g., by CSP sandbox directive)
+ * which blocks window.print().
+ */
+export function isPrintAvailable(): boolean {
+  // file: and chrome-extension: protocols are always allowed to print.
+  // Note: file:// URLs have opaque origin (window.origin === 'null') in Chrome,
+  // which would incorrectly fail the sandbox check below.
+  const protocol = window.location.protocol;
+  if (protocol === 'file:' || protocol === 'chrome-extension:') {
+    return true;
+  }
+  // CSP sandbox without allow-same-origin sets origin to 'null'
+  if (window.origin === 'null') {
+    return false;
+  }
+  return true;
+}
+
+export const PRINT_BLOCKED_BY_SANDBOX = 'PRINT_BLOCKED_BY_SANDBOX';
+
+/**
+ * Build the print stylesheet for a rendered document: @page margins plus the
+ * @media print rules (hide chrome, clamp media, keep diagrams unbroken).
+ * Shared by the in-viewer window.print() path and the CLI headless PDF path.
+ */
+export function buildPrintCss(element: HTMLElement, extraCss = ''): string {
   const markdownContent = element.querySelector('#markdown-content') as HTMLElement | null;
   // Extract theme background color for @page and html/body rules
   const pageBackgroundColor = markdownContent
     ? getComputedStyle(markdownContent).backgroundColor
     : (getComputedStyle(document.body).backgroundColor || '');
+  return buildPrintCssRules(pageBackgroundColor, extraCss);
+}
 
-  // Firefox does not support @page { background-color }; margin area will remain white on Firefox.
-  // Chrome 131+ supports it, so we always use 12mm margins.
-
-  const printStyle = document.createElement('style');
-  printStyle.id = 'mv-print-inject';
-  printStyle.textContent = `
+/**
+ * Pure-string variant of buildPrintCss (no DOM access) so the rules can be
+ * unit-tested in Node. The page background color is resolved by the caller.
+ * @param pageBackgroundColor - Theme background color for @page / html / body
+ * @param extraCss - Additional CSS appended after the rules
+ */
+export function buildPrintCssRules(pageBackgroundColor: string, extraCss = ''): string {
+  return `
     @page {
       margin: 12mm;
       /* @page { background-color } is Chrome 131+ only; covers the bleed area including margin zone */
@@ -29,6 +60,38 @@ export async function printElement(element: HTMLElement, title = document.title)
       }
       body {
         background-color: ${pageBackgroundColor} !important;
+      }
+      /* The shared screen rule gives #markdown-page a 40px card padding +
+         shadow + surface background. In print the @page margin already spaces
+         the content, so strip the card chrome — otherwise every PDF gets an
+         extra 40px gutter and the printed shadow/background (page.pdf with
+         printBackground: true) looks like a box on the page. */
+      #markdown-page {
+        margin: 0 auto !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        max-width: none !important;
+        overflow: visible !important;
+      }
+      #remark-sidebar,
+      #gitbook-sidebar-header,
+      #gitbook-sidebar-body,
+      #gitbook-resize-handle,
+      #table-of-contents,
+      #toc-overlay,
+      #page-header,
+      #toolbar {
+        display: none !important;
+      }
+      /* Hover-revealed heading anchors ("#" links) are interactive-only UI and must never
+         print. Export is triggered from a menu that is removed right before window.print():
+         the pointer ends up over whatever content was underneath the menu item (often a
+         heading), and Chromium's print snapshot carries the resulting :hover reveal into the
+         PDF — leaving a stray "#" next to the heading under the cursor. */
+      #markdown-content .heading-anchor,
+      #book-print-root .heading-anchor {
+        display: none !important;
       }
       /* Diagram images: wrapper <div> sets the design width; <img> is fully auto (max-width:100% +
          max-height clamp). Both dims auto on <img> so replaced-element algorithm preserves
@@ -62,7 +125,49 @@ export async function printElement(element: HTMLElement, title = document.title)
         height: auto !important;
       }
     }
+    ${extraCss}
   `;
+}
+
+/**
+ * Print CSS for whole-book PDF export: hide the current page, show the
+ * off-screen book container, and start every chapter on a new page.
+ */
+export const BOOK_PRINT_CSS = `
+    @media print {
+      #markdown-page { display: none !important; }
+      #book-print-root {
+        position: static !important;
+        left: 0 !important;
+      }
+      #book-print-root .book-chapter {
+        break-before: page;
+        page-break-before: always;
+      }
+      #book-print-root .book-chapter:first-child {
+        break-before: auto;
+        page-break-before: auto;
+      }
+      #book-print-root img {
+        max-width: 100%;
+        max-height: 9.5in;
+        height: auto;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      #book-print-root .diagram-block {
+        overflow: visible !important;
+        max-width: 100% !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  `;
+
+export async function printElement(element: HTMLElement, title = document.title, extraCss = ''): Promise<void> {
+  const printStyle = document.createElement('style');
+  printStyle.id = 'mv-print-inject';
+  printStyle.textContent = buildPrintCss(element, extraCss);
   document.head.appendChild(printStyle);
 
   const cleanup = () => {
@@ -71,9 +176,23 @@ export async function printElement(element: HTMLElement, title = document.title)
     }
   };
 
-  window.addEventListener('afterprint', cleanup, { once: true });
+  // Detect if print is blocked by sandbox (e.g., CSP sandbox directive)
+  // beforeprint fires synchronously when window.print() succeeds;
+  // if the page is sandboxed, window.print() is a no-op and no event fires.
+  let printTriggered = false;
+  const beforePrintHandler = () => { printTriggered = true; };
+  window.addEventListener('beforeprint', beforePrintHandler);
+
   window.print();
 
+  window.removeEventListener('beforeprint', beforePrintHandler);
+
+  if (!printTriggered) {
+    cleanup();
+    throw new Error(PRINT_BLOCKED_BY_SANDBOX);
+  }
+
+  window.addEventListener('afterprint', cleanup, { once: true });
   // Fallback cleanup in case afterprint doesn't fire
   setTimeout(cleanup, 2000);
 }

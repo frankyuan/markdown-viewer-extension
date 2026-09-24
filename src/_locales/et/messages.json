@@ -19,6 +19,30 @@
     "message": "Tundmatu viga",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Ekspordi raamat DOCX-i",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_epub": {
+    "message": "Ekspordi raamat EPUB-ina",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
+  "book_export_failed": {
+    "message": "Raamatu eksportimine ebaõnnestus: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Ekspordi raamat PDF-i",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "Jäeti vahele {0} lehte",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Ekspordi raamat",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Tühjenda vahemälu",
     "description": "Clear cache button"
@@ -175,6 +199,10 @@
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
   },
+  "copy_table": {
+    "message": "Kopeeri tabel",
+    "description": "Context menu item for copying a rendered table as spreadsheet cells"
+  },
   "delete": {
     "message": "Kustuta",
     "description": "Delete button text"
@@ -203,6 +231,10 @@
     "message": "Ekspordi DOCX-ina",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_epub": {
+    "message": "Ekspordi EPUB-ina",
+    "description": "Export menu item for exporting the current document to EPUB"
+  },
   "export_menu_export_html": {
     "message": "Ekspordi HTML-ina",
     "description": "Export menu item for exporting to HTML"
@@ -220,7 +252,7 @@
     "description": "Fallback message when DOCX export fails"
   },
   "extensionDescription": {
-    "message": "Markdown täiuslikuks Wordiks — Mermaid, PlantUML, Vega, drawio, Graphviz, LaTeX, koodi esiletõstmine, kohalik töötlemine.",
+    "message": "Vaata Markdowni kohapeal ja ekspordi viimistletud Wordi dokumendid diagrammide, valemite ja koodiga.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {
@@ -251,6 +283,14 @@
     "message": "ja lubage 'Luba juurdepääs faili URL-idele'",
     "description": "Suffix for file access warning"
   },
+  "file_access_disabled_suffix_firefox": {
+    "message": "ja luba „Juurdepääs arvuti kohalikele failidele“ jaotises Õigused ja andmed",
+    "description": "Suffix for the Firefox file access warning"
+  },
+  "file_access_enable_button": {
+    "message": "Luba juurdepääs kohalikele failidele",
+    "description": "Button that requests local file access"
+  },
   "file_access_settings_link": {
     "message": "laienduse sätete lehte",
     "description": "Link text to extension settings"
@@ -271,13 +311,9 @@
     "message": "URL kopeeritud. Kleebi aadressiribale avamiseks.",
     "description": "Message shown when file URL is copied to clipboard in Firefox"
   },
-  "heading_h2_format": {
-    "message": "Peatükk {0}",
-    "description": "Format for h2 headings. {0} is the chapter number."
-  },
-  "heading_h2_numerals": {
-    "message": "arabic",
-    "description": "Numeral system for h2: chinese, arabic, roman"
+  "heading_anchor_title": {
+    "message": "Link sellele jaotisele",
+    "description": "Tooltip for the hover anchor icon shown next to a heading"
   },
   "history_clear": {
     "message": "Kustuta ajalugu",
@@ -339,6 +375,26 @@
     "message": "Vähenda",
     "description": "Tooltip for zooming out in the diagram lightbox"
   },
+  "local_file_access_message": {
+    "message": "Firefox ei luba sellel laiendusel kohalikke faile lugeda, seega kausta {0} pilte ei saa manustada. Valige kaust, mis need sisaldab – valitud failid jäävad teie arvutisse ja neid loetakse ainult selle dokumendi jaoks.",
+    "description": "Prompt shown when the folder name is known"
+  },
+  "local_file_access_message_generic": {
+    "message": "Firefox ei luba sellel laiendusel kohalikke faile lugeda, seega selle dokumendi kohalikke pilte ei saa manustada. Valige kaust, mis need sisaldab – valitud failid jäävad teie arvutisse ja neid loetakse ainult selle dokumendi jaoks.",
+    "description": "Prompt shown without a folder name"
+  },
+  "local_file_access_pick": {
+    "message": "Vali kaust",
+    "description": "Button that opens the folder picker"
+  },
+  "local_file_access_skip": {
+    "message": "Ekspordi seekord ilma piltideta",
+    "description": "Button that exports without embedding local images"
+  },
+  "local_file_access_title": {
+    "message": "Kohalikke pilte ei saa lugeda",
+    "description": "Title of the local file access prompt"
+  },
   "more": {
     "message": "Rohkem",
     "description": "More options menu"
@@ -387,13 +443,45 @@
     "message": "Lisa märkus…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
-  "remark_all_cleared": {
-    "message": "Kõik märkmed on kustutatud",
-    "description": "Temporary success state after clearing all remarks"
+  "remark_cfg_auto_delete": {
+    "message": "Kustuta tühjad märkmed automaatselt",
+    "description": "Config: auto-delete annotations with no note"
   },
-  "remark_cancel": {
-    "message": "Tühista ja eemalda",
-    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  "remark_cfg_close_after_copy": {
+    "message": "Sulge vahekaart pärast kopeerimist",
+    "description": "Config: close the file tab after copying remarks"
+  },
+  "remark_cfg_default_color": {
+    "message": "Vaikevärv",
+    "description": "Config: default annotation color"
+  },
+  "remark_cfg_font_size": {
+    "message": "Kirjasuurus",
+    "description": "Config: sidebar font size"
+  },
+  "remark_cfg_highlight_style": {
+    "message": "Esiletõstmise stiil",
+    "description": "Config: how text is visually marked"
+  },
+  "remark_cfg_style_bg": {
+    "message": "Taust",
+    "description": "Highlight style: colored background"
+  },
+  "remark_cfg_style_border": {
+    "message": "Raam",
+    "description": "Highlight style: bottom border"
+  },
+  "remark_cfg_style_underline": {
+    "message": "Allajoonitud",
+    "description": "Highlight style: solid underline"
+  },
+  "remark_cfg_style_wavy": {
+    "message": "Laineline",
+    "description": "Highlight style: wavy underline"
+  },
+  "remark_cfg_title": {
+    "message": "Märkuste režiim",
+    "description": "Title for remark mode settings card"
   },
   "remark_clear_all": {
     "message": "Kustuta kõik märkmed",
@@ -415,18 +503,6 @@
     "message": "Soovitus",
     "description": "Label for the yellow remark category"
   },
-  "remark_copied": {
-    "message": "Kopeeritud!",
-    "description": "Temporary success state after copying remarks"
-  },
-  "remark_copy_btn": {
-    "message": "Kopeeri märkmed",
-    "description": "Button text for copying all remarks"
-  },
-  "remark_copy_failed": {
-    "message": "Kopeerimine ebaõnnestus",
-    "description": "Temporary error state when copying remarks fails"
-  },
   "remark_copy_tooltip": {
     "message": "Kopeeri kõik märkmed lõikelauale",
     "description": "Tooltip for copying all remarks"
@@ -439,9 +515,9 @@
     "message": "Kustutatud",
     "description": "Status label shown after a remark is deleted"
   },
-  "remark_edit_note": {
-    "message": "Klõpsa muutmiseks",
-    "description": "Tooltip for editing an existing remark note"
+  "remark_download_tooltip": {
+    "message": "Laadi märkused failina alla",
+    "description": "Tooltip for the button that downloads all remarks as a portable file"
   },
   "remark_empty_hint": {
     "message": "Vali tekst märkmete lisamiseks",
@@ -459,6 +535,10 @@
     "message": "Märkus",
     "description": "Label preceding the note text in exported remarks"
   },
+  "remark_import_tooltip": {
+    "message": "Impordi ja liida märkused failist",
+    "description": "Tooltip for the button that imports remarks from a file and merges them"
+  },
   "remark_mode": {
     "message": "Märkmete režiim",
     "description": "Toolbar button title for entering remark mode"
@@ -475,10 +555,6 @@
     "message": "Eemalda loendist",
     "description": "Menu item to remove file from recent list"
   },
-  "reset": {
-    "message": "Lähtesta",
-    "description": "Reset button"
-  },
   "save_as_drawio": {
     "message": "Salvesta DrawIO-na",
     "description": "Context menu item for saving a PlantUML diagram as DrawIO"
@@ -494,6 +570,10 @@
   "save_image_as": {
     "message": "Salvesta pilt kui…",
     "description": "Context menu item for saving an image"
+  },
+  "save_table_as_xlsx": {
+    "message": "Salvesta Excelina (.xlsx)",
+    "description": "Context menu item for saving a rendered table as an Excel (.xlsx) file"
   },
   "search_case_sensitive": {
     "message": "Tõstutundlik",
@@ -520,7 +600,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Värskendusintervall:",
+    "message": "Värskendusintervall",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -534,6 +614,18 @@
   "settings_cache_title": {
     "message": "Vahemälu",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Diagrammi paigutus",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Keskele",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Vasakule",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Emoji stiil",
@@ -556,11 +648,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Horisontaaljoone käsitlemine",
+    "message": "Horisontaaljoone käsitlemine",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Peida (tühi rida)",
+    "message": "Peida",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -575,8 +667,32 @@
     "message": "Leheküljevahetus",
     "description": "Option to export horizontal rules as page breaks in DOCX"
   },
+  "settings_first_line_indent": {
+    "message": "Esimese rea taane",
+    "description": "Label for first-line indent selector"
+  },
+  "settings_first_line_indent_1": {
+    "message": "1 märk",
+    "description": "Option: 1 character first-line indent"
+  },
+  "settings_first_line_indent_2": {
+    "message": "2 märki",
+    "description": "Option: 2 characters first-line indent"
+  },
+  "settings_first_line_indent_3": {
+    "message": "3 märki",
+    "description": "Option: 3 characters first-line indent"
+  },
+  "settings_first_line_indent_4": {
+    "message": "4 märki",
+    "description": "Option: 4 characters first-line indent"
+  },
+  "settings_first_line_indent_off": {
+    "message": "Taandeta",
+    "description": "Option to disable first-line indent"
+  },
   "settings_frontmatter_display": {
-    "message": "Frontmatteri kuvamine:",
+    "message": "Frontmatteri kuvamine",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -599,6 +715,18 @@
     "message": "Laienduse sätted",
     "description": "Heading for settings section"
   },
+  "settings_image_layout": {
+    "message": "Pildi paigutus",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Keskele",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Vasakule",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Liidese sätted",
     "description": "Heading for interface settings section"
@@ -616,7 +744,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Maksimaalne vahemällu salvestatud üksuste arv:",
+    "message": "Maksimaalne vahemällu salvestatud üksuste arv",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -680,7 +808,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "Valige teema:",
+    "message": "Valige teema",
     "description": "Label for theme selector"
   },
   "share": {
@@ -724,8 +852,8 @@
     "description": "Toolbar layout toggle tooltip for normal mode"
   },
   "toolbar_print_disabled_title": {
-    "message": "Printimine on saadaval ainult kohalike failide jaoks",
-    "description": "Tooltip when print button is disabled for remote files"
+    "message": "Printimine on lehe turbepoliitika (liivakast) tõttu blokeeritud",
+    "description": "Tooltip when print button is disabled due to sandbox restriction"
   },
   "toolbar_print_title": {
     "message": "Prindi",
@@ -762,6 +890,14 @@
   "workspace_desc": {
     "message": "Avage kohalik kataloog toetatud failide sirvimiseks ja eelvaateks.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Tagasi",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Edasi",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Ava tööala",

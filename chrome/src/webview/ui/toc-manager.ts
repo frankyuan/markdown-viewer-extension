@@ -15,6 +15,18 @@ interface TocManager {
   updateActiveTocItem(): void;
   scrollTocToActiveItem(activeLink: Element, tocDiv: Element): void;
   setupResponsiveToc(): Promise<void>;
+  navigateToHeading(id: string): void;
+}
+
+interface TocManagerOptions {
+  getDesiredVisibility?: () => boolean | undefined;
+  /**
+   * When true, clicking a TOC item updates the page URL hash (e.g. `#heading`)
+   * so the reading position can be bookmarked or shared. Only enabled for the
+   * full-page browser viewer; disabled for embedded elements so the host page
+   * URL is never mutated.
+   */
+  updateLocationHash?: boolean;
 }
 
 const TOC_NAVIGATION_SCROLL_BEHAVIOR: ScrollBehavior = 'auto';
@@ -28,9 +40,11 @@ const TOC_NAVIGATION_SCROLL_BEHAVIOR: ScrollBehavior = 'auto';
 export function createTocManager(
   saveFileState: SaveFileStateFunction,
   getFileState: GetFileStateFunction,
-  isMobile: boolean
+  isMobile: boolean,
+  options: TocManagerOptions = {}
 ): TocManager {
   let tocGenerationToken = 0;
+  const { getDesiredVisibility, updateLocationHash = false } = options;
 
   function getScrollContainer(): HTMLElement | null {
     return document.getElementById('markdown-wrapper') as HTMLElement | null;
@@ -54,6 +68,37 @@ export function createTocManager(
   }
 
   /**
+   * Scroll to a heading by id and (optionally) reflect it in the URL hash so the
+   * reading position can be bookmarked or shared. Shared by the TOC list and by
+   * the in-content heading anchor links.
+   */
+  function navigateToHeading(id: string): void {
+    if (!id) {
+      return;
+    }
+
+    const target = document.getElementById(id);
+    if (!target) {
+      return;
+    }
+
+    scrollTargetIntoView(target as HTMLElement);
+
+    // Use history.pushState instead of assigning location.hash to avoid firing
+    // the `hashchange` handler (which would trigger a redundant second scroll).
+    if (updateLocationHash) {
+      const newHash = `#${encodeURIComponent(id)}`;
+      if (window.location.hash !== newHash) {
+        try {
+          history.pushState(null, '', newHash);
+        } catch {
+          // Some restricted contexts disallow pushState with a hash; ignore.
+        }
+      }
+    }
+  }
+
+  /**
    * Generate table of contents from headings
    */
   async function generateTOC(): Promise<void> {
@@ -62,6 +107,22 @@ export function createTocManager(
     const tocDiv = document.getElementById('table-of-contents');
 
     if (!contentDiv || !tocDiv) return;
+
+    if (document.documentElement.dataset.codeView === '1') {
+      tocDiv.style.display = 'none';
+      tocDiv.classList.add('hidden');
+      document.body.classList.add('toc-hidden');
+      document.getElementById('toc-overlay')?.classList.add('hidden');
+      return;
+    }
+
+    if (document.documentElement.dataset.tocDisabled === '1') {
+      tocDiv.style.display = 'none';
+      tocDiv.classList.add('hidden');
+      document.body.classList.add('toc-hidden');
+      document.getElementById('toc-overlay')?.classList.add('hidden');
+      return;
+    }
 
     const headings = contentDiv.querySelectorAll('h1, h2, h3, h4, h5, h6');
 
@@ -109,12 +170,7 @@ export function createTocManager(
           return;
         }
 
-        const target = document.getElementById(decodeURIComponent(href.slice(1)));
-        if (!target) {
-          return;
-        }
-
-        scrollTargetIntoView(target as HTMLElement);
+        navigateToHeading(decodeURIComponent(href.slice(1)));
       });
     });
     
@@ -124,8 +180,19 @@ export function createTocManager(
     }
 
     // Apply saved TOC visibility state after generating TOC
-    const savedState = await getFileState();
+    const desiredVisibility = getDesiredVisibility?.();
+    const savedState = desiredVisibility === undefined
+      ? await getFileState()
+      : undefined;
     if (token !== tocGenerationToken) {
+      return;
+    }
+
+    if (document.documentElement.dataset.codeView === '1') {
+      tocDiv.style.display = 'none';
+      tocDiv.classList.add('hidden');
+      document.body.classList.add('toc-hidden');
+      document.getElementById('toc-overlay')?.classList.add('hidden');
       return;
     }
     const overlayDiv = document.getElementById('toc-overlay');
@@ -133,7 +200,9 @@ export function createTocManager(
     if (overlayDiv) {
       // Determine desired visibility: use saved state if available, otherwise use responsive default
       let shouldBeVisible: boolean;
-      if (savedState.tocVisible !== undefined) {
+      if (desiredVisibility !== undefined) {
+        shouldBeVisible = desiredVisibility;
+      } else if (savedState?.tocVisible !== undefined) {
         shouldBeVisible = savedState.tocVisible;
       } else {
         // No saved state - only mobile uses collapsed TOC by default.
@@ -309,6 +378,7 @@ export function createTocManager(
     setupTocToggle,
     updateActiveTocItem,
     scrollTocToActiveItem,
-    setupResponsiveToc
+    setupResponsiveToc,
+    navigateToHeading
   };
 }

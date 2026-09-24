@@ -19,6 +19,30 @@
     "message": "Errore sconosciuto",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Esporta libro in DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_epub": {
+    "message": "Esporta libro in EPUB",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
+  "book_export_failed": {
+    "message": "Esportazione del libro non riuscita: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Esporta libro in PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} pagina/e saltata/e",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Esporta libro",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Svuota cache",
     "description": "Clear cache button"
@@ -175,6 +199,10 @@
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
   },
+  "copy_table": {
+    "message": "Copia tabella",
+    "description": "Context menu item for copying a rendered table as spreadsheet cells"
+  },
   "delete": {
     "message": "Elimina",
     "description": "Delete button text"
@@ -203,6 +231,10 @@
     "message": "Esporta in DOCX",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_epub": {
+    "message": "Esporta in EPUB",
+    "description": "Export menu item for exporting the current document to EPUB"
+  },
   "export_menu_export_html": {
     "message": "Esporta in HTML",
     "description": "Export menu item for exporting to HTML"
@@ -220,7 +252,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown in Word perfetto — Mermaid, PlantUML, Vega, drawio, Graphviz, LaTeX, evidenziazione codice, elaborazione locale.",
+    "message": "Visualizza Markdown localmente ed esporta documenti Word curati con diagrammi, formule modificabili e codice evidenziato.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {
@@ -251,6 +283,14 @@
     "message": "e abilita 'Consenti accesso agli URL dei file'",
     "description": "Suffix for file access warning"
   },
+  "file_access_disabled_suffix_firefox": {
+    "message": "e attiva «Accesso ai file locali sul tuo computer» in Autorizzazioni e dati",
+    "description": "Suffix for the Firefox file access warning"
+  },
+  "file_access_enable_button": {
+    "message": "Consenti accesso ai file locali",
+    "description": "Button that requests local file access"
+  },
   "file_access_settings_link": {
     "message": "pagina delle impostazioni dell'estensione",
     "description": "Link text to extension settings"
@@ -271,13 +311,9 @@
     "message": "URL copiato. Incolla nella barra degli indirizzi per aprire.",
     "description": "Message shown when file URL is copied to clipboard in Firefox"
   },
-  "heading_h2_format": {
-    "message": "Capitolo {0}",
-    "description": "Format for h2 headings. {0} is the chapter number."
-  },
-  "heading_h2_numerals": {
-    "message": "arabic",
-    "description": "Numeral system for h2: chinese, arabic, roman"
+  "heading_anchor_title": {
+    "message": "Link a questa sezione",
+    "description": "Tooltip for the hover anchor icon shown next to a heading"
   },
   "history_clear": {
     "message": "Cancella cronologia",
@@ -339,6 +375,26 @@
     "message": "Riduci zoom",
     "description": "Tooltip for zooming out in the diagram lightbox"
   },
+  "local_file_access_message": {
+    "message": "Firefox impedisce a questa estensione di leggere i file locali, quindi le immagini nella cartella {0} non possono essere incorporate. Scegli la cartella che le contiene: i file selezionati restano sul tuo computer e vengono letti solo per questo documento.",
+    "description": "Prompt shown when the folder name is known"
+  },
+  "local_file_access_message_generic": {
+    "message": "Firefox impedisce a questa estensione di leggere i file locali, quindi le immagini locali di questo documento non possono essere incorporate. Scegli la cartella che le contiene: i file selezionati restano sul tuo computer e vengono letti solo per questo documento.",
+    "description": "Prompt shown without a folder name"
+  },
+  "local_file_access_pick": {
+    "message": "Scegli cartella",
+    "description": "Button that opens the folder picker"
+  },
+  "local_file_access_skip": {
+    "message": "Esporta senza immagini stavolta",
+    "description": "Button that exports without embedding local images"
+  },
+  "local_file_access_title": {
+    "message": "Impossibile leggere le immagini locali",
+    "description": "Title of the local file access prompt"
+  },
   "more": {
     "message": "Altro",
     "description": "More menu tooltip"
@@ -387,13 +443,45 @@
     "message": "Aggiungi annotazione…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
-  "remark_all_cleared": {
-    "message": "Tutte le annotazioni sono state cancellate",
-    "description": "Temporary success state after clearing all remarks"
+  "remark_cfg_auto_delete": {
+    "message": "Elimina automaticamente le note vuote",
+    "description": "Config: auto-delete annotations with no note"
   },
-  "remark_cancel": {
-    "message": "Annulla e rimuovi",
-    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  "remark_cfg_close_after_copy": {
+    "message": "Chiudi scheda dopo la copia",
+    "description": "Config: close the file tab after copying remarks"
+  },
+  "remark_cfg_default_color": {
+    "message": "Colore predefinito",
+    "description": "Config: default annotation color"
+  },
+  "remark_cfg_font_size": {
+    "message": "Dimensione carattere",
+    "description": "Config: sidebar font size"
+  },
+  "remark_cfg_highlight_style": {
+    "message": "Stile evidenziazione",
+    "description": "Config: how text is visually marked"
+  },
+  "remark_cfg_style_bg": {
+    "message": "Sfondo",
+    "description": "Highlight style: colored background"
+  },
+  "remark_cfg_style_border": {
+    "message": "Bordo",
+    "description": "Highlight style: bottom border"
+  },
+  "remark_cfg_style_underline": {
+    "message": "Sottolineato",
+    "description": "Highlight style: solid underline"
+  },
+  "remark_cfg_style_wavy": {
+    "message": "Ondulato",
+    "description": "Highlight style: wavy underline"
+  },
+  "remark_cfg_title": {
+    "message": "Modalità annotazione",
+    "description": "Title for remark mode settings card"
   },
   "remark_clear_all": {
     "message": "Cancella tutte le annotazioni",
@@ -415,18 +503,6 @@
     "message": "Suggerimento",
     "description": "Label for the yellow remark category"
   },
-  "remark_copied": {
-    "message": "Copiato!",
-    "description": "Temporary success state after copying remarks"
-  },
-  "remark_copy_btn": {
-    "message": "Copia annotazioni",
-    "description": "Button text for copying all remarks"
-  },
-  "remark_copy_failed": {
-    "message": "Copia non riuscita",
-    "description": "Temporary error state when copying remarks fails"
-  },
   "remark_copy_tooltip": {
     "message": "Copia tutte le annotazioni negli appunti",
     "description": "Tooltip for copying all remarks"
@@ -439,9 +515,9 @@
     "message": "Eliminato",
     "description": "Status label shown after a remark is deleted"
   },
-  "remark_edit_note": {
-    "message": "Fai clic per modificare",
-    "description": "Tooltip for editing an existing remark note"
+  "remark_download_tooltip": {
+    "message": "Scarica le annotazioni come file",
+    "description": "Tooltip for the button that downloads all remarks as a portable file"
   },
   "remark_empty_hint": {
     "message": "Seleziona il testo per aggiungere annotazioni",
@@ -459,6 +535,10 @@
     "message": "Nota",
     "description": "Label preceding the note text in exported remarks"
   },
+  "remark_import_tooltip": {
+    "message": "Importa e unisci le annotazioni da un file",
+    "description": "Tooltip for the button that imports remarks from a file and merges them"
+  },
   "remark_mode": {
     "message": "Modalità annotazioni",
     "description": "Toolbar button title for entering remark mode"
@@ -475,10 +555,6 @@
     "message": "Rimuovi dall'elenco",
     "description": "Menu item to remove file from recent list"
   },
-  "reset": {
-    "message": "Reimposta",
-    "description": "Reset button"
-  },
   "save_as_drawio": {
     "message": "Salva come DrawIO",
     "description": "Context menu item for saving a PlantUML diagram as DrawIO"
@@ -494,6 +570,10 @@
   "save_image_as": {
     "message": "Salva immagine come…",
     "description": "Context menu item for saving an image"
+  },
+  "save_table_as_xlsx": {
+    "message": "Salva come Excel (.xlsx)",
+    "description": "Context menu item for saving a rendered table as an Excel (.xlsx) file"
   },
   "search_case_sensitive": {
     "message": "Maiuscole/minuscole",
@@ -520,7 +600,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Intervallo di aggiornamento:",
+    "message": "Intervallo di aggiornamento",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -534,6 +614,18 @@
   "settings_cache_title": {
     "message": "Cache",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Allineamento diagrammi",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Centro",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Sinistra",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Stile emoji",
@@ -556,11 +648,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Gestione linee orizzontali",
+    "message": "Gestione linee orizzontali",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Nascondi (riga vuota)",
+    "message": "Nascondi",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -575,8 +667,32 @@
     "message": "Interruzione di pagina",
     "description": "Option to export horizontal rules as page breaks in DOCX"
   },
+  "settings_first_line_indent": {
+    "message": "Rientro prima riga",
+    "description": "Label for first-line indent selector"
+  },
+  "settings_first_line_indent_1": {
+    "message": "1 carattere",
+    "description": "Option: 1 character first-line indent"
+  },
+  "settings_first_line_indent_2": {
+    "message": "2 caratteri",
+    "description": "Option: 2 characters first-line indent"
+  },
+  "settings_first_line_indent_3": {
+    "message": "3 caratteri",
+    "description": "Option: 3 characters first-line indent"
+  },
+  "settings_first_line_indent_4": {
+    "message": "4 caratteri",
+    "description": "Option: 4 characters first-line indent"
+  },
+  "settings_first_line_indent_off": {
+    "message": "Nessun rientro",
+    "description": "Option to disable first-line indent"
+  },
   "settings_frontmatter_display": {
-    "message": "Visualizzazione Frontmatter:",
+    "message": "Visualizzazione Frontmatter",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -599,6 +715,18 @@
     "message": "Impostazioni estensione",
     "description": "Titolo della sezione impostazioni"
   },
+  "settings_image_layout": {
+    "message": "Allineamento immagini",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Centro",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Sinistra",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Impostazioni interfaccia",
     "description": "Heading for interface settings section"
@@ -616,7 +744,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Massimo elementi in cache:",
+    "message": "Massimo elementi in cache",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -680,7 +808,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "Seleziona Tema:",
+    "message": "Seleziona Tema",
     "description": "Label for theme selector"
   },
   "share": {
@@ -724,8 +852,8 @@
     "description": "Toolbar layout toggle tooltip for normal mode"
   },
   "toolbar_print_disabled_title": {
-    "message": "La stampa è disponibile solo per file locali",
-    "description": "Tooltip when print button is disabled for remote files"
+    "message": "La stampa è bloccata dalla politica di sicurezza della pagina (sandbox)",
+    "description": "Tooltip when print button is disabled due to sandbox restriction"
   },
   "toolbar_print_title": {
     "message": "Stampa",
@@ -762,6 +890,14 @@
   "workspace_desc": {
     "message": "Apri una directory locale per sfogliare e visualizzare in anteprima i file supportati.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Indietro",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Avanti",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Apri area di lavoro",

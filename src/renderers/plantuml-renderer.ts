@@ -35,13 +35,6 @@ function extractStencilGroups(xml: string): string[] {
   return Array.from(groups);
 }
 
-function getPrimaryFontFamily(fontFamily?: string): string | undefined {
-  if (!fontFamily) return undefined;
-  const first = fontFamily.split(',')[0]?.trim();
-  if (!first) return undefined;
-  return first.replace(/^['"]|['"]$/g, '');
-}
-
 function buildDrawUmlTheme(themeConfig: RendererThemeConfig | null): DrawUmlThemeOptions | undefined {
   if (!themeConfig) return undefined;
 
@@ -57,9 +50,10 @@ function buildDrawUmlTheme(themeConfig: RendererThemeConfig | null): DrawUmlThem
     theme.fontSize = themeConfig.fontSize;
   }
 
-  const primaryFontFamily = getPrimaryFontFamily(themeConfig.fontFamily);
-  if (primaryFontFamily) {
-    theme.fontFamily = primaryFontFamily;
+  // Pass the full font stack through — draw-uml keeps comma-separated
+  // fallback chains (e.g. `FangSong, SimSun, sans-serif`) end-to-end.
+  if (typeof themeConfig.fontFamily === 'string' && themeConfig.fontFamily.trim()) {
+    theme.fontFamily = themeConfig.fontFamily.trim();
   }
 
   return Object.keys(theme).length > 0 ? theme : undefined;
@@ -119,7 +113,7 @@ export class PlantumlRenderer extends BaseRenderer {
     // Step 3: Convert DrawIO XML to SVG
     let svg = convert(drawioXml, {
       stencils,
-      fontFamily: themeConfig?.fontFamily ? getPrimaryFontFamily(themeConfig.fontFamily) : undefined
+      fontFamily: themeConfig?.fontFamily || undefined
     });
 
     // Step 4: Parse SVG to get dimensions
@@ -149,8 +143,8 @@ export class PlantumlRenderer extends BaseRenderer {
       svg = applyRoughEffect(svg, this.roughOptions);
     }
 
-    // Step 6: Render SVG to PNG
-    const scale = this.calculateCanvasScale(themeConfig);
+    // Step 6: Render SVG to PNG (scale clamped to Chromium's canvas limits)
+    const scale = this.clampCanvasDimensions(captureWidth, captureHeight, this.calculateCanvasScale(themeConfig));
     const canvas = await this.renderSvgToCanvas(svg, captureWidth * scale, captureHeight * scale);
 
     const pngDataUrl = canvas.toDataURL('image/png', 1.0);

@@ -200,6 +200,19 @@ export interface LayoutBlockConfig {
   /** Optional border width for horizontal rule. Color from colorScheme.rule.color.
    *  Web preview only — not applied by DOCX/other renderers. */
   borderWidth?: string;
+  /** Whether the theme supports first-line indentation on paragraphs.
+   *  Actual indent amount is controlled by user setting (0-4 characters).
+   *  This switch also drives list-item alignment (li { margin-left }) so
+   *  lists stay aligned with indented body text; listItem.firstLineIndent
+   *  is deprecated and no longer consumed. */
+  firstLineIndent?: boolean;
+  /** Table text size as a fraction of the body font (e.g. 0.85 = 85%). Falls
+   *  back to a global default so tables read distinct from body text across
+   *  every theme. Applied in web rendering and DOCX export alike. */
+  fontScale?: number;
+  /** Block text line-height multiplier (e.g. 1.4 for tables). Falls back to
+   *  a global table default, or the body line-height for other blocks. */
+  lineHeight?: number;
 }
 
 /**

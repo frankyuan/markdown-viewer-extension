@@ -7,10 +7,8 @@
 import * as vscode from 'vscode';
 import { MarkdownPreviewPanel } from './preview-panel';
 import { CacheStorage } from './cache-storage';
-import { registerNumberHeadingsCommand } from './markdown-tools';
 import { SUPPORTED_LANGUAGE_IDS } from '../../../src/types/formats';
 
-let outputChannel: vscode.OutputChannel;
 let cacheStorage: CacheStorage;
 let renderStatusBarItem: vscode.StatusBarItem;
 let renderStatusTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -88,9 +86,10 @@ class TopmostLineMonitor {
 const topmostLineMonitor = new TopmostLineMonitor();
 
 export function activate(context: vscode.ExtensionContext) {
-  outputChannel = vscode.window.createOutputChannel('Markdown Viewer');
-  outputChannel.appendLine('Markdown Viewer is now active');
-  
+  // Reset preview panel context keys (used by editor/title menu when clauses)
+  void vscode.commands.executeCommand('setContext', 'markdownViewerPreviewOpen', false);
+  void vscode.commands.executeCommand('setContext', 'markdownViewerPreviewFocused', false);
+
   // Initialize the monitor with current active editor
   topmostLineMonitor.setActiveEditor(vscode.window.activeTextEditor);
 
@@ -99,8 +98,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Initialize cache storage
   cacheStorage = new CacheStorage(context);
-  cacheStorage.init().catch(err => {
-    outputChannel.appendLine(`Cache storage init error: ${err}`);
+  cacheStorage.init().catch((error) => {
+    console.error('[Markdown Viewer] Cache storage init error:', error);
   });
 
   // Create status bar item for render progress
@@ -137,7 +136,6 @@ export function activate(context: vscode.ExtensionContext) {
         panel.setRenderProgressCallback(updateRenderProgress);
         // Send initial scroll position from editor
         const initialLine = topmostLineMonitor.getLineForEditor(editor);
-        outputChannel.appendLine(`[DEBUG] Preview command: sending initial scroll to line ${initialLine}`);
         panel.scrollToLine(initialLine);
       } else {
         vscode.window.showWarningMessage('Please open a supported file (Markdown, Mermaid, Vega, GraphViz, or Infographic)');
@@ -234,9 +232,6 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Register Markdown tools
-  registerNumberHeadingsCommand(context, cacheStorage);
-
   // Auto-update preview on document change
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument((e) => {
@@ -311,14 +306,10 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  outputChannel.appendLine('Commands registered successfully');
 }
 
 export function deactivate() {
   if (renderStatusTimeout) {
     clearTimeout(renderStatusTimeout);
-  }
-  if (outputChannel) {
-    outputChannel.dispose();
   }
 }

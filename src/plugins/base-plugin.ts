@@ -6,6 +6,7 @@
  */
 
 import type { ASTNode, PluginRenderer, PluginRenderResult, UnifiedRenderResult } from '../types/index';
+import { CODE_BLOCK_LANGUAGE_MAP } from '../types/formats';
 
 export class BasePlugin {
   type: string;
@@ -48,11 +49,19 @@ export class BasePlugin {
       return null;
     }
 
-    // Check language for code blocks
-    if (this.language && node.lang !== this.language) {
+    // Check language for code blocks.
+    // The central CODE_BLOCK_LANGUAGE_MAP maps all aliases (e.g. 'wsd',
+    // 'puml', 'vegalite', 'graphviz') to fileType, so subclasses don't
+    // need to override extractContent just to handle language aliases.
+    if (this.language && node.lang) {
+      const resolvedType = CODE_BLOCK_LANGUAGE_MAP[node.lang.toLowerCase()];
+      if (resolvedType !== this.type) {
+        return null;
+      }
+    } else if (this.language && node.lang !== this.language) {
       return null;
     }
-    
+
     return node.value || null;
   }
 
@@ -97,6 +106,23 @@ export class BasePlugin {
    */
   async fetchContent(url: string): Promise<string> {
     throw new Error('fetchContent not implemented');
+  }
+
+  /**
+   * Build the plain-image fallback URL for content that needs fetching.
+   *
+   * Resolved while the AST node is still at hand, and used only if fetching
+   * fails: returning a URL lets the caller show the resource as an ordinary
+   * <img> the browser loads natively (the same rendering a non-SVG image gets)
+   * instead of an error block. Platforms can refuse to read local files (e.g.
+   * Firefox content scripts), so a readable fallback beats a dead end.
+   *
+   * @param content - Extracted node content (the URL)
+   * @param node - AST node being processed, when available
+   * @returns Image URL to render instead, or null when no fallback applies
+   */
+  createFetchFallbackUrl(_content: string, _node?: ASTNode): string | null {
+    return null; // Default: no fallback, the error block stands
   }
 
   /**
@@ -168,8 +194,9 @@ export class BasePlugin {
         }
       };
     } catch (error) {
-      console.warn(`Failed to render ${this.type}:`, error);
-      
+      // The failure is propagated as an error result; the pipeline layer
+      // (e.g. convertNodeToDOCX) reports it once as a concise warning with
+      // the source line — never log the raw error object here (stack trace).
       return {
         type: 'error',
         content: {

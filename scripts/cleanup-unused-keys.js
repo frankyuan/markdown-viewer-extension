@@ -117,7 +117,7 @@ function main() {
   });
   
   console.log(`\n✨ Cleanup complete! Removed ${totalRemoved} key(s) total.`);
-  console.log('\n💡 Run "node scripts/check-missing-keys.js" to verify.');
+  console.log('\n💡 Run "npx fibjs test/suites/project-gates/i18n-keys.test.ts" to verify.');
 }
 
 main();

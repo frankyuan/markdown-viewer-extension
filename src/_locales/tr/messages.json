@@ -19,6 +19,30 @@
     "message": "Bilinmeyen hata",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Kitabı DOCX olarak dışa aktar",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_epub": {
+    "message": "Kitabı EPUB olarak dışa aktar",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
+  "book_export_failed": {
+    "message": "Kitap dışa aktarılamadı: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Kitabı PDF olarak dışa aktar",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} sayfa atlandı",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Kitabı dışa aktar",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Önbelleği temizle",
     "description": "Clear cache button"
@@ -175,6 +199,10 @@
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
   },
+  "copy_table": {
+    "message": "Tabloyu kopyala",
+    "description": "Context menu item for copying a rendered table as spreadsheet cells"
+  },
   "delete": {
     "message": "Delete",
     "description": "Delete button text"
@@ -203,6 +231,10 @@
     "message": "DOCX olarak dışa aktar",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_epub": {
+    "message": "EPUB olarak dışa aktar",
+    "description": "Export menu item for exporting the current document to EPUB"
+  },
   "export_menu_export_html": {
     "message": "HTML olarak dışa aktar",
     "description": "Export menu item for exporting to HTML"
@@ -220,7 +252,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown'dan mükemmel Word'e — Mermaid, PlantUML, Vega, drawio, infografik, Graphviz, LaTeX, kod vurgulama, yerel işleme.",
+    "message": "Markdown dosyalarını yerel olarak önizleyin; diyagram, düzenlenebilir formül ve kod vurgulu Word belgeleri dışa aktarın.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {
@@ -251,6 +283,14 @@
     "message": "ve 'Dosya URL'lerine erişime izin ver' seçeneğini etkinleştirin",
     "description": "Suffix for file access warning"
   },
+  "file_access_disabled_suffix_firefox": {
+    "message": "ve “Bilgisayarınızdaki yerel dosyalara erişim” seçeneğini İzinler ve veriler bölümünde açın",
+    "description": "Suffix for the Firefox file access warning"
+  },
+  "file_access_enable_button": {
+    "message": "Yerel dosya erişimini etkinleştir",
+    "description": "Button that requests local file access"
+  },
   "file_access_settings_link": {
     "message": "uzantı ayarları sayfası",
     "description": "Link text to extension settings"
@@ -271,13 +311,9 @@
     "message": "URL kopyalandı. Açmak için adres çubuğuna yapıştırın.",
     "description": "Message shown when file URL is copied to clipboard in Firefox"
   },
-  "heading_h2_format": {
-    "message": "Bölüm {0}",
-    "description": "Format for h2 headings. {0} is the chapter number."
-  },
-  "heading_h2_numerals": {
-    "message": "arabic",
-    "description": "Numeral system for h2: chinese, arabic, roman"
+  "heading_anchor_title": {
+    "message": "Bu bölüme bağlantı",
+    "description": "Tooltip for the hover anchor icon shown next to a heading"
   },
   "history_clear": {
     "message": "Geçmişi temizle",
@@ -339,6 +375,26 @@
     "message": "Uzaklaştır",
     "description": "Tooltip for zooming out in the diagram lightbox"
   },
+  "local_file_access_message": {
+    "message": "Firefox bu uzantının yerel dosyaları okumasını engelliyor, bu yüzden {0} klasöründeki görseller gömülemez. Bunları içeren klasörü seçin - seçilen dosyalar bilgisayarınızda kalır ve yalnızca bu belge için okunur.",
+    "description": "Prompt shown when the folder name is known"
+  },
+  "local_file_access_message_generic": {
+    "message": "Firefox bu uzantının yerel dosyaları okumasını engelliyor, bu yüzden bu belgedeki yerel görseller gömülemez. Bunları içeren klasörü seçin - seçilen dosyalar bilgisayarınızda kalır ve yalnızca bu belge için okunur.",
+    "description": "Prompt shown without a folder name"
+  },
+  "local_file_access_pick": {
+    "message": "Klasör seç",
+    "description": "Button that opens the folder picker"
+  },
+  "local_file_access_skip": {
+    "message": "Bu kez görseller olmadan dışa aktar",
+    "description": "Button that exports without embedding local images"
+  },
+  "local_file_access_title": {
+    "message": "Yerel görseller okunamıyor",
+    "description": "Title of the local file access prompt"
+  },
   "more": {
     "message": "More",
     "description": "More menu tooltip"
@@ -387,13 +443,45 @@
     "message": "Not ekle…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
-  "remark_all_cleared": {
-    "message": "Tüm notlar temizlendi",
-    "description": "Temporary success state after clearing all remarks"
+  "remark_cfg_auto_delete": {
+    "message": "Boş notları otomatik sil",
+    "description": "Config: auto-delete annotations with no note"
   },
-  "remark_cancel": {
-    "message": "İptal et ve kaldır",
-    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  "remark_cfg_close_after_copy": {
+    "message": "Kopyaladıktan sonra sekmeyi kapat",
+    "description": "Config: close the file tab after copying remarks"
+  },
+  "remark_cfg_default_color": {
+    "message": "Varsayılan renk",
+    "description": "Config: default annotation color"
+  },
+  "remark_cfg_font_size": {
+    "message": "Yazı tipi boyutu",
+    "description": "Config: sidebar font size"
+  },
+  "remark_cfg_highlight_style": {
+    "message": "Vurgulama stili",
+    "description": "Config: how text is visually marked"
+  },
+  "remark_cfg_style_bg": {
+    "message": "Arka plan",
+    "description": "Highlight style: colored background"
+  },
+  "remark_cfg_style_border": {
+    "message": "Kenarlık",
+    "description": "Highlight style: bottom border"
+  },
+  "remark_cfg_style_underline": {
+    "message": "Alt çizgi",
+    "description": "Highlight style: solid underline"
+  },
+  "remark_cfg_style_wavy": {
+    "message": "Dalgalı",
+    "description": "Highlight style: wavy underline"
+  },
+  "remark_cfg_title": {
+    "message": "Not modu",
+    "description": "Title for remark mode settings card"
   },
   "remark_clear_all": {
     "message": "Tüm notları temizle",
@@ -415,18 +503,6 @@
     "message": "Öneri",
     "description": "Label for the yellow remark category"
   },
-  "remark_copied": {
-    "message": "Kopyalandı!",
-    "description": "Temporary success state after copying remarks"
-  },
-  "remark_copy_btn": {
-    "message": "Notları kopyala",
-    "description": "Button text for copying all remarks"
-  },
-  "remark_copy_failed": {
-    "message": "Kopyalama başarısız",
-    "description": "Temporary error state when copying remarks fails"
-  },
   "remark_copy_tooltip": {
     "message": "Tüm notları panoya kopyala",
     "description": "Tooltip for copying all remarks"
@@ -439,9 +515,9 @@
     "message": "Silindi",
     "description": "Status label shown after a remark is deleted"
   },
-  "remark_edit_note": {
-    "message": "Düzenlemek için tıkla",
-    "description": "Tooltip for editing an existing remark note"
+  "remark_download_tooltip": {
+    "message": "Notları dosya olarak indir",
+    "description": "Tooltip for the button that downloads all remarks as a portable file"
   },
   "remark_empty_hint": {
     "message": "Not eklemek için metin seç",
@@ -459,6 +535,10 @@
     "message": "Not",
     "description": "Label preceding the note text in exported remarks"
   },
+  "remark_import_tooltip": {
+    "message": "Notları dosyadan içe aktar ve birleştir",
+    "description": "Tooltip for the button that imports remarks from a file and merges them"
+  },
   "remark_mode": {
     "message": "Not modu",
     "description": "Toolbar button title for entering remark mode"
@@ -475,10 +555,6 @@
     "message": "Remove from list",
     "description": "Menu item to remove file from recent list"
   },
-  "reset": {
-    "message": "Sıfırla",
-    "description": "Reset button"
-  },
   "save_as_drawio": {
     "message": "DrawIO olarak kaydet",
     "description": "Context menu item for saving a PlantUML diagram as DrawIO"
@@ -494,6 +570,10 @@
   "save_image_as": {
     "message": "Resmi farklı kaydet…",
     "description": "Context menu item for saving an image"
+  },
+  "save_table_as_xlsx": {
+    "message": "Excel olarak kaydet (.xlsx)",
+    "description": "Context menu item for saving a rendered table as an Excel (.xlsx) file"
   },
   "search_case_sensitive": {
     "message": "Büyük/küçük harf duyarlı",
@@ -520,7 +600,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Yenileme aralığı:",
+    "message": "Yenileme aralığı",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -534,6 +614,18 @@
   "settings_cache_title": {
     "message": "Önbellek",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Diyagram düzeni",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Orta",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Sol",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Emoji Stili",
@@ -556,11 +648,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Yatay çizgi işleme",
+    "message": "Yatay çizgi işleme",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Gizle (boş satır)",
+    "message": "Gizle",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -575,8 +667,32 @@
     "message": "Sayfa sonu",
     "description": "Option to export horizontal rules as page breaks in DOCX"
   },
+  "settings_first_line_indent": {
+    "message": "İlk satır girintisi",
+    "description": "Label for first-line indent selector"
+  },
+  "settings_first_line_indent_1": {
+    "message": "1 karakter",
+    "description": "Option: 1 character first-line indent"
+  },
+  "settings_first_line_indent_2": {
+    "message": "2 karakter",
+    "description": "Option: 2 characters first-line indent"
+  },
+  "settings_first_line_indent_3": {
+    "message": "3 karakter",
+    "description": "Option: 3 characters first-line indent"
+  },
+  "settings_first_line_indent_4": {
+    "message": "4 karakter",
+    "description": "Option: 4 characters first-line indent"
+  },
+  "settings_first_line_indent_off": {
+    "message": "Girinti yok",
+    "description": "Option to disable first-line indent"
+  },
   "settings_frontmatter_display": {
-    "message": "Frontmatter görüntüleme:",
+    "message": "Frontmatter görüntüleme",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -599,6 +715,18 @@
     "message": "Uzantı ayarları",
     "description": "Heading for settings section"
   },
+  "settings_image_layout": {
+    "message": "Görsel düzeni",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Orta",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Sol",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Arayüz ayarları",
     "description": "Heading for interface settings section"
@@ -616,7 +744,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Maksimum önbellekteki öğe sayısı:",
+    "message": "Maksimum önbellekteki öğe sayısı",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -680,7 +808,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "Tema Seç:",
+    "message": "Tema Seç",
     "description": "Label for theme selector"
   },
   "share": {
@@ -724,8 +852,8 @@
     "description": "Toolbar layout toggle tooltip for normal mode"
   },
   "toolbar_print_disabled_title": {
-    "message": "Yazdırma yalnızca yerel dosyalar için kullanılabilir",
-    "description": "Tooltip when print button is disabled for remote files"
+    "message": "Yazdırma sayfa güvenlik politikası (korumalı alan) tarafından engelleniyor",
+    "description": "Tooltip when print button is disabled due to sandbox restriction"
   },
   "toolbar_print_title": {
     "message": "Yazdır",
@@ -762,6 +890,14 @@
   "workspace_desc": {
     "message": "Desteklenen dosyaları göz atmak ve önizlemek için yerel bir dizin açın.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Geri",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "İleri",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Çalışma alanını aç",

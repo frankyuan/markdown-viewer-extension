@@ -19,9 +19,11 @@ import { InfographicPlugin } from './infographic-plugin';
 import { JsonCanvasPlugin } from './canvas-plugin';
 import { DrawioPlugin } from './drawio-plugin';
 import { PlantumlPlugin } from './plantuml-plugin';
+import { EchartsPlugin } from './echarts-plugin';
 import { replacePlaceholderWithImage } from './plugin-html-utils';
-import { createErrorHTML } from './plugin-content-utils';
-import { convertPluginResultToDOCX } from '../exporters/docx-exporter';
+import { createErrorHTML, withNodeSourceInfo } from './plugin-content-utils';
+import { recordRenderDiagnostic } from '../core/render-diagnostics';
+import { convertPluginResultToDOCX, withBlockImageAlignment } from '../exporters/docx-exporter';
 import { syncBlockHtmlFromDOM } from '../core/viewer/viewer-controller';
 import type { BasePlugin } from './base-plugin';
 import type { Processor } from 'unified';
@@ -77,7 +79,8 @@ export const plugins: BasePlugin[] = [
   new InfographicPlugin(),
   new JsonCanvasPlugin(),
   new DrawioPlugin(),
-  new PlantumlPlugin()
+  new PlantumlPlugin(),
+  new EchartsPlugin()
 ];
 
 // ============================================================================
@@ -124,8 +127,24 @@ export function registerRemarkPlugins(
             const content = plugin.extractContent(node);
             if (!content) continue;
 
+            // Capture inline/block mode at match time. Some plugins (notably SVG)
+            // derive inline mode from the current AST node type; reading isInline()
+            // later inside async callbacks can observe a different node and corrupt
+            // layout (e.g. inline badge images becoming block diagrams).
+            const isInline = plugin.isInline();
+
             // This plugin can handle this node, create async task
             const initialStatus = plugin.isUrl(content) ? 'fetching' : 'ready';
+            const placeholderPlugin = { ...plugin, isInline: () => isInline } as typeof plugin;
+
+            // Resolve the plain-image fallback now, while this node is in hand:
+            // if fetching the URL fails later, the task manager can still show
+            // the resource as a native <img> instead of an error block.
+            const taskData = withNodeSourceInfo(plugin.createTaskData(content), node);
+            const fetchFallbackUrl = plugin.createFetchFallbackUrl(content, node);
+            if (fetchFallbackUrl) {
+              taskData.fetchFallbackUrl = fetchFallbackUrl;
+            }
 
             const result = asyncTask(
               async (data: TaskData) => {
@@ -135,20 +154,37 @@ export function registerRemarkPlugins(
                 const placeholderBefore = document.getElementById(id);
                 
                 if (!placeholderBefore) {
+                  // A newer render replaced the document while this task waited: the
+                  // block is rendered by that pass instead. Keep this quiet — it is
+                  // normal supersede traffic, not a failure.
                   return;
-                }
-                
+                }                
                 try {
                   // Preprocess content (e.g., inline local images for HTML plugin)
                   const processedCode = await plugin.preprocessContent(code || '');
                   const renderResult = await renderer.render(plugin.type, processedCode);
                   
                   if (renderResult) {
-                    replacePlaceholderWithImage(id, renderResult, plugin.type, plugin.isInline(), sourceHash as string);
+                    replacePlaceholderWithImage(id, renderResult, plugin.type, isInline, sourceHash as string);
                     // Sync rendered content back to in-memory cache
                     // This ensures block moves don't lose rendered diagrams
                     syncBlockHtmlFromDOM(id);
                   } else {
+                    // The renderer resolved without producing anything. Removing the
+                    // placeholder leaves a gap in the document, so say why instead of
+                    // leaving the reader (and the logs) with nothing.
+                    const noResultLine = typeof data.sourceLine === 'number' ? data.sourceLine : null;
+                    console.warn(
+                      `[PluginTask] ${plugin.type} produced no result for ${id}${noResultLine ? ` (line ${noResultLine})` : ''} — the block will be missing`,
+                    );
+                    recordRenderDiagnostic({
+                      level: 'error',
+                      kind: 'block-missing',
+                      type: plugin.type,
+                      line: noResultLine,
+                      blockId: id,
+                      message: 'the renderer produced no result — the block will be missing',
+                    });
                     const placeholder = document.getElementById(id);
                     if (placeholder) {
                       placeholder.remove();
@@ -160,20 +196,39 @@ export function registerRemarkPlugins(
                       (error as Error).message === 'Request cancelled') {
                     return;
                   }
-                  console.error('[PluginTask] Render error for:', id, error);
+                  // Report as a concise warning with the source line — the
+                  // error is already surfaced in the document itself via the
+                  // placeholder error block, so a full stack trace here is
+                  // noise (and would be dumped into every CLI export).
+                  const sourceLine = typeof data.sourceLine === 'number' ? data.sourceLine : null;
+                  console.warn(
+                    `[PluginTask] ${plugin.type} render failed for ${id}${sourceLine ? ` (line ${sourceLine})` : ''}: ${(error as Error).message}`,
+                  );
+                  recordRenderDiagnostic({
+                    level: 'error',
+                    kind: 'render-failed',
+                    type: plugin.type,
+                    line: sourceLine,
+                    blockId: id,
+                    message: (error as Error).message,
+                  });
                   const placeholder = document.getElementById(id);
                   if (placeholder) {
                     const errorDetail = escapeHtml((error as Error).message || '');
                     const localizedError = translate('async_processing_error', [plugin.type, errorDetail]) 
                       || `${plugin.type} error: ${errorDetail}`;
-                    placeholder.outerHTML = createErrorHTML(localizedError);
+                    placeholder.outerHTML = createErrorHTML(localizedError, {
+                      pluginType: plugin.type,
+                      sourceLine,
+                      blockId: id,
+                    });
                     // Also sync error state to memory
                     syncBlockHtmlFromDOM(id);
                   }
                 }
               },
-              plugin.createTaskData(content),
-              plugin,
+              taskData,
+              placeholderPlugin,
               translate,
               initialStatus
             );
@@ -277,7 +332,34 @@ export async function convertNodeToDOCX(
   }
 
   // Render to unified format
-  const renderResult = await plugin.renderToCommon(renderer, content);
+  let renderResult = await plugin.renderToCommon(renderer, content);
+
+  // Report plugin failures once, as a concise warning with the source line —
+  // the error text is also carried into the DOCX itself via the error result.
+  // The diagnostic is what lets a host (the documd CLI) fail the conversion
+  // instead of only printing a line a batch render would scroll past.
+  if (renderResult.type === 'error') {
+    const position = (node as { position?: { start?: { line?: number } } }).position;
+    const line = position?.start?.line;
+    const reason = renderResult.content.text || 'the engine failed to render this block';
+    console.warn(
+      `[PluginTask] ${plugin.type} render failed${line ? ` (line ${line})` : ''}: ${reason}`,
+    );
+    recordRenderDiagnostic({
+      level: 'error',
+      kind: 'render-failed',
+      type: plugin.type,
+      line: typeof line === 'number' ? line : null,
+      blockId: null,
+      message: reason,
+    });
+  }
+
+  // Block diagrams/charts should follow the user's diagram alignment setting in DOCX.
+  if (plugin.type !== 'image' && renderResult.type === 'image' && !renderResult.display.inline) {
+    const diagramLayout = (docxHelpers.diagramLayout === 'left' ? 'left' : 'center') as 'left' | 'center';
+    renderResult = withBlockImageAlignment(renderResult, diagramLayout);
+  }
   
   // Convert to DOCX
   const result = convertPluginResultToDOCX(renderResult, plugin.type);

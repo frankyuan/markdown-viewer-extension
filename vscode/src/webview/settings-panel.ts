@@ -10,9 +10,13 @@
 import Localization from '../../../src/utils/localization';
 import type { EmojiStyle } from '../../../src/types/docx.js';
 import type { FrontmatterDisplay } from '../../../src/core/viewer/viewer-controller';
+import { DEFAULT_SETTINGS } from '../../../src/config/settings.generated';
 
 /** Table layout mode */
 export type TableLayout = 'left' | 'center' | 'center-full-width';
+
+/** Media layout mode */
+export type MediaLayout = 'left' | 'center';
 
 export interface SettingsPanelOptions {
   /** Current theme ID */
@@ -29,6 +33,12 @@ export interface SettingsPanelOptions {
   tableMergeEmpty?: boolean;
   /** Table layout setting */
   tableLayout?: TableLayout;
+  /** Standalone image layout setting */
+  imageLayout?: MediaLayout;
+  /** Diagram/chart layout setting */
+  diagramLayout?: MediaLayout;
+  /** First-line indent (0 = off, 1-4 = characters) */
+  firstLineIndent?: number;
   /** Theme changed callback */
   onThemeChange?: (themeId: string) => void;
   /** Locale changed callback */
@@ -43,6 +53,12 @@ export interface SettingsPanelOptions {
   onTableMergeEmptyChange?: (enabled: boolean) => void;
   /** Table layout changed callback */
   onTableLayoutChange?: (layout: TableLayout) => void;
+  /** Image layout changed callback */
+  onImageLayoutChange?: (layout: MediaLayout) => void;
+  /** Diagram layout changed callback */
+  onDiagramLayoutChange?: (layout: MediaLayout) => void;
+  /** First-line indent changed callback */
+  onFirstLineIndentChange?: (indent: number) => void;
   /** Cache clear callback */
   onClearCache?: () => Promise<void>;
   /** Called when panel is shown, use to refresh dynamic data */
@@ -98,13 +114,16 @@ export interface CacheStats {
  */
 export function createSettingsPanel(options: SettingsPanelOptions): SettingsPanel {
   const {
-    currentTheme = 'default',
-    currentLocale = 'auto',
-    docxHrDisplay = 'hide',
-    docxEmojiStyle = 'windows',
-    frontmatterDisplay = 'hide',
-    tableMergeEmpty = true,
-    tableLayout = 'center',
+    currentTheme = DEFAULT_SETTINGS.themeId,
+    currentLocale = DEFAULT_SETTINGS.preferredLocale,
+    docxHrDisplay = DEFAULT_SETTINGS.docxHrDisplay,
+    docxEmojiStyle = DEFAULT_SETTINGS.docxEmojiStyle,
+    frontmatterDisplay = DEFAULT_SETTINGS.frontmatterDisplay,
+    tableMergeEmpty = DEFAULT_SETTINGS.tableMergeEmpty,
+    tableLayout = DEFAULT_SETTINGS.tableLayout,
+    imageLayout = DEFAULT_SETTINGS.imageLayout,
+    diagramLayout = DEFAULT_SETTINGS.diagramLayout,
+    firstLineIndent = DEFAULT_SETTINGS.firstLineIndent,
     onThemeChange,
     onLocaleChange,
     onDocxHrDisplayChange,
@@ -151,6 +170,45 @@ export function createSettingsPanel(options: SettingsPanelOptions): SettingsPane
         </select>
       </div>
       <div class="vscode-settings-group">
+        <label class="vscode-settings-label" data-i18n="settings_first_line_indent">${Localization.translate('settings_first_line_indent')}</label>
+        <select class="vscode-settings-select" data-setting="firstLineIndent">
+          <option value="0" ${firstLineIndent === 0 ? 'selected' : ''} data-i18n="settings_first_line_indent_off">${Localization.translate('settings_first_line_indent_off')}</option>
+          <option value="1" ${firstLineIndent === 1 ? 'selected' : ''} data-i18n="settings_first_line_indent_1">${Localization.translate('settings_first_line_indent_1')}</option>
+          <option value="2" ${firstLineIndent === 2 ? 'selected' : ''} data-i18n="settings_first_line_indent_2">${Localization.translate('settings_first_line_indent_2')}</option>
+          <option value="3" ${firstLineIndent === 3 ? 'selected' : ''} data-i18n="settings_first_line_indent_3">${Localization.translate('settings_first_line_indent_3')}</option>
+          <option value="4" ${firstLineIndent === 4 ? 'selected' : ''} data-i18n="settings_first_line_indent_4">${Localization.translate('settings_first_line_indent_4')}</option>
+        </select>
+      </div>
+      <div class="vscode-settings-group">
+        <label class="vscode-settings-label" data-i18n="settings_table_layout">${Localization.translate('settings_table_layout')}</label>
+        <select class="vscode-settings-select" data-setting="tableLayout">
+          <option value="left" ${tableLayout === 'left' ? 'selected' : ''} data-i18n="settings_table_layout_left">${Localization.translate('settings_table_layout_left')}</option>
+          <option value="center" ${tableLayout === 'center' ? 'selected' : ''} data-i18n="settings_table_layout_center">${Localization.translate('settings_table_layout_center')}</option>
+          <option value="center-full-width" ${tableLayout === 'center-full-width' ? 'selected' : ''} data-i18n="settings_table_layout_full_width">${Localization.translate('settings_table_layout_full_width')}</option>
+        </select>
+      </div>
+      <div class="vscode-settings-group">
+        <label class="vscode-settings-label" data-i18n="settings_image_layout">${Localization.translate('settings_image_layout')}</label>
+        <select class="vscode-settings-select" data-setting="imageLayout">
+          <option value="left" ${imageLayout === 'left' ? 'selected' : ''} data-i18n="settings_image_layout_left">${Localization.translate('settings_image_layout_left')}</option>
+          <option value="center" ${imageLayout === 'center' ? 'selected' : ''} data-i18n="settings_image_layout_center">${Localization.translate('settings_image_layout_center')}</option>
+        </select>
+      </div>
+      <div class="vscode-settings-group">
+        <label class="vscode-settings-label" data-i18n="settings_diagram_layout">${Localization.translate('settings_diagram_layout')}</label>
+        <select class="vscode-settings-select" data-setting="diagramLayout">
+          <option value="left" ${diagramLayout === 'left' ? 'selected' : ''} data-i18n="settings_diagram_layout_left">${Localization.translate('settings_diagram_layout_left')}</option>
+          <option value="center" ${diagramLayout === 'center' ? 'selected' : ''} data-i18n="settings_diagram_layout_center">${Localization.translate('settings_diagram_layout_center')}</option>
+        </select>
+      </div>
+      <div class="vscode-settings-group">
+        <span class="vscode-settings-label" data-i18n="settings_table_merge_empty">${Localization.translate('settings_table_merge_empty')}</span>
+        <label class="vscode-settings-switch">
+          <input type="checkbox" data-setting="tableMergeEmpty" ${tableMergeEmpty ? 'checked' : ''}>
+          <span class="vscode-settings-switch-slider" aria-hidden="true"></span>
+        </label>
+      </div>
+      <div class="vscode-settings-group">
         <label class="vscode-settings-label" data-i18n="settings_frontmatter_display">${Localization.translate('settings_frontmatter_display')}</label>
         <select class="vscode-settings-select" data-setting="frontmatterDisplay">
           <option value="hide" ${frontmatterDisplay === 'hide' ? 'selected' : ''} data-i18n="settings_frontmatter_hide">${Localization.translate('settings_frontmatter_hide')}</option>
@@ -167,20 +225,6 @@ export function createSettingsPanel(options: SettingsPanelOptions): SettingsPane
         </select>
       </div>
       <div class="vscode-settings-group">
-        <label class="vscode-settings-checkbox">
-          <input type="checkbox" data-setting="tableMergeEmpty" ${tableMergeEmpty ? 'checked' : ''}>
-          <span data-i18n="settings_table_merge_empty">${Localization.translate('settings_table_merge_empty')}</span>
-        </label>
-      </div>
-      <div class="vscode-settings-group">
-        <label class="vscode-settings-label" data-i18n="settings_table_layout">${Localization.translate('settings_table_layout')}</label>
-        <select class="vscode-settings-select" data-setting="tableLayout">
-          <option value="left" ${tableLayout === 'left' ? 'selected' : ''} data-i18n="settings_table_layout_left">${Localization.translate('settings_table_layout_left')}</option>
-          <option value="center" ${tableLayout === 'center' ? 'selected' : ''} data-i18n="settings_table_layout_center">${Localization.translate('settings_table_layout_center')}</option>
-          <option value="center-full-width" ${tableLayout === 'center-full-width' ? 'selected' : ''} data-i18n="settings_table_layout_full_width">${Localization.translate('settings_table_layout_full_width')}</option>
-        </select>
-      </div>
-      <div class="vscode-settings-group">
         <label class="vscode-settings-label" data-i18n="settings_docx_hr_display">${Localization.translate('settings_docx_hr_display')}</label>
         <select class="vscode-settings-select" data-setting="docxHrDisplay">
           <option value="hide" ${docxHrDisplay === 'hide' ? 'selected' : ''} data-i18n="settings_docx_hr_display_hide">${Localization.translate('settings_docx_hr_display_hide')}</option>
@@ -189,7 +233,7 @@ export function createSettingsPanel(options: SettingsPanelOptions): SettingsPane
         </select>
       </div>
       <div class="vscode-settings-divider"></div>
-      <div class="vscode-settings-group">
+      <div class="vscode-settings-group vscode-cache-group">
         <div class="vscode-cache-stats">
           <div class="vscode-cache-stat-item">
             <span class="vscode-cache-stat-label" data-i18n="cache_stat_item_label">${Localization.translate('cache_stat_item_label')}</span>
@@ -213,8 +257,11 @@ export function createSettingsPanel(options: SettingsPanelOptions): SettingsPane
   const docxHrDisplaySelect = panel.querySelector('[data-setting="docxHrDisplay"]') as HTMLSelectElement;
   const tableMergeEmptyCheckbox = panel.querySelector('[data-setting="tableMergeEmpty"]') as HTMLInputElement;
   const tableLayoutSelect = panel.querySelector('[data-setting="tableLayout"]') as HTMLSelectElement;
+  const imageLayoutSelect = panel.querySelector('[data-setting="imageLayout"]') as HTMLSelectElement;
+  const diagramLayoutSelect = panel.querySelector('[data-setting="diagramLayout"]') as HTMLSelectElement;
   const emojiStyleSelect = panel.querySelector('[data-setting="emojiStyle"]') as HTMLSelectElement;
   const frontmatterDisplaySelect = panel.querySelector('[data-setting="frontmatterDisplay"]') as HTMLSelectElement;
+  const firstLineIndentSelect = panel.querySelector('[data-setting="firstLineIndent"]') as HTMLSelectElement;
   const clearCacheBtn = panel.querySelector('.vscode-cache-clear-btn') as HTMLButtonElement;
   const cacheItemsValue = panel.querySelector('[data-cache-stat="items"]') as HTMLElement;
   const cacheSizeValue = panel.querySelector('[data-cache-stat="size"]') as HTMLElement;
@@ -227,8 +274,11 @@ export function createSettingsPanel(options: SettingsPanelOptions): SettingsPane
   if (docxHrDisplaySelect) docxHrDisplaySelect.value = docxHrDisplay;
   if (tableMergeEmptyCheckbox) tableMergeEmptyCheckbox.checked = tableMergeEmpty;
   if (tableLayoutSelect) tableLayoutSelect.value = tableLayout;
+  if (imageLayoutSelect) imageLayoutSelect.value = imageLayout;
+  if (diagramLayoutSelect) diagramLayoutSelect.value = diagramLayout;
   if (emojiStyleSelect) emojiStyleSelect.value = docxEmojiStyle;
   if (frontmatterDisplaySelect) frontmatterDisplaySelect.value = frontmatterDisplay;
+  if (firstLineIndentSelect) firstLineIndentSelect.value = String(firstLineIndent);
 
   // Bind events
   closeBtn?.addEventListener('click', () => {
@@ -266,12 +316,24 @@ export function createSettingsPanel(options: SettingsPanelOptions): SettingsPane
     options.onTableLayoutChange?.(tableLayoutSelect.value as TableLayout);
   });
 
+  imageLayoutSelect?.addEventListener('change', () => {
+    options.onImageLayoutChange?.(imageLayoutSelect.value as MediaLayout);
+  });
+
+  diagramLayoutSelect?.addEventListener('change', () => {
+    options.onDiagramLayoutChange?.(diagramLayoutSelect.value as MediaLayout);
+  });
+
   emojiStyleSelect?.addEventListener('change', () => {
     options.onDocxEmojiStyleChange?.(emojiStyleSelect.value as EmojiStyle);
   });
 
   frontmatterDisplaySelect?.addEventListener('change', () => {
     options.onFrontmatterDisplayChange?.(frontmatterDisplaySelect.value as FrontmatterDisplay);
+  });
+
+  firstLineIndentSelect?.addEventListener('change', () => {
+    options.onFirstLineIndentChange?.(parseInt(firstLineIndentSelect.value, 10));
   });
 
   // Handle clear cache button - no confirm dialog in sandboxed webview

@@ -19,6 +19,30 @@
     "message": "Onbekende fout",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Boek exporteren naar DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_epub": {
+    "message": "Boek exporteren naar EPUB",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
+  "book_export_failed": {
+    "message": "Boek exporteren mislukt: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Boek exporteren naar PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} pagina('s) overgeslagen",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Boek exporteren",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Cache wissen",
     "description": "Clear cache button"
@@ -175,6 +199,10 @@
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
   },
+  "copy_table": {
+    "message": "Tabel kopiëren",
+    "description": "Context menu item for copying a rendered table as spreadsheet cells"
+  },
   "delete": {
     "message": "Delete",
     "description": "Delete button text"
@@ -203,6 +231,10 @@
     "message": "Exporteren naar DOCX",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_epub": {
+    "message": "Exporteren naar EPUB",
+    "description": "Export menu item for exporting the current document to EPUB"
+  },
   "export_menu_export_html": {
     "message": "Exporteren naar HTML",
     "description": "Export menu item for exporting to HTML"
@@ -220,7 +252,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown naar perfect Word — Mermaid, PlantUML, Vega, drawio, infographic, Graphviz, LaTeX, code-accentuering, lokale verwerking.",
+    "message": "Bekijk Markdown lokaal en exporteer verzorgde Word-documenten met diagrammen, bewerkbare formules en code-accentuering.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {
@@ -251,6 +283,14 @@
     "message": "en schakel 'Toegang tot bestand-URL's toestaan' in",
     "description": "Suffix for file access warning"
   },
+  "file_access_disabled_suffix_firefox": {
+    "message": "en schakel ‘Toegang tot lokale bestanden op uw computer’ in bij Machtigingen en gegevens",
+    "description": "Suffix for the Firefox file access warning"
+  },
+  "file_access_enable_button": {
+    "message": "Toegang tot lokale bestanden inschakelen",
+    "description": "Button that requests local file access"
+  },
   "file_access_settings_link": {
     "message": "extensie-instellingenpagina",
     "description": "Link text to extension settings"
@@ -271,13 +311,9 @@
     "message": "URL gekopieerd. Plak in de adresbalk om te openen.",
     "description": "Message shown when file URL is copied to clipboard in Firefox"
   },
-  "heading_h2_format": {
-    "message": "Hoofdstuk {0}",
-    "description": "Format for h2 headings. {0} is the chapter number."
-  },
-  "heading_h2_numerals": {
-    "message": "arabic",
-    "description": "Numeral system for h2: chinese, arabic, roman"
+  "heading_anchor_title": {
+    "message": "Link naar deze sectie",
+    "description": "Tooltip for the hover anchor icon shown next to a heading"
   },
   "history_clear": {
     "message": "Geschiedenis wissen",
@@ -339,6 +375,26 @@
     "message": "Uitzoomen",
     "description": "Tooltip for zooming out in the diagram lightbox"
   },
+  "local_file_access_message": {
+    "message": "Firefox staat deze extensie niet toe lokale bestanden te lezen, daarom kunnen de afbeeldingen in map {0} niet worden ingesloten. Kies de map die ze bevat - de geselecteerde bestanden blijven op je computer en worden alleen voor dit document gelezen.",
+    "description": "Prompt shown when the folder name is known"
+  },
+  "local_file_access_message_generic": {
+    "message": "Firefox staat deze extensie niet toe lokale bestanden te lezen, daarom kunnen lokale afbeeldingen in dit document niet worden ingesloten. Kies de map die ze bevat - de geselecteerde bestanden blijven op je computer en worden alleen voor dit document gelezen.",
+    "description": "Prompt shown without a folder name"
+  },
+  "local_file_access_pick": {
+    "message": "Map kiezen",
+    "description": "Button that opens the folder picker"
+  },
+  "local_file_access_skip": {
+    "message": "Deze keer zonder afbeeldingen exporteren",
+    "description": "Button that exports without embedding local images"
+  },
+  "local_file_access_title": {
+    "message": "Lokale afbeeldingen kunnen niet worden gelezen",
+    "description": "Title of the local file access prompt"
+  },
   "more": {
     "message": "More",
     "description": "More menu tooltip"
@@ -387,13 +443,45 @@
     "message": "Opmerking toevoegen…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
-  "remark_all_cleared": {
-    "message": "Alle opmerkingen zijn gewist",
-    "description": "Temporary success state after clearing all remarks"
+  "remark_cfg_auto_delete": {
+    "message": "Lege opmerkingen automatisch verwijderen",
+    "description": "Config: auto-delete annotations with no note"
   },
-  "remark_cancel": {
-    "message": "Annuleren en verwijderen",
-    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  "remark_cfg_close_after_copy": {
+    "message": "Tabblad sluiten na kopiëren",
+    "description": "Config: close the file tab after copying remarks"
+  },
+  "remark_cfg_default_color": {
+    "message": "Standaardkleur",
+    "description": "Config: default annotation color"
+  },
+  "remark_cfg_font_size": {
+    "message": "Lettergrootte",
+    "description": "Config: sidebar font size"
+  },
+  "remark_cfg_highlight_style": {
+    "message": "Markeerstijl",
+    "description": "Config: how text is visually marked"
+  },
+  "remark_cfg_style_bg": {
+    "message": "Achtergrond",
+    "description": "Highlight style: colored background"
+  },
+  "remark_cfg_style_border": {
+    "message": "Kader",
+    "description": "Highlight style: bottom border"
+  },
+  "remark_cfg_style_underline": {
+    "message": "Onderstreept",
+    "description": "Highlight style: solid underline"
+  },
+  "remark_cfg_style_wavy": {
+    "message": "Golvend",
+    "description": "Highlight style: wavy underline"
+  },
+  "remark_cfg_title": {
+    "message": "Annotatiemodus",
+    "description": "Title for remark mode settings card"
   },
   "remark_clear_all": {
     "message": "Alle opmerkingen wissen",
@@ -415,18 +503,6 @@
     "message": "Suggestie",
     "description": "Label for the yellow remark category"
   },
-  "remark_copied": {
-    "message": "Gekopieerd!",
-    "description": "Temporary success state after copying remarks"
-  },
-  "remark_copy_btn": {
-    "message": "Opmerkingen kopiëren",
-    "description": "Button text for copying all remarks"
-  },
-  "remark_copy_failed": {
-    "message": "Kopiëren mislukt",
-    "description": "Temporary error state when copying remarks fails"
-  },
   "remark_copy_tooltip": {
     "message": "Alle opmerkingen naar het klembord kopiëren",
     "description": "Tooltip for copying all remarks"
@@ -439,9 +515,9 @@
     "message": "Verwijderd",
     "description": "Status label shown after a remark is deleted"
   },
-  "remark_edit_note": {
-    "message": "Klik om te bewerken",
-    "description": "Tooltip for editing an existing remark note"
+  "remark_download_tooltip": {
+    "message": "Opmerkingen als bestand downloaden",
+    "description": "Tooltip for the button that downloads all remarks as a portable file"
   },
   "remark_empty_hint": {
     "message": "Selecteer tekst om opmerkingen toe te voegen",
@@ -459,6 +535,10 @@
     "message": "Notitie",
     "description": "Label preceding the note text in exported remarks"
   },
+  "remark_import_tooltip": {
+    "message": "Opmerkingen uit bestand importeren en samenvoegen",
+    "description": "Tooltip for the button that imports remarks from a file and merges them"
+  },
   "remark_mode": {
     "message": "Opmerkingsmodus",
     "description": "Toolbar button title for entering remark mode"
@@ -475,10 +555,6 @@
     "message": "Remove from list",
     "description": "Menu item to remove file from recent list"
   },
-  "reset": {
-    "message": "Resetten",
-    "description": "Reset button"
-  },
   "save_as_drawio": {
     "message": "Opslaan als DrawIO",
     "description": "Context menu item for saving a PlantUML diagram as DrawIO"
@@ -494,6 +570,10 @@
   "save_image_as": {
     "message": "Afbeelding opslaan als…",
     "description": "Context menu item for saving an image"
+  },
+  "save_table_as_xlsx": {
+    "message": "Opslaan als Excel (.xlsx)",
+    "description": "Context menu item for saving a rendered table as an Excel (.xlsx) file"
   },
   "search_case_sensitive": {
     "message": "Hoofdlettergevoelig",
@@ -520,7 +600,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Vernieuwingsinterval:",
+    "message": "Vernieuwingsinterval",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -534,6 +614,18 @@
   "settings_cache_title": {
     "message": "Cache",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Diagramindeling",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Gecentreerd",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Links",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Emoji-stijl",
@@ -556,11 +648,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Horizontale lijn verwerking",
+    "message": "Horizontale lijn verwerking",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Verbergen (lege regel)",
+    "message": "Verbergen",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -575,8 +667,32 @@
     "message": "Pagina-einde",
     "description": "Option to export horizontal rules as page breaks in DOCX"
   },
+  "settings_first_line_indent": {
+    "message": "Inspringing eerste regel",
+    "description": "Label for first-line indent selector"
+  },
+  "settings_first_line_indent_1": {
+    "message": "1 teken",
+    "description": "Option: 1 character first-line indent"
+  },
+  "settings_first_line_indent_2": {
+    "message": "2 tekens",
+    "description": "Option: 2 characters first-line indent"
+  },
+  "settings_first_line_indent_3": {
+    "message": "3 tekens",
+    "description": "Option: 3 characters first-line indent"
+  },
+  "settings_first_line_indent_4": {
+    "message": "4 tekens",
+    "description": "Option: 4 characters first-line indent"
+  },
+  "settings_first_line_indent_off": {
+    "message": "Geen inspringing",
+    "description": "Option to disable first-line indent"
+  },
   "settings_frontmatter_display": {
-    "message": "Frontmatter weergave:",
+    "message": "Frontmatter weergave",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -599,6 +715,18 @@
     "message": "Extensie-instellingen",
     "description": "Heading for settings section"
   },
+  "settings_image_layout": {
+    "message": "Afbeeldingsindeling",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Gecentreerd",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Links",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Interface-instellingen",
     "description": "Heading for interface settings section"
@@ -616,7 +744,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Maximaal aantal items in cache:",
+    "message": "Maximaal aantal items in cache",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -680,7 +808,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "Selecteer thema:",
+    "message": "Selecteer thema",
     "description": "Label for theme selector"
   },
   "share": {
@@ -724,8 +852,8 @@
     "description": "Toolbar layout toggle tooltip for normal mode"
   },
   "toolbar_print_disabled_title": {
-    "message": "Afdrukken is alleen beschikbaar voor lokale bestanden",
-    "description": "Tooltip when print button is disabled for remote files"
+    "message": "Afdrukken is geblokkeerd door het beveiligingsbeleid van de pagina (sandbox)",
+    "description": "Tooltip when print button is disabled due to sandbox restriction"
   },
   "toolbar_print_title": {
     "message": "Afdrukken",
@@ -762,6 +890,14 @@
   "workspace_desc": {
     "message": "Open een lokale map om ondersteunde bestanden te bekijken en een voorbeeld te zien.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Terug",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Vooruit",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Werkruimte openen",

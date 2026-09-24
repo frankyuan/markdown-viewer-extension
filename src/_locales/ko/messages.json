@@ -19,6 +19,30 @@
     "message": "알 수 없는 오류",
     "description": "세부 정보가 없을 때 문구"
   },
+  "book_export_docx": {
+    "message": "책을 DOCX로 내보내기",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_epub": {
+    "message": "책을 EPUB로 내보내기",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
+  "book_export_failed": {
+    "message": "책 내보내기 실패: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "책을 PDF로 내보내기",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0}페이지가 건너뛰어졌습니다",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "책 내보내기",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "캐시 비우기",
     "description": "캐시 비우기 버튼"
@@ -175,6 +199,10 @@
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
   },
+  "copy_table": {
+    "message": "표 복사",
+    "description": "Context menu item for copying a rendered table as spreadsheet cells"
+  },
   "delete": {
     "message": "삭제",
     "description": "Delete button text"
@@ -203,6 +231,10 @@
     "message": "DOCX로 내보내기",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_epub": {
+    "message": "EPUB로 내보내기",
+    "description": "Export menu item for exporting the current document to EPUB"
+  },
   "export_menu_export_html": {
     "message": "HTML로 내보내기",
     "description": "Export menu item for exporting to HTML"
@@ -220,11 +252,11 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown을 완벽한 Word로 — Mermaid, PlantUML, Vega, drawio, canvas, 인포그래픽, Graphviz, LaTeX(편집 가능), 코드 강조, 로컬 처리.",
+    "message": "Markdown을 로컬에서 미리 보고 다이어그램, 편집 가능한 수식, 코드 강조가 포함된 Word 문서를 내보냅니다.",
     "description": "Chrome 웹 스토어에 표시되는 설명"
   },
   "extensionName": {
-    "message": "Markdown 뷰어",
+    "message": "docu.md Markdown 뷰어",
     "description": "확장 프로그램 이름"
   },
   "failed_to_open_file": {
@@ -251,6 +283,14 @@
     "message": "을 방문하여 '파일 URL에 대한 액세스 허용'을 활성화하세요",
     "description": "Suffix for file access warning"
   },
+  "file_access_disabled_suffix_firefox": {
+    "message": "「권한 및 데이터」에서 「컴퓨터의 로컬 파일 접근」을 켜세요",
+    "description": "Suffix for the Firefox file access warning"
+  },
+  "file_access_enable_button": {
+    "message": "로컬 파일 접근 허용",
+    "description": "Button that requests local file access"
+  },
   "file_access_settings_link": {
     "message": "확장 프로그램 설정 페이지",
     "description": "Link text to extension settings"
@@ -271,13 +311,9 @@
     "message": "URL이 복사되었습니다. 주소창에 붙여넣어 열어주세요.",
     "description": "Message shown when file URL is copied to clipboard in Firefox"
   },
-  "heading_h2_format": {
-    "message": "제{0}장",
-    "description": "Format for h2 headings. {0} is the chapter number."
-  },
-  "heading_h2_numerals": {
-    "message": "arabic",
-    "description": "Numeral system for h2: chinese, arabic, roman"
+  "heading_anchor_title": {
+    "message": "이 섹션으로 연결되는 링크",
+    "description": "Tooltip for the hover anchor icon shown next to a heading"
   },
   "history_clear": {
     "message": "기록 지우기",
@@ -339,6 +375,26 @@
     "message": "축소",
     "description": "Tooltip for zooming out in the diagram lightbox"
   },
+  "local_file_access_message": {
+    "message": "Firefox는 이 확장 프로그램이 로컬 파일을 읽는 것을 허용하지 않으므로 {0} 폴더의 이미지를 포함할 수 없습니다. 이미지가 들어 있는 폴더를 선택하세요. 선택한 파일은 컴퓨터에 그대로 남고 이 문서를 읽기 위해서만 사용됩니다.",
+    "description": "Prompt shown when the folder name is known"
+  },
+  "local_file_access_message_generic": {
+    "message": "Firefox는 이 확장 프로그램이 로컬 파일을 읽는 것을 허용하지 않으므로 이 문서의 로컬 이미지를 포함할 수 없습니다. 이미지가 들어 있는 폴더를 선택하세요. 선택한 파일은 컴퓨터에 그대로 남고 이 문서를 읽기 위해서만 사용됩니다.",
+    "description": "Prompt shown without a folder name"
+  },
+  "local_file_access_pick": {
+    "message": "폴더 선택",
+    "description": "Button that opens the folder picker"
+  },
+  "local_file_access_skip": {
+    "message": "이번에는 이미지 없이 내보내기",
+    "description": "Button that exports without embedding local images"
+  },
+  "local_file_access_title": {
+    "message": "로컬 이미지를 읽을 수 없습니다",
+    "description": "Title of the local file access prompt"
+  },
   "more": {
     "message": "더 보기",
     "description": "More menu tooltip"
@@ -387,13 +443,45 @@
     "message": "메모 추가…",
     "description": "Placeholder for the note input in the annotation popup and sidebar"
   },
-  "remark_all_cleared": {
-    "message": "모든 주석을 지웠습니다",
-    "description": "Temporary success state after clearing all remarks"
+  "remark_cfg_auto_delete": {
+    "message": "빈 메모 자동 삭제",
+    "description": "Config: auto-delete annotations with no note"
   },
-  "remark_cancel": {
-    "message": "취소하고 제거",
-    "description": "Cancel button in the annotation popup"
+  "remark_cfg_close_after_copy": {
+    "message": "복사 후 탭 닫기",
+    "description": "Config: close the file tab after copying remarks"
+  },
+  "remark_cfg_default_color": {
+    "message": "기본 색상",
+    "description": "Config: default annotation color"
+  },
+  "remark_cfg_font_size": {
+    "message": "글꼴 크기",
+    "description": "Config: sidebar font size"
+  },
+  "remark_cfg_highlight_style": {
+    "message": "강조 스타일",
+    "description": "Config: how text is visually marked"
+  },
+  "remark_cfg_style_bg": {
+    "message": "배경",
+    "description": "Highlight style: colored background"
+  },
+  "remark_cfg_style_border": {
+    "message": "테두리",
+    "description": "Highlight style: bottom border"
+  },
+  "remark_cfg_style_underline": {
+    "message": "밑줄",
+    "description": "Highlight style: solid underline"
+  },
+  "remark_cfg_style_wavy": {
+    "message": "물결",
+    "description": "Highlight style: wavy underline"
+  },
+  "remark_cfg_title": {
+    "message": "주석 모드",
+    "description": "Title for remark mode settings card"
   },
   "remark_clear_all": {
     "message": "모든 주석 지우기",
@@ -415,18 +503,6 @@
     "message": "제안",
     "description": "Label for the yellow annotation color"
   },
-  "remark_copied": {
-    "message": "복사됨!",
-    "description": "Feedback shown after remarks are successfully copied"
-  },
-  "remark_copy_btn": {
-    "message": "주석 복사",
-    "description": "Button label to copy all remarks to clipboard and exit Remark Mode"
-  },
-  "remark_copy_failed": {
-    "message": "복사 실패",
-    "description": "Feedback shown when copying remarks fails"
-  },
   "remark_copy_tooltip": {
     "message": "모든 주석을 클립보드에 복사",
     "description": "Tooltip for the Copy remarks button"
@@ -439,9 +515,9 @@
     "message": "삭제됨",
     "description": "Status label shown after a remark is deleted"
   },
-  "remark_edit_note": {
-    "message": "클릭하여 편집",
-    "description": "Tooltip on a remark note in the sidebar indicating it is editable"
+  "remark_download_tooltip": {
+    "message": "주석을 파일로 다운로드",
+    "description": "Tooltip for the button that downloads all remarks as a portable file"
   },
   "remark_empty_hint": {
     "message": "텍스트를 선택해 주석 추가",
@@ -459,6 +535,10 @@
     "message": "메모",
     "description": "Label preceding the note text in exported remarks"
   },
+  "remark_import_tooltip": {
+    "message": "파일에서 주석 가져와 병합",
+    "description": "Tooltip for the button that imports remarks from a file and merges them"
+  },
   "remark_mode": {
     "message": "주석 모드",
     "description": "Toolbar button tooltip to enter Remark Mode"
@@ -475,10 +555,6 @@
     "message": "목록에서 제거",
     "description": "Menu item to remove file from recent list"
   },
-  "reset": {
-    "message": "재설정",
-    "description": "Reset button"
-  },
   "save_as_drawio": {
     "message": "DrawIO로 저장",
     "description": "Context menu item for saving a PlantUML diagram as DrawIO"
@@ -494,6 +570,10 @@
   "save_image_as": {
     "message": "이미지를 다른 이름으로 저장…",
     "description": "Context menu item for saving an image"
+  },
+  "save_table_as_xlsx": {
+    "message": "Excel로 저장 (.xlsx)",
+    "description": "Context menu item for saving a rendered table as an Excel (.xlsx) file"
   },
   "search_case_sensitive": {
     "message": "대소문자 구분",
@@ -520,7 +600,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "새로고침 간격:",
+    "message": "새로고침 간격",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -534,6 +614,18 @@
   "settings_cache_title": {
     "message": "캐시",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "다이어그램 레이아웃",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "가운데",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "왼쪽",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "이모지 스타일",
@@ -556,11 +648,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: 가로줄 처리",
+    "message": "가로줄 처리",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "숨기기 (빈 줄)",
+    "message": "숨기기",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -575,8 +667,32 @@
     "message": "페이지 나누기",
     "description": "Option to export horizontal rules as page breaks in DOCX"
   },
+  "settings_first_line_indent": {
+    "message": "첫 줄 들여쓰기",
+    "description": "Label for first-line indent selector"
+  },
+  "settings_first_line_indent_1": {
+    "message": "1자",
+    "description": "Option: 1 character first-line indent"
+  },
+  "settings_first_line_indent_2": {
+    "message": "2자",
+    "description": "Option: 2 characters first-line indent"
+  },
+  "settings_first_line_indent_3": {
+    "message": "3자",
+    "description": "Option: 3 characters first-line indent"
+  },
+  "settings_first_line_indent_4": {
+    "message": "4자",
+    "description": "Option: 4 characters first-line indent"
+  },
+  "settings_first_line_indent_off": {
+    "message": "들여쓰기 없음",
+    "description": "Option to disable first-line indent"
+  },
   "settings_frontmatter_display": {
-    "message": "Frontmatter 표시:",
+    "message": "Frontmatter 표시",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -599,6 +715,18 @@
     "message": "확장 프로그램 설정",
     "description": "설정 섹션 제목"
   },
+  "settings_image_layout": {
+    "message": "이미지 레이아웃",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "가운데",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "왼쪽",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "인터페이스 설정",
     "description": "Heading for interface settings section"
@@ -616,7 +744,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "최대 캐시 항목 수:",
+    "message": "최대 캐시 항목 수",
     "description": "캐시 필드 라벨"
   },
   "settings_reset_btn": {
@@ -680,7 +808,7 @@
     "description": "테마 변경 시 표시되는 메시지"
   },
   "settings_theme_label": {
-    "message": "테마 선택:",
+    "message": "테마 선택",
     "description": "테마 선택 라벨"
   },
   "share": {
@@ -724,7 +852,7 @@
     "description": "기본 레이아웃 툴팁"
   },
   "toolbar_print_disabled_title": {
-    "message": "인쇄는 로컬 파일에서만 사용할 수 있습니다",
+    "message": "페이지 보안 정책(샌드박스)으로 인해 인쇄가 차단되었습니다",
     "description": "원격 파일에서 인쇄 버튼이 비활성화될 때의 툴팁"
   },
   "toolbar_print_title": {
@@ -762,6 +890,14 @@
   "workspace_desc": {
     "message": "로컬 디렉터리를 열어 지원되는 파일을 탐색하고 미리 봅니다.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "뒤로",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "앞으로",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "워크스페이스 열기",

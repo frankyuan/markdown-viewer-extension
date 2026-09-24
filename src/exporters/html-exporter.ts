@@ -1,5 +1,6 @@
 import type { DocumentService } from '../types/platform';
 import { ResourceEmbedder } from './resource-embedder';
+import { collectContentCss } from './export-styles';
 
 export interface HtmlExportOptions {
   container: HTMLElement;
@@ -33,13 +34,6 @@ html, body {
   width: 100%;
   max-width: 1360px !important;
   margin: 0 auto !important;
-  padding: 0 !important;
-}
-
-#markdown-content {
-  margin: 0 auto !important;
-  padding: 40px !important;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1) !important;
 }
 `;
 
@@ -55,105 +49,11 @@ function toHtmlFilename(filename: string): string {
   return htmlFilename;
 }
 
-function stripKatexFontFace(css: string): string {
-  return css.replace(/@font-face\s*\{[^{}]*KaTeX[^{}]*\}\s*/gi, '');
-}
-
-function stripPreloadHidingRules(css: string): string {
-  // Defensive filtering for extension preload styles that hide body to prevent FOUC.
-  // These rules must never be embedded into exported standalone HTML.
-  return css
-    .replace(/(^|\n)\s*body\s*\{[^{}]*opacity\s*:\s*0\s*!important[^{}]*\}\s*(\n|$)/gi, '\n')
-    .replace(/(^|\n)\s*body\s*\{[^{}]*overflow\s*:\s*hidden\s*!important[^{}]*\}\s*(\n|$)/gi, '\n')
-    .replace(/(^|\n)\s*body\s*\{[^{}]*opacity\s*:\s*0\s*!important[^{}]*overflow\s*:\s*hidden\s*!important[^{}]*\}\s*(\n|$)/gi, '\n')
-    .replace(/(^|\n)\s*:root\s*\{[^{}]*color-scheme\s*:\s*light\s+dark[^{}]*\}\s*(\n|$)/gi, '\n');
-}
-
-const CONTENT_SELECTOR_TOKENS = [
-  '#markdown-content',
-  '#markdown-page',
-  '.katex',
-  '.hljs',
-  '.mermaid',
-  '.markmap',
-  '.graphviz',
-  '.plantuml',
-  '.diagram',
-];
-
-function shouldKeepSelector(selector: string): boolean {
-  const lower = selector.toLowerCase();
-  return CONTENT_SELECTOR_TOKENS.some((token) => lower.includes(token));
-}
-
-function serializeFilteredRule(rule: CSSRule): string {
-  if (rule.type === CSSRule.STYLE_RULE) {
-    const styleRule = rule as CSSStyleRule;
-    return shouldKeepSelector(styleRule.selectorText) ? styleRule.cssText : '';
-  }
-
-  // Skip host/webview font-face bundles in exported standalone HTML.
-  if (rule.type === CSSRule.FONT_FACE_RULE) {
-    return '';
-  }
-
-  if (rule.type === CSSRule.MEDIA_RULE) {
-    const mediaRule = rule as CSSMediaRule;
-    const inner = Array.from(mediaRule.cssRules)
-      .map((child) => serializeFilteredRule(child))
-      .filter((text) => text.length > 0)
-      .join('\n');
-    return inner ? `@media ${mediaRule.conditionText} {\n${inner}\n}` : '';
-  }
-
-  const maybeGrouped = rule as CSSRule & { cssRules?: CSSRuleList };
-  if (maybeGrouped.cssRules && maybeGrouped.cssRules.length > 0) {
-    const inner = Array.from(maybeGrouped.cssRules)
-      .map((child) => serializeFilteredRule(child))
-      .filter((text) => text.length > 0)
-      .join('\n');
-    if (!inner) {
-      return '';
-    }
-
-    const ruleHeader = rule.cssText.slice(0, rule.cssText.indexOf('{')).trim();
-    return `${ruleHeader} {\n${inner}\n}`;
-  }
-
-  return '';
-}
-
-function collectStylesheetCss(): string {
-  const chunks: string[] = [];
-  for (const stylesheet of Array.from(document.styleSheets)) {
-    const owner = (stylesheet.ownerNode || null) as HTMLElement | null;
-    if (owner?.id === 'markdown-viewer-preload') {
-      continue;
-    }
-
-    try {
-      const rules = Array.from(stylesheet.cssRules);
-      if (rules.length === 0) {
-        continue;
-      }
-      const filteredCss = rules
-        .map((rule) => serializeFilteredRule(rule))
-        .filter((text) => text.length > 0)
-        .join('\n');
-      if (filteredCss) {
-        chunks.push(filteredCss);
-      }
-    } catch {
-      // Ignore inaccessible stylesheets (cross-origin or browser restrictions).
-    }
-  }
-
-  const themeStyle = document.getElementById('theme-dynamic-style') as HTMLStyleElement | null;
-  if (themeStyle?.textContent) {
-    chunks.push(themeStyle.textContent);
-  }
-
-  return stripPreloadHidingRules(stripKatexFontFace(chunks.join('\n')));
+function escapeHtmlText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function removeEphemeralUi(root: HTMLElement): void {
@@ -164,6 +64,8 @@ function removeEphemeralUi(root: HTMLElement): void {
     parent.replaceChild(text, el);
     parent.normalize();
   });
+  // Remove non-functional copy buttons that only make sense in the live preview
+  root.querySelectorAll('.mv-code-copy-btn').forEach((btn) => btn.remove());
 }
 
 function stripRuntimeWrappers(root: HTMLElement): void {
@@ -179,12 +81,29 @@ function stripRuntimeWrappers(root: HTMLElement): void {
   });
 }
 
+function preserveContentRootState(root: HTMLElement): void {
+  const liveContent = document.getElementById('markdown-content') as HTMLElement | null;
+  const exportedContent = root.querySelector('#markdown-content') as HTMLElement | null;
+  if (!liveContent || !exportedContent) {
+    return;
+  }
+
+  exportedContent.className = liveContent.className;
+
+  const liveStyle = liveContent.getAttribute('style');
+  if (liveStyle && liveStyle.trim().length > 0) {
+    exportedContent.setAttribute('style', liveStyle);
+  } else {
+    exportedContent.removeAttribute('style');
+  }
+}
+
 async function inlineImages(
   root: HTMLElement,
   embedder: ResourceEmbedder,
   onItemDone?: () => void,
 ): Promise<void> {
-  const images = Array.from(root.querySelectorAll('img[src]'));
+  const images = Array.from(root.querySelectorAll<HTMLImageElement>('img[src]'));
   const tasks = images.map(async (img) => {
     const srcAttr = img.getAttribute('src') || '';
     const src = srcAttr || img.src || '';
@@ -218,6 +137,15 @@ export async function exportToHtml(options: HtmlExportOptions): Promise<HtmlExpo
   } = options;
 
   try {
+    // Platforms that cannot read local files may need the user's help before the
+    // first image is embedded (see PlatformAPI.prepareLocalResourceAccess).
+    const proceed = await globalThis.platform?.prepareLocalResourceAccess?.();
+    if (proceed === false) {
+      // Dismissing the platform's prompt cancels the export; the flows treat
+      // this message as a silent user cancellation.
+      throw new Error('Download cancelled by user');
+    }
+
     const htmlFilename = toHtmlFilename(filename);
     const imageCount = container.querySelectorAll('img[src]').length;
     const totalSteps = 4 + imageCount;
@@ -230,13 +158,21 @@ export async function exportToHtml(options: HtmlExportOptions): Promise<HtmlExpo
     const clonedContainer = container.cloneNode(true) as HTMLElement;
     removeEphemeralUi(clonedContainer);
     stripRuntimeWrappers(clonedContainer);
+    // Single-document exports serialize the live #markdown-page, whose content
+    // root carries the viewer state (layout classes, inline style). Whole-book
+    // chapter exports serialize .book-chapter containers inside
+    // #book-print-root — their content roots already carry their own classes
+    // and must NOT be overwritten by the live page's state.
+    if (container.closest('#markdown-page')) {
+      preserveContentRootState(clonedContainer);
+    }
     reportStep();
 
     const embedder = new ResourceEmbedder({ documentService });
     await inlineImages(clonedContainer, embedder, reportStep);
     reportStep();
 
-    const styles = collectStylesheetCss();
+    const styles = collectContentCss();
     reportStep();
     const katexLink = includeKatexCdn
       ? `<link rel="stylesheet" href="${KATEX_CDN_URL}">`
@@ -247,7 +183,7 @@ export async function exportToHtml(options: HtmlExportOptions): Promise<HtmlExpo
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
+  <title>${escapeHtmlText(title)}</title>
   ${katexLink}
   <style>${styles}\n${EXPORT_LAYOUT_CSS}</style>
 </head>
@@ -264,6 +200,10 @@ ${clonedContainer.outerHTML}
       filename: htmlFilename,
     };
   } catch (error) {
+    // A cancelled export is not a failure: let the flow report it silently.
+    if (error instanceof Error && error.message === 'Download cancelled by user') {
+      throw error;
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),

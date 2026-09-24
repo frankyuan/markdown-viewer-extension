@@ -1,0 +1,9 @@
+{
+  "id": "markdown-viewer-extension",
+  "name": "docu.md Markdown Viewer",
+  "version": "5.2.0",
+  "minAppVersion": "1.0.0",
+  "description": "Open Markdown files and export polished Word documents with diagrams, editable math, code highlighting, and local processing.",
+  "author": "Markdown Viewer Team",
+  "isDesktopOnly": false
+}

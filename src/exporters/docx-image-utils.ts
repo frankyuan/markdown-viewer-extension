@@ -9,7 +9,6 @@ import {
 } from 'docx';
 import type { UnifiedRenderResult } from '../types/index';
 import type {
-  ImageBufferResult,
   DOCXImageType,
 } from '../types/docx';
 
@@ -25,8 +24,6 @@ interface Renderer {
     height: number;
   }>;
 }
-
-type FetchImageAsBufferFunction = (url: string) => Promise<ImageBufferResult>;
 
 /**
  * Calculate appropriate image dimensions for DOCX to fit within page constraints
@@ -147,7 +144,13 @@ export function convertPluginResultToDOCX(renderResult: UnifiedRenderResult, plu
     return new Paragraph({
       children: [imageRun],
       alignment: alignmentMap[alignment || 'center'] || AlignmentType.CENTER,
-      spacing: { before: 240, after: 240 },
+      // line 240 auto: keep the image paragraph on an auto line rule so it is
+      // NOT constrained by a document-wide fixed line height (lineRule exact,
+      // e.g. 公文 28pt baseline in docDefaults). Under an exact baseline an
+      // inline image taller than the fixed line box would overflow and overlap
+      // the surrounding paragraphs; an auto rule lets the line expand to the
+      // image height (Word/WPS behaviour for inline pictures).
+      spacing: { before: 240, after: 240, line: 240, lineRule: 'auto' },
     });
   }
 
@@ -155,6 +158,23 @@ export function convertPluginResultToDOCX(renderResult: UnifiedRenderResult, plu
   return new Paragraph({
     children: [],
   });
+}
+
+export function withBlockImageAlignment(
+  renderResult: UnifiedRenderResult,
+  alignment: 'left' | 'center' | 'right'
+): UnifiedRenderResult {
+  if (renderResult.type !== 'image' || renderResult.display.inline) {
+    return renderResult;
+  }
+
+  return {
+    ...renderResult,
+    display: {
+      ...renderResult.display,
+      alignment,
+    },
+  };
 }
 
 /**
@@ -236,6 +256,25 @@ export function isSvgImage(url: string, contentType: string | null = null): bool
 }
 
 /**
+ * Check whether fetched bytes are a PNG raster rather than markup.
+ *
+ * A platform that cannot hand us the file may still recover the picture by
+ * loading it as an image element and rasterising it (see the Firefox document
+ * service), in which case an `.svg` URL yields PNG bytes. Callers must not
+ * decode those as SVG text.
+ *
+ * @param buffer - Fetched content
+ * @returns True when the buffer starts with the PNG signature
+ */
+export function isPngBuffer(buffer: Uint8Array): boolean {
+  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (buffer.length < signature.length) {
+    return false;
+  }
+  return signature.every((byte, index) => buffer[index] === byte);
+}
+
+/**
  * Convert SVG content to PNG using renderer
  * @param svgContent - SVG content string
  * @param renderer - Renderer instance with render() method
@@ -260,28 +299,4 @@ export async function convertSvgToPng(svgContent: string, renderer: Renderer): P
   };
 }
 
-/**
- * Get SVG content from URL or data URL
- * @param url - SVG URL or data URL
- * @param fetchImageAsBuffer - Function to fetch image as buffer
- * @returns SVG content string
- */
-export async function getSvgContent(url: string, fetchImageAsBuffer: FetchImageAsBufferFunction): Promise<string> {
-  // Handle data: URLs
-  if (url.startsWith('data:image/svg+xml')) {
-    const base64Match = url.match(/^data:image\/svg\+xml;base64,(.+)$/);
-    if (base64Match) {
-      return atob(base64Match[1]);
-    }
-    // Try URL encoded format
-    const urlMatch = url.match(/^data:image\/svg\+xml[;,](.+)$/);
-    if (urlMatch) {
-      return decodeURIComponent(urlMatch[1]);
-    }
-    throw new Error('Unsupported SVG data URL format');
-  }
-  
-  // Fetch SVG file (local or remote)
-  const { buffer } = await fetchImageAsBuffer(url);
-  return new TextDecoder().decode(buffer);
-}
+

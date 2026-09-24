@@ -11,13 +11,14 @@ import {
 } from 'docx';
 import { convertLatex2Math } from './docx-math-converter';
 import { isNetworkUrl } from '../utils/document-url';
+import { recordRenderDiagnostic } from '../core/render-diagnostics';
 import {
   calculateImageDimensions,
   getImageDimensions,
   determineImageType,
   isSvgImage,
+  isPngBuffer,
   convertSvgToPng,
-  getSvgContent,
 } from './docx-image-utils';
 import type {
   DOCXThemeStyles,
@@ -26,6 +27,7 @@ import type {
   DOCXImageType,
   EmojiStyle,
 } from '../types/docx';
+import { DEFAULT_SETTINGS } from '../config/settings.generated';
 
 // ============================================================================
 // Type Definitions
@@ -54,6 +56,8 @@ interface InlineConverterOptions {
   renderer?: Renderer | null;
   emojiStyle?: EmojiStyle;
   linkColor?: string;  // Link color from colorScheme (hex without #)
+  imageLayout?: 'left' | 'center';
+  diagramLayout?: 'left' | 'center';
 }
 
 /**
@@ -180,6 +184,8 @@ export interface InlineConverter {
   convertInlineNodes(nodes: InlineNode[], parentStyle?: ParentStyle): Promise<InlineResult[]>;
   convertInlineNode(node: InlineNode, parentStyle?: ParentStyle): Promise<InlineResult | InlineResult[] | null>;
   convertImage(node: ImageNode): Promise<ImageRun | TextRun>;
+  isBlockImageNode(node: InlineNode): boolean;
+  isBlockDiagramNode(node: InlineNode): boolean;
   extractText(node: InlineNode | { type: string; children?: InlineNode[]; value?: string }): string;
 }
 
@@ -277,8 +283,10 @@ export function createInlineConverter({
   reportResourceProgress,
   linkDefinitions,
   renderer,
-  emojiStyle = 'system',
-  linkColor = '0366D6'  // Default to GitHub blue
+  emojiStyle = DEFAULT_SETTINGS.docxEmojiStyle,
+  linkColor = '0366D6',  // Default to GitHub blue
+  imageLayout = DEFAULT_SETTINGS.imageLayout,
+  diagramLayout = DEFAULT_SETTINGS.diagramLayout
 }: InlineConverterOptions): InlineConverter {
   // Get emoji font based on user preference (null for system style)
   const emojiFont = emojiStyle === 'system' ? null : getEmojiFont(emojiStyle);
@@ -519,7 +527,17 @@ export function createInlineConverter({
         },
       });
     } catch (error) {
-      console.warn('[DOCX] Failed to load image:', node.url, error);
+      // Concise warning — the error text is already shown inside the DOCX as
+      // a red placeholder; a stack trace here is noise in CLI logs.
+      console.warn(`[DOCX] Failed to load image: ${node.url} — ${(error as Error).message}`);
+      recordRenderDiagnostic({
+        level: 'error',
+        kind: 'resource-failed',
+        type: 'image',
+        line: (node as { position?: { start?: { line?: number } } }).position?.start?.line ?? null,
+        blockId: null,
+        message: (error as Error).message,
+      });
       reportResourceProgress();
 
       return new TextRun({
@@ -564,7 +582,25 @@ export function createInlineConverter({
         });
       }
       // Local SVG: fetch content then convert
-      const svgContent = await getSvgContent(url, fetchImageAsBuffer);
+      const { buffer } = await fetchImageAsBuffer(url);
+
+      // Platforms that cannot read the file may rasterise it through an image
+      // element instead, so an .svg URL can hand back PNG bytes: embed the
+      // raster rather than decoding it as SVG source.
+      if (isPngBuffer(buffer)) {
+        const { width: rasterWidth, height: rasterHeight } = await getImageDimensions(buffer, 'image/png');
+        const { width: rasterDisplayWidth, height: rasterDisplayHeight } =
+          calculateImageDimensions(rasterWidth, rasterHeight);
+        reportResourceProgress();
+        return new ImageRun({
+          data: buffer,
+          transformation: { width: rasterDisplayWidth, height: rasterDisplayHeight },
+          type: 'png',
+          altText: { title: alt || 'SVG Image', description: alt || 'SVG image', name: alt || 'svg-image' },
+        });
+      }
+
+      const svgContent = new TextDecoder().decode(buffer);
       return await convertSvgImageContent(svgContent, alt);
     } catch (error) {
       console.warn('[DOCX] Failed to load SVG image:', url, error);
@@ -670,10 +706,20 @@ export function createInlineConverter({
     return '';
   }
 
+  function isBlockImageNode(node: InlineNode): boolean {
+    return node.type === 'image';
+  }
+
+  function isBlockDiagramNode(node: InlineNode): boolean {
+    return node.type === 'image' && isSvgImage(node.url);
+  }
+
   return { 
     convertInlineNodes, 
     convertInlineNode,
     convertImage,
+    isBlockImageNode,
+    isBlockDiagramNode,
     extractText
   };
 }

@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { build } from 'esbuild';
 import { fileURLToPath } from 'url';
+import { dagreShimPlugin } from '../scripts/dagre-shim-plugin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
@@ -44,9 +45,23 @@ function syncVersion() {
 async function checkMissingKeys() {
   console.log('📦 Checking translations...');
   try {
-    await import('../scripts/check-missing-keys.js');
+    // Shared with the unit suite (test/suites/project-gates/i18n-keys.test.ts)
+    const { checkI18nKeys, printI18nKeyReport } = await import('../test/gates/i18n-keys.js');
+    printI18nKeyReport(checkI18nKeys());
   } catch (error) {
     console.error('⚠️  Warning: Failed to check translation keys:', error.message);
+  }
+}
+
+/**
+ * Sync the settings schema (regenerates the Dart default constants)
+ */
+async function syncSettingsSchema() {
+  try {
+    const { default: syncSettings } = await import('../scripts/sync-settings.js');
+    syncSettings();
+  } catch (error) {
+    console.error('⚠️  Warning: Failed to sync settings schema:', error.message);
   }
 }
 
@@ -130,7 +145,8 @@ async function buildMainBundle() {
     },
     minify: true,
     sourcemap: false,
-    external: []
+    external: [],
+    plugins: [dagreShimPlugin]
   });
 
   console.log('✅ Main bundle built');
@@ -167,7 +183,8 @@ async function buildIframeRenderWorkerBundle() {
     },
     minify: true,
     sourcemap: false,
-    external: ['web-worker']
+    external: ['web-worker'],
+    plugins: [dagreShimPlugin]
   });
 
   console.log('✅ Iframe-render-worker built');
@@ -345,6 +362,9 @@ async function main() {
 
   // Check translations
   await checkMissingKeys();
+
+  // Sync settings schema (Dart defaults)
+  await syncSettingsSchema();
 
   // Download fonts if needed
   await downloadFonts();

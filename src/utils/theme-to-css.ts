@@ -13,6 +13,167 @@
 import themeManager from './theme-manager';
 import { fetchJSON } from './fetch-utils';
 import type { PlatformAPI, ColorScheme } from '../types/index';
+import type { Theme, LayoutBlockConfig } from '../types/theme';
+
+/**
+ * Content-root selectors. Theme CSS is generated against `#markdown-content`
+ * and then expanded to also cover `.markdown-viewer-content` (embed/book
+ * hosts). The expansion is explicit dual selectors — NOT `:is(...)` — because
+ * EPUB readers and older CSS engines do not support `:is()` reliably, and the
+ * shared content CSS must stay within the weakest consumer's compatibility
+ * boundary.
+ */
+const CONTENT_ROOT_SELECTOR = '#markdown-content';
+const CONTENT_ROOT_ALTERNATE = '.markdown-viewer-content';
+
+/**
+ * Expand a CSS selector list: every selector that targets `#markdown-content`
+ * is duplicated with `#markdown-content` replaced by the alternate content
+ * root class, producing explicit dual selectors with equivalent semantics.
+ * Selectors without the content root are kept byte-for-byte.
+ */
+function expandContentRootSelectors(selectorList: string): string {
+  const expanded = selectorList
+    .split(',')
+    .map((raw) => raw.trim())
+    .map((selector) => {
+      if (!selector.includes(CONTENT_ROOT_SELECTOR)) {
+        return selector;
+      }
+      const alternate = selector.replace(/#markdown-content/g, CONTENT_ROOT_ALTERNATE);
+      // Hosts that render into a child `.markdown-viewer-content` inside
+      // #markdown-content (content-script takeover, embed, GitBook panel)
+      // carry the layout classes on the child only. For classed/id/attr
+      // content-root selectors (`#markdown-content.foo ...`) also emit the
+      // nested child branch so the variant keeps at least the specificity of
+      // the base rules (which include the #markdown-content id).
+      const nested = selector.replace(
+        /#markdown-content([.#\[])/g,
+        `#markdown-content ${CONTENT_ROOT_ALTERNATE}$1`,
+      );
+      return `${selector}, ${alternate}${nested !== selector ? `, ${nested}` : ''}`;
+    })
+    .join(',\n');
+  return `${expanded} `;
+}
+
+/**
+ * Expand every rule in a generated CSS string whose selector(s) target
+ * `#markdown-content`. Rules without the content root are left untouched.
+ */
+function expandCssContentRoots(css: string): string {
+  return css.replace(/([^{}]+)\{/g, (match: string, selectors: string) => {
+    return `${expandContentRootSelectors(selectors)}{`;
+  });
+}
+
+// ============================================================================
+// Color Mixing (no color-mix())
+// ============================================================================
+
+interface RgbColor {
+  r: number;
+  g: number;
+  b: number;
+  /** 0..1; 1 = fully opaque */
+  a: number;
+}
+
+function parseColor(input: string): RgbColor | null {
+  const value = input.trim().toLowerCase();
+  if (value === 'transparent') {
+    return { r: 0, g: 0, b: 0, a: 0 };
+  }
+
+  const hex = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    const raw = hex[1];
+    const full = raw.length === 3
+      ? raw.split('').map((ch) => ch + ch).join('')
+      : raw;
+    return {
+      r: parseInt(full.slice(0, 2), 16),
+      g: parseInt(full.slice(2, 4), 16),
+      b: parseInt(full.slice(4, 6), 16),
+      a: 1,
+    };
+  }
+
+  const rgb = value.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgb) {
+    const parts = rgb[1].split(',').map((part) => part.trim());
+    if (parts.length < 3) {
+      return null;
+    }
+    return {
+      r: Number(parts[0]),
+      g: Number(parts[1]),
+      b: Number(parts[2]),
+      a: parts.length >= 4 ? Number(parts[3]) : 1,
+    };
+  }
+
+  return null;
+}
+
+function formatColor(color: RgbColor): string {
+  if (color.a >= 1) {
+    const hex = [color.r, color.g, color.b]
+      .map((channel) => Math.round(channel).toString(16).padStart(2, '0'))
+      .join('');
+    return `#${hex}`;
+  }
+  return `rgba(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)}, ${color.a})`;
+}
+
+/**
+ * Mix two colors in sRGB and return a concrete CSS color, replicating
+ * `color-mix(in srgb, first W%, second)` without relying on color-mix() —
+ * EPUB readers and older CSS engines do not support it reliably.
+ *
+ * When `second` is transparent the result keeps the first color and uses the
+ * first color's weight as the alpha channel.
+ */
+function mixColors(first: string, firstWeightPercent: number, second: string): string {
+  const firstColor = parseColor(first);
+  const secondColor = parseColor(second);
+  if (!firstColor || !secondColor) {
+    return first;
+  }
+
+  const weight = Math.max(0, Math.min(100, firstWeightPercent)) / 100;
+
+  if (secondColor.a === 0) {
+    // Over transparent: keep the first color, alpha = weight.
+    return formatColor({ r: firstColor.r, g: firstColor.g, b: firstColor.b, a: weight });
+  }
+
+  // Straight sRGB interpolation of two opaque colors.
+  const r = firstColor.r * weight + secondColor.r * (1 - weight);
+  const g = firstColor.g * weight + secondColor.g * (1 - weight);
+  const b = firstColor.b * weight + secondColor.b * (1 - weight);
+  return formatColor({ r, g, b, a: 1 });
+}
+
+/**
+ * Perceived brightness of a color (ITU-R BT.601 luma, 0..255).
+ * Used to pick an ink that stays legible on top of a theme color.
+ */
+function brightness(color: string): number {
+  const rgb = parseColor(color);
+  if (!rgb) {
+    return 255;
+  }
+  return 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b;
+}
+
+/**
+ * Ink color to draw on top of `background`: the dark ink on light fills, the
+ * light ink on dark fills.
+ */
+function contrastInk(background: string, light = '#ffffff', dark = '#1f1f1f'): string {
+  return brightness(background) > 150 ? dark : light;
+}
 
 // ============================================================================
 // Type Definitions
@@ -56,6 +217,8 @@ interface FontScheme {
  * Theme configuration (v2.0 format)
  */
 export interface ThemeConfig {
+  /** Registry id — present on loaded/bundled theme records (not on raw config subsets). */
+  id?: string;
   fontScheme: FontScheme;
   layoutScheme: string;    // reference to layout-schemes/
   colorScheme: string;     // reference to color-schemes/
@@ -63,6 +226,14 @@ export interface ThemeConfig {
   codeTheme: string;
   /** Diagram rendering style: 'normal' or 'handDrawn' (default: 'handDrawn') */
   diagramStyle?: 'normal' | 'handDrawn';
+}
+
+interface ResolvedThemeBundle {
+  theme: ThemeConfig;
+  layoutScheme: LayoutScheme;
+  colorScheme: ColorScheme;
+  tableStyle: TableStyleConfig;
+  codeTheme: CodeThemeConfig;
 }
 
 /**
@@ -120,18 +291,6 @@ interface LayoutHeadingConfig {
     style?: string;         // default 'solid'
     paddingBottom?: string; // e.g. "0.3em"
   };
-}
-
-/**
- * Layout scheme block configuration
- */
-interface LayoutBlockConfig {
-  spacingBefore?: string;
-  spacingAfter?: string;
-  paddingVertical?: string;
-  paddingHorizontal?: string;
-  /** Optional border width for horizontal rule (hr). Color comes from colorScheme.rule.color or table.border fallback. */
-  borderWidth?: string;
 }
 
 /**
@@ -198,7 +357,8 @@ export function themeToCSS(
   layoutScheme: LayoutScheme,
   colorScheme: ColorScheme,
   tableStyle: TableStyleConfig,
-  codeTheme: CodeThemeConfig
+  codeTheme: CodeThemeConfig,
+  firstLineIndent = 0
 ): string {
   const css: string[] = [];
 
@@ -212,9 +372,17 @@ export function themeToCSS(
   css.push(generateCodeCSS(theme.fontScheme.code, codeTheme, layoutScheme.code, layoutScheme.body.fontSize, colorScheme));
 
   // Block spacing (uses colorScheme for blockquote border)
-  css.push(generateBlockSpacingCSS(layoutScheme, colorScheme));
+  css.push(generateBlockSpacingCSS(layoutScheme, colorScheme, firstLineIndent));
 
-  return css.join('\n\n');
+  css.push(generateFootnoteCSS());
+
+  // GFM task-list checkboxes (li.task-list-item)
+  css.push(generateTaskListCSS(colorScheme));
+
+  // GitHub-style alerts (blockquote.markdown-alert)
+  css.push(generateAlertCSS(colorScheme));
+
+  return expandCssContentRoots(css.join('\n\n'));
 }
 
 /**
@@ -249,8 +417,9 @@ function generateFontAndLayoutCSS(fontScheme: FontScheme, layoutScheme: LayoutSc
       const accentBase = colorScheme.accent.link;
       const accentSurface = colorScheme.background.surface || colorScheme.background.page || 'transparent';
       vars.push(`  --md-accent: ${accentBase};`);
-      vars.push(`  --md-accent-bg: color-mix(in srgb, ${accentBase} 16%, ${accentSurface});`);
-      vars.push(`  --md-accent-subtle: color-mix(in srgb, ${accentBase} 22%, transparent);`);
+      // Concrete colors instead of color-mix(): EPUB readers don't support it.
+      vars.push(`  --md-accent-bg: ${mixColors(accentBase, 16, accentSurface)};`);
+      vars.push(`  --md-accent-subtle: ${mixColors(accentBase, 22, 'transparent')};`);
     }
     if (colorScheme.accent.linkHover) vars.push(`  --md-accent-hover: ${colorScheme.accent.linkHover};`);
     css.push(`:root {\n${vars.join('\n')}\n}`);
@@ -351,21 +520,26 @@ ${styles.join('\n')}
 function generateTableCSS(tableStyle: TableStyleConfig, colorScheme: ColorScheme): string {
   const css: string[] = [];
 
-  // Base table styles - default to centered auto width.
+  // Base table styles - display:table + width:auto gives the classic
+  // content-width table (narrow tables size to their content, wide tables are
+  // constrained by max-width). width:fit-content is intentionally avoided:
+  // EPUB readers and older CSS engines do not support it, and display:table
+  // provides the same content-width behavior everywhere.
   css.push(`#markdown-content table {
   border-collapse: collapse;
+  display: table;
+  width: auto;
+  max-width: 100%;
   margin: 13px auto;
-  overflow: auto;
 }
 
 /* Table layout: left alignment */
 #markdown-content.table-layout-left table {
-  width: auto;
   margin-left: 0;
   margin-right: auto;
 }
 
-/* Table layout: centered auto width */
+/* Table layout: centered auto width (explicit; base rule already auto) */
 #markdown-content.table-layout-center table {
   width: auto;
 }
@@ -578,7 +752,7 @@ function generateCodeCSS(
  * @param colorScheme - Color scheme configuration (for blockquote border)
  * @returns CSS string
  */
-function generateBlockSpacingCSS(layoutScheme: LayoutScheme, colorScheme: ColorScheme): string {
+function generateBlockSpacingCSS(layoutScheme: LayoutScheme, colorScheme: ColorScheme, firstLineIndent = 0): string {
   const css: string[] = [];
   const blocks = layoutScheme.blocks;
 
@@ -592,9 +766,27 @@ function generateBlockSpacingCSS(layoutScheme: LayoutScheme, colorScheme: ColorS
   if (blocks.paragraph) {
     const marginBefore = toPx(blocks.paragraph.spacingBefore);
     const marginAfter = toPx(blocks.paragraph.spacingAfter);
+    const styles: string[] = [
+      `  margin: ${marginBefore} 0 ${marginAfter} 0;`
+    ];
+    // First-line indent: only if theme supports it AND user has enabled it.
+    // Plain text-indent only — the `each-line` keyword (indent every wrapped
+    // line) is not supported by EPUB readers and older CSS engines.
+    if (blocks.paragraph.firstLineIndent && firstLineIndent > 0) {
+      styles.push(`  text-indent: ${firstLineIndent}em;`);
+    }
     css.push(`#markdown-content p {
-  margin: ${marginBefore} 0 ${marginAfter} 0;
+${styles.join('\n')}
 }`);
+    // Override text-indent on paragraphs inside list items.
+    // Loose lists (blank line between items) wrap content in <p>, which would
+    // inherit the paragraph first-line indent and create a gap between the
+    // list marker and the text. List markers already provide visual hierarchy.
+    if (blocks.paragraph.firstLineIndent && firstLineIndent > 0) {
+      css.push(`#markdown-content li p {
+  text-indent: 0;
+}`);
+    }
   }
 
   // List spacing
@@ -605,6 +797,28 @@ function generateBlockSpacingCSS(layoutScheme: LayoutScheme, colorScheme: ColorS
 #markdown-content ol {
   margin: ${marginBefore} 0 ${marginAfter} 0;
 }`);
+    // When the body uses a first-line indent (clreq: 2em is the standard for
+    // Chinese publications), shift the FIRST-LEVEL list as a whole by the same
+    // amount so the marker starts at the body's first-line position (the
+    // "tupai/itemization" convention for numbered lists: the marker sits at
+    // the line start, text follows and wrapped lines align). Applied as
+    // "every list shifts, nested lists and blockquote-internal lists reset" —
+    // a top-level list cannot be targeted with `#markdown-content > ul`
+    // because the document renderer wraps every block in a
+    // `<div class="md-block">`. Putting the offset on li instead would
+    // compound on every nesting level.
+    if (blocks.paragraph?.firstLineIndent && firstLineIndent > 0) {
+      css.push(`#markdown-content ul,
+#markdown-content ol {
+  margin-left: ${firstLineIndent}em;
+}
+#markdown-content li ul,
+#markdown-content li ol,
+#markdown-content blockquote ul,
+#markdown-content blockquote ol {
+  margin-left: 0;
+}`);
+    }
   }
 
   // List item spacing
@@ -614,6 +828,11 @@ function generateBlockSpacingCSS(layoutScheme: LayoutScheme, colorScheme: ColorS
     css.push(`#markdown-content li {
   margin: ${marginBefore} 0 ${marginAfter} 0;
 }`);
+    // Note: list indentation is intentionally decoupled from the paragraph
+    // first-line indent. Lists already carry their own hierarchy via the
+    // ul/ol 2em padding step; adding margin-left here would COMPOUND on
+    // every nesting level (each li matches) and balloon the indent step
+    // to ~3em per level.
   }
 
   // Blockquote spacing and border color from colorScheme
@@ -628,6 +847,12 @@ function generateBlockSpacingCSS(layoutScheme: LayoutScheme, colorScheme: ColorS
   padding: ${paddingVertical} ${paddingHorizontal};
   border-left-color: ${colorScheme.blockquote.border};
 }`);
+    // Override text-indent on paragraphs inside blockquote (blockquotes are already visually distinct)
+    if (blocks.paragraph.firstLineIndent && firstLineIndent > 0) {
+      css.push(`#markdown-content blockquote p {
+  text-indent: 0;
+}`);
+    }
   }
 
   // Code block spacing
@@ -639,12 +864,22 @@ function generateBlockSpacingCSS(layoutScheme: LayoutScheme, colorScheme: ColorS
 }`);
   }
 
-  // Table spacing
+  // Table text is scaled down from the body font (default 0.85×) with a
+  // tighter line-height so tables read as a distinct, data-dense block across
+  // every theme. blocks.table.fontScale / lineHeight override per theme.
   if (blocks.table) {
     const marginBefore = toPx(blocks.table.spacingBefore);
     const marginAfter = toPx(blocks.table.spacingAfter);
+    const bodyPt = parseFloat(layoutScheme.body.fontSize);
+    const tableScale = blocks.table.fontScale ?? 0.85;
+    const tableLineHeight = blocks.table.lineHeight ?? 1.4;
+    const tableStyles: string[] = [
+      `  margin: ${marginBefore} auto ${marginAfter} auto;`,
+      `  font-size: ${themeManager.ptToPx(`${bodyPt * tableScale}pt`)};`,
+      `  line-height: ${tableLineHeight};`,
+    ];
     css.push(`#markdown-content table {
-  margin: ${marginBefore} auto ${marginAfter} auto;
+${tableStyles.join('\n')}
 }`);
   }
 
@@ -672,6 +907,195 @@ ${hrStyles.join('\n')}
   }
 
   return css.join('\n\n');
+}
+
+function generateFootnoteCSS(): string {
+  return `
+#markdown-content sup.footnote-ref {
+  font-size: 0.8em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+  top: -0.5em;
+}
+#markdown-content sup.footnote-ref a {
+  text-decoration: none;
+  color: var(--md-accent, #0366d6);
+  font-weight: 600;
+}
+#markdown-content sup.footnote-ref a:hover {
+  text-decoration: underline;
+}
+#markdown-content section.footnotes {
+  font-size: 0.9em;
+}
+#markdown-content section.footnotes ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin: 0;
+}
+#markdown-content section.footnotes .footnote-item {
+  margin: 0.3em 0;
+  line-height: 1.5;
+}
+#markdown-content section.footnotes .footnote-label {
+  font-weight: 600;
+  color: var(--md-accent, #0366d6);
+  margin-right: 0.35em;
+}
+#markdown-content section.footnotes .footnote-item > .footnote-content > :first-child {
+  margin-top: 0;
+}
+#markdown-content section.footnotes .footnote-item > .footnote-content > :last-child {
+  margin-bottom: 0;
+}
+`.trim();
+}
+
+/**
+ * Box edge length in em of the body font — the native checkbox proportion.
+ */
+const TASK_BOX_EM = 0.75;
+/**
+ * Marker gutter the box hangs in: the top-level list padding (1em, see
+ * `#markdown-content ul` in styles.css). remark-gfm puts a space between the
+ * box and the label, so pulling the box by exactly the gutter width puts the
+ * box's left edge on the gutter's left edge AND lands the label on the list's
+ * text edge — mixed bullet/task items stay aligned, and the gap scales with
+ * the body font instead of being a hard-coded value.
+ */
+const TASK_BOX_GUTTER_EM = 1;
+
+/**
+ * Generate CSS for GFM task-list checkboxes (`#markdown-content li.task-list-item`).
+ *
+ * remark-gfm renders `- [x]` as `<input type="checkbox" disabled>` inside
+ * `li.task-list-item` — a direct child in a tight list, inside the item's first
+ * `<p>` in a loose one, so the box is matched as a descendant. Left to the UA, a
+ * disabled checkbox is painted from the platform's control palette, never from
+ * the theme: with the OS in dark mode the box is a near-black square whose check
+ * mark is a barely lighter gray (issue #131 — checked and unchecked are
+ * indistinguishable), and even in the light palette the checked state is a
+ * washed-out gray. The box is therefore drawn explicitly from the color scheme,
+ * so both states stay legible and on theme in every host (browser, standalone
+ * HTML, EPUB). The check mark is an inline SVG so no font or image file is
+ * needed.
+ *
+ * @param colorScheme - Color scheme configuration (page/accent/text colours)
+ * @returns CSS string for task-list checkbox styling
+ */
+function generateTaskListCSS(colorScheme: ColorScheme): string {
+  const page = colorScheme.background.page || '#ffffff';
+  const accent = colorScheme.accent.link;
+  // Mid-tone derived from the body ink: visible on the page and on tinted
+  // surfaces (blockquotes, zebra rows) without competing with body text.
+  const borderColor = mixColors(colorScheme.text.primary, 28, page);
+  // `#` must be percent-encoded for use inside a CSS url().
+  const checkColor = contrastInk(accent).replace('#', '%23');
+  const checkMark = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='${checkColor}' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E")`;
+
+  return `
+#markdown-content li.task-list-item {
+  /* GitHub convention: a task item shows its box instead of a bullet/number. */
+  list-style: none;
+}
+#markdown-content li.task-list-item input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  /* Form controls don't inherit the document font: without this the em values
+     below resolve against the UA's control font (~13px) instead of the body
+     font, so the box and its gutter pull would both come out too small. */
+  font-size: inherit;
+  width: ${TASK_BOX_EM}em;
+  height: ${TASK_BOX_EM}em;
+  /* Hang the box in the marker gutter: its left edge sits on the gutter's left
+     edge and the label keeps the list's text edge (remark-gfm's own space is
+     the gap). See TASK_BOX_GUTTER_EM. */
+  margin: 0 0 0 -${TASK_BOX_GUTTER_EM}em;
+  border: 1px solid ${borderColor};
+  border-radius: 0.2em;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100%;
+  vertical-align: -0.05em;
+  /* remark-gfm marks the box disabled: keep it looking like a live control
+     instead of the UA's dimmed/grayed rendering. */
+  opacity: 1;
+}
+#markdown-content li.task-list-item input[type="checkbox"]:checked {
+  border-color: ${accent};
+  background-color: ${accent};
+  background-image: ${checkMark};
+}
+`.trim();
+}
+
+/**
+ * Generate CSS for GitHub-style alerts.
+ *
+ * Alerts are blockquotes tagged with `markdown-alert` (+ a per-kind class) by
+ * the remark-github-alerts plugin. Each kind gets a signature border/background
+ * colour; backgrounds are tinted against the page colour so they adapt to both
+ * light and dark themes without extra rules. Tints are materialized as
+ * concrete colors (no color-mix()) for EPUB reader compatibility.
+ *
+ * @param colorScheme - Color scheme configuration (page/surface colours)
+ * @returns CSS string for alert styling
+ */
+function generateAlertCSS(colorScheme: ColorScheme): string {
+  const page = colorScheme.background?.page || '#ffffff';
+
+  // GitHub's canonical alert palette.
+  const alertKinds: { key: string; color: string }[] = [
+    { key: 'note', color: '#0969da' },
+    { key: 'tip', color: '#1a7f37' },
+    { key: 'important', color: '#8250df' },
+    { key: 'warning', color: '#9a6700' },
+    { key: 'caution', color: '#cf222e' },
+  ];
+
+  const rules: string[] = [];
+
+  rules.push(`#markdown-content blockquote.markdown-alert {
+  margin: 0.6em 0;
+  padding: 0.4em 0.9em;
+  border-left: 4px solid var(--md-alert-border, #d0d7de);
+  background-color: var(--md-alert-bg, transparent);
+  color: inherit;
+}`);
+
+  // Tighten paragraph spacing inside alerts so the title sits close to the body.
+  rules.push(`#markdown-content blockquote.markdown-alert > p {
+  margin: 0.25em 0;
+}`);
+  rules.push(`#markdown-content blockquote.markdown-alert > p:first-child {
+  margin-top: 0;
+}`);
+  rules.push(`#markdown-content blockquote.markdown-alert > p:last-child {
+  margin-bottom: 0;
+}`);
+
+  rules.push(`#markdown-content .markdown-alert-title {
+  font-weight: 600;
+  line-height: 1.3;
+}`);
+  rules.push(`#markdown-content blockquote.markdown-alert > .markdown-alert-title {
+  margin-bottom: 0.35em;
+}`);
+
+  for (const kind of alertKinds) {
+    const bg = mixColors(kind.color, 10, page);
+    rules.push(`#markdown-content blockquote.markdown-alert-${kind.key} {
+  border-left-color: ${kind.color};
+  background-color: ${bg};
+}`);
+    rules.push(`#markdown-content blockquote.markdown-alert-${kind.key} > .markdown-alert-title {
+  color: ${kind.color};
+}`);
+  }
+
+  return rules.join('\n\n');
 }
 
 // ============================================================================
@@ -704,40 +1128,60 @@ export function applyThemeCSS(css: string): void {
 export async function loadAndApplyTheme(themeId: string): Promise<void> {
   try {
     const platform = getPlatform();
-    
-    // Load theme preset
-    const theme = (await themeManager.loadTheme(themeId)) as unknown as ThemeConfig;
+    const bundleSupported = platform.platform === 'vscode';
 
-    // Load layout scheme
-    const layoutSchemeUrl = platform.resource.getURL(`themes/layout-schemes/${theme.layoutScheme}.json`);
-    const layoutScheme = await fetchJSON(layoutSchemeUrl) as LayoutScheme;
+    let theme: ThemeConfig;
+    let layoutScheme: LayoutScheme;
+    let colorScheme: ColorScheme;
+    let tableStyle: TableStyleConfig;
+    let codeTheme: CodeThemeConfig;
 
-    // Load color scheme
-    const colorSchemeUrl = platform.resource.getURL(`themes/color-schemes/${theme.colorScheme}.json`);
-    const colorScheme = await fetchJSON(colorSchemeUrl) as ColorScheme;
+    if (bundleSupported) {
+      await themeManager.initialize();
 
-    // Load table style
-    const tableStyle = await fetchJSON(
-      platform.resource.getURL(`themes/table-styles/${theme.tableStyle}.json`)
-    ) as TableStyleConfig;
-
-    // Load code theme
-    const codeTheme = await fetchJSON(
-      platform.resource.getURL(`themes/code-themes/${theme.codeTheme}.json`)
-    ) as CodeThemeConfig;
+      try {
+        const bundle = await fetchJSON(platform.resource.getURL(`themes/bundles/${themeId}.json`)) as ResolvedThemeBundle;
+        theme = bundle.theme;
+        layoutScheme = bundle.layoutScheme;
+        colorScheme = bundle.colorScheme;
+        tableStyle = bundle.tableStyle;
+        codeTheme = bundle.codeTheme;
+        // The bundle theme record is the full registry Theme (id/name included),
+        // while ThemeConfig models the config subset consumed here.
+        themeManager.setCurrentTheme(theme as unknown as Theme);
+      } catch {
+        theme = (await themeManager.loadTheme(themeId)) as unknown as ThemeConfig;
+        [layoutScheme, colorScheme, tableStyle, codeTheme] = await loadThemeParts(theme, platform);
+      }
+    } else {
+      theme = (await themeManager.loadTheme(themeId)) as unknown as ThemeConfig;
+      [layoutScheme, colorScheme, tableStyle, codeTheme] = await loadThemeParts(theme, platform);
+    }
 
     // Generate and apply CSS
-    const css = themeToCSS(theme, layoutScheme, colorScheme, tableStyle, codeTheme);
+    let firstLineIndent = 0;
+    try {
+      const settings = platform?.settings;
+      if (settings) {
+        firstLineIndent = await settings.get('firstLineIndent');
+      }
+    } catch { /* use default 0 */ }
+    const css = themeToCSS(theme, layoutScheme, colorScheme, tableStyle, codeTheme, firstLineIndent);
     applyThemeCSS(css);
     
     // Set renderer theme config for diagrams (Mermaid, Graphviz, etc.)
     const fontFamily = themeManager.buildFontFamily(theme.fontScheme.body.fontFamily);
-    const fontSize = parseFloat(layoutScheme.body.fontSize);
+    // Diagram font size is intentionally FIXED and decoupled from the theme
+    // body font size: external SVGs (e.g. shields.io badges) render with their
+    // own fixed internal sizes, so a body-driven diagram font would break row
+    // height consistency (a 16pt body made diagrams and badges visually
+    // incompatible; badges only line up with PNGs at 12pt).
+    const fontSize = 12;
     const diagramStyle = theme.diagramStyle || 'normal';
     // Derive colorSchema from the theme's registry category. Dark presets live
     // under the 'dark' category so downstream renderers (mermaid, vega, dot,
     // infographic) can switch to dark styling. Mirrors the slidev mechanism.
-    const category = themeManager.getThemeCategory(theme.id);
+    const category = theme.id ? themeManager.getThemeCategory(theme.id) : null;
     const colorSchema: 'light' | 'dark' = category === 'dark' ? 'dark' : 'light';
     platform.renderer.setThemeConfig({ fontFamily, fontSize, diagramStyle, colorSchema });
 
@@ -762,6 +1206,19 @@ export async function loadAndApplyTheme(themeId: string): Promise<void> {
     console.error('[Theme] Error loading theme:', error);
     throw error;
   }
+}
+
+async function loadThemeParts(
+  theme: ThemeConfig,
+  platform: PlatformAPI,
+): Promise<[LayoutScheme, ColorScheme, TableStyleConfig, CodeThemeConfig]> {
+  const [layoutScheme, colorScheme, tableStyle, codeTheme] = await Promise.all([
+    fetchJSON(platform.resource.getURL(`themes/layout-schemes/${theme.layoutScheme}.json`)) as Promise<LayoutScheme>,
+    fetchJSON(platform.resource.getURL(`themes/color-schemes/${theme.colorScheme}.json`)) as Promise<ColorScheme>,
+    fetchJSON(platform.resource.getURL(`themes/table-styles/${theme.tableStyle}.json`)) as Promise<TableStyleConfig>,
+    fetchJSON(platform.resource.getURL(`themes/code-themes/${theme.codeTheme}.json`)) as Promise<CodeThemeConfig>,
+  ]);
+  return [layoutScheme, colorScheme, tableStyle, codeTheme];
 }
 
 /**

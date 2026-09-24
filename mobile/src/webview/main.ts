@@ -20,9 +20,11 @@ import {
   renderMarkdownFlow,
   handleThemeSwitchFlow,
   exportDocxFlow,
+  exportEpubFlow,
   exportHtmlFlow,
 } from '../../../src/core/viewer/viewer-host';
 import { setupImageContextMenu } from '../../../src/ui/image-context-menu';
+import { setupTableContextMenu } from '../../../src/ui/table-context-menu';
 import { setupDiagramLightbox } from '../../../src/ui/diagram-lightbox';
 import { setupCodeBlockCopy } from '../../../src/ui/code-block-copy';
 import { findHeadingLine } from '../../../src/utils/heading-slug';
@@ -30,6 +32,9 @@ import { isExternalUrl, splitPathAndFragment } from '../../../src/utils/document
 
 declare global {
   var bridge: PlatformBridgeAPI | undefined;
+  interface Window {
+    __mobileWebViewReady?: boolean;
+  }
 }
 
 // Make platform globally available (same as Chrome)
@@ -37,10 +42,18 @@ globalThis.platform = platform;
 // Expose bridge for shared plugins that need host file/asset access
 globalThis.bridge = bridge;
 
+interface CurrentDocumentState {
+  sourceContent: string;
+  filename: string;
+  filePath: string;
+}
+
 // Global state
-let currentMarkdown = '';
-let currentFilename = '';
-let currentFilePath = ''; // File path for state persistence (used by FileStateService)
+const currentDocument: CurrentDocumentState = {
+  sourceContent: '',
+  filename: '',
+  filePath: '',
+};
 let currentThemeId = 'default'; // Current theme ID (loaded via shared loadAndApplyTheme)
 // Stable ref object so renderMarkdownFlow can abort previous renders across calls
 const currentTaskManagerRef: { current: AsyncTaskManager | null } = { current: null };
@@ -62,7 +75,7 @@ interface LoadMarkdownPayload {
   filename?: string;
   filePath?: string;    // File path for state persistence
   themeId?: string;     // Theme ID (WebView loads theme data itself)
-  scrollLine?: number;  // Saved scroll position (line number) - legacy, prefer fileState
+  targetLine?: number;  // Explicit target line for rerender/navigation
   forceRender?: boolean; // Force re-render even if file hasn't changed (e.g., theme change)
 }
 
@@ -71,6 +84,12 @@ interface LoadMarkdownPayload {
  */
 interface SetThemePayload {
   themeId: string;
+}
+
+interface SyncHostUiPayload {
+  themeId?: string;
+  locale?: string;
+  settings?: Record<string, unknown>;
 }
 
 /**
@@ -92,7 +111,56 @@ interface SetLocalePayload {
  */
 interface BridgeMessage {
   type?: string;
-  payload?: LoadMarkdownPayload | SetThemePayload | UpdateSettingsPayload | SetLocalePayload;
+  payload?: LoadMarkdownPayload | SetThemePayload | UpdateSettingsPayload | SetLocalePayload | SyncHostUiPayload;
+}
+
+function hasCurrentDocument(): boolean {
+  return currentDocument.filePath.length > 0
+    || currentDocument.filename.length > 0
+    || currentDocument.sourceContent.length > 0;
+}
+
+function getCurrentDocumentPayload(overrides: Partial<LoadMarkdownPayload> = {}): LoadMarkdownPayload {
+  return {
+    content: currentDocument.sourceContent,
+    filename: currentDocument.filename || undefined,
+    filePath: currentDocument.filePath || undefined,
+    ...overrides,
+  };
+}
+
+function getCurrentScrollLine(): number {
+  return scrollSyncController?.getCurrentLine() ?? 0;
+}
+
+async function rerenderCurrentDocument(overrides: Partial<LoadMarkdownPayload> = {}): Promise<void> {
+  if (!hasCurrentDocument()) {
+    return;
+  }
+
+  await handleLoadMarkdown(getCurrentDocumentPayload(overrides));
+}
+
+async function rerenderCurrentDocumentPreservingScroll(overrides: Partial<LoadMarkdownPayload> = {}): Promise<void> {
+  await rerenderCurrentDocument({
+    forceRender: true,
+    targetLine: getCurrentScrollLine(),
+    ...overrides,
+  });
+}
+
+async function syncHostUi(payload: SyncHostUiPayload): Promise<void> {
+  if (payload.themeId !== undefined) {
+    await handleSetTheme({ themeId: payload.themeId });
+  }
+
+  if (payload.locale !== undefined) {
+    await handleSetLocale({ locale: payload.locale });
+  }
+
+  if (payload.settings !== undefined) {
+    await handleUpdateSettings({ settings: payload.settings });
+  }
 }
 
 function isBridgeMessage(message: unknown): message is BridgeMessage {
@@ -121,10 +189,10 @@ async function initialize(): Promise<void> {
       console.error('[Mobile] Failed to load theme at init:', error);
     }
 
-    // Pre-initialize render iframe (don't wait, let it load in background)
-    platform.renderer.ensureReady().catch((err: Error) => {
-      console.warn('[Mobile] Render frame pre-init failed:', err?.message, err?.stack);
-    });
+    // Pre-initialize render iframe and wait for a real ready handshake before
+    // telling Flutter it can inject documents. Cold-start share flow is very
+    // sensitive to this order on Android.
+    await platform.renderer.ensureReady();
 
     // Initialize scroll sync controller FIRST (before message handlers)
     // Uses #markdown-content as container, window scroll for mobile
@@ -144,6 +212,15 @@ async function initialize(): Promise<void> {
         translate: (key) => Localization.translate(key),
       });
 
+      // Setup table context menu for copy/Excel export (shared cross-platform)
+      setupTableContextMenu({
+        container: contentContainer,
+        onDownload: ({ filename, data, mimeType }) => {
+          bridge.sendRequest('DOWNLOAD_FILE', { filename, data, mimeType });
+        },
+        translate: (key) => Localization.translate(key),
+      });
+
       setupDiagramLightbox({
         container: contentContainer,
         translate: (key) => Localization.translate(key),
@@ -155,8 +232,23 @@ async function initialize(): Promise<void> {
       });
     }
 
+    // Suppress the browser/WebView native context menu (which includes "Refresh"
+    // that would blank the page). The image context menu above handles img elements
+    // and calls preventDefault() itself, so we only suppress for non-img targets.
+    document.addEventListener('contextmenu', (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && !target.closest('img')) {
+        e.preventDefault();
+      }
+    });
+
     // Set up message handlers from host app (Flutter)
     setupMessageHandlers();
+
+    // Expose an explicit readiness bit for the Flutter side. Polling for
+    // `window.openDocument` is too early because that function is assigned
+    // before async initialization and render-worker bootstrapping finish.
+    window.__mobileWebViewReady = true;
 
     // Notify host app that WebView is ready
     platform.notifyReady();
@@ -193,16 +285,24 @@ function setupMessageHandlers(): void {
 
     try {
       switch (message.type) {
-        case 'LOAD_MARKDOWN':
+        case 'OPEN_DOCUMENT':
           await handleLoadMarkdown(message.payload as LoadMarkdownPayload);
           break;
 
-        case 'SET_THEME':
-          await handleSetTheme(message.payload as SetThemePayload);
+        case 'UPDATE_CONTENT':
+          await handleLoadMarkdown(message.payload as LoadMarkdownPayload);
+          break;
+
+        case 'SYNC_HOST_UI':
+          await syncHostUi(message.payload as SyncHostUiPayload);
           break;
 
         case 'EXPORT_DOCX':
           await handleExportDocx();
+          break;
+
+        case 'EXPORT_EPUB':
+          await handleExportEpub();
           break;
 
         case 'EXPORT_HTML':
@@ -211,10 +311,6 @@ function setupMessageHandlers(): void {
 
         case 'UPDATE_SETTINGS':
           await handleUpdateSettings(message.payload as UpdateSettingsPayload);
-          break;
-
-        case 'SET_LOCALE':
-          await handleSetLocale(message.payload as SetLocalePayload);
           break;
 
         default:
@@ -231,31 +327,32 @@ function setupMessageHandlers(): void {
  * Handle loading Markdown content
  */
 async function handleLoadMarkdown(payload: LoadMarkdownPayload): Promise<void> {
-  const { content, filename, filePath, themeId, scrollLine, forceRender } = payload;
+  const { content, filename, filePath, themeId, targetLine, forceRender } = payload;
 
   // Check if file changed
   const newFilename = filename || 'document.md';
   const newFilePath = filePath || newFilename; // Fallback to filename if no path
-  const fileChanged = currentFilename !== newFilename;
+  const fileChanged = currentDocument.filePath !== newFilePath;
 
-
-  currentMarkdown = content;
-  currentFilename = newFilename;
-  currentFilePath = newFilePath;
+  currentDocument.sourceContent = content;
+  currentDocument.filename = newFilename;
+  currentDocument.filePath = newFilePath;
 
   // Set file key for scroll position persistence (used by viewer-host)
   setCurrentFileKey(newFilePath);
 
-  // Get saved scroll position from FileStateService (fallback to legacy scrollLine param)
-  let savedScrollLine = scrollLine ?? 0;
-  if (currentFilePath) {
+  // An explicit targetLine is an immediate navigation request; otherwise restore file state.
+  let savedScrollLine = typeof targetLine === 'number' && Number.isFinite(targetLine)
+    ? Math.max(0, Math.floor(targetLine))
+    : 0;
+  if (savedScrollLine === 0 && currentDocument.filePath) {
     try {
-      const fileState = await platform.fileState.get(currentFilePath);
+      const fileState = await platform.fileState.get(currentDocument.filePath);
       if (fileState.scrollLine !== undefined) {
         savedScrollLine = fileState.scrollLine;
       }
     } catch {
-      // Use legacy scrollLine on error
+      // Keep default scroll line when file state is unavailable.
     }
   }
 
@@ -407,7 +504,7 @@ function setupLinkHandling(): void {
     else if (href.startsWith('#')) {
       const targetEl = document.getElementById(decodeURIComponent(href.slice(1)));
       if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth' });
+        targetEl.scrollIntoView({ behavior: 'auto' });
       }
     }
     // Relative links
@@ -451,10 +548,7 @@ async function handleSetTheme(payload: SetThemePayload): Promise<void> {
       scrollController: scrollSyncController,
       applyTheme: loadAndApplyTheme,
       rerender: async (scrollLine) => {
-        // Re-render if we have content
-        if (currentMarkdown) {
-          await handleLoadMarkdown({ content: currentMarkdown, filename: currentFilename || '', scrollLine, forceRender: true });
-        }
+        await rerenderCurrentDocument({ targetLine: scrollLine, forceRender: true });
       },
     });
     
@@ -470,8 +564,8 @@ async function handleSetTheme(payload: SetThemePayload): Promise<void> {
  */
 async function handleExportDocx(): Promise<void> {
   await exportDocxFlow({
-    markdown: currentMarkdown,
-    filename: currentFilename,
+    markdown: currentDocument.sourceContent,
+    filename: currentDocument.filename,
     renderer: pluginRenderer,
     onProgress: (completed, total) => {
       bridge.postMessage('EXPORT_PROGRESS', { 
@@ -500,8 +594,8 @@ async function handleExportHtml(): Promise<void> {
 
   await exportHtmlFlow({
     container: page,
-    filename: currentFilename,
-    title: currentFilename || document.title || 'Markdown Viewer',
+    filename: currentDocument.filename,
+    title: currentDocument.filename || document.title || 'Markdown Viewer',
     platform,
     onProgress: (completed, total, phase) => {
       bridge.postMessage('EXPORT_PROGRESS', {
@@ -509,6 +603,37 @@ async function handleExportHtml(): Promise<void> {
         total,
         phase: phase || 'processing',
         format: 'html',
+      });
+    },
+    onSuccess: () => {
+      // Mobile share flow is handled by DOWNLOAD_FILE response pipeline.
+    },
+    onError: (error) => {
+      bridge.postMessage('EXPORT_ERROR', { error });
+    },
+  });
+}
+
+/**
+ * Handle EPUB export
+ */
+async function handleExportEpub(): Promise<void> {
+  const page = document.getElementById('markdown-page') as HTMLElement | null;
+  if (!page) {
+    return;
+  }
+
+  await exportEpubFlow({
+    container: page,
+    filename: currentDocument.filename,
+    title: currentDocument.filename || document.title || 'Markdown Viewer',
+    platform,
+    onProgress: (completed, total, phase) => {
+      bridge.postMessage('EXPORT_PROGRESS', {
+        completed,
+        total,
+        phase: phase || 'processing',
+        format: 'epub',
       });
     },
     onSuccess: () => {
@@ -536,9 +661,7 @@ async function handleSetLocale(payload: SetLocalePayload): Promise<void> {
     bridge.postMessage('LOCALE_CHANGED', { locale: payload.locale });
     
     // Re-render content with new locale (for translated error messages, etc.)
-    if (currentMarkdown) {
-      await handleLoadMarkdown({ content: currentMarkdown, filename: currentFilename || '' });
-    }
+    await rerenderCurrentDocument();
   } catch (error) {
     console.error('[Mobile] Locale change failed:', error);
   }
@@ -548,42 +671,33 @@ async function handleSetLocale(payload: SetLocalePayload): Promise<void> {
 // Most functionality is now on platform object, only expose minimal API for Flutter calls
 declare global {
   interface Window {
-    // Content loading (Flutter sends themeId, WebView loads theme itself)
-    loadMarkdown: (content: string, filename?: string, themeId?: string, scrollLine?: number) => void;
-    // Theme change (Flutter sends themeId only)
-    setTheme: (themeId: string) => void;
+    openDocument: (payload: LoadMarkdownPayload) => void;
+    updateContent: (payload: LoadMarkdownPayload) => void;
+    syncHostUi: (payload: SyncHostUiPayload) => Promise<void>;
     // Export
     exportDocx: () => void;
     exportHtml: () => void;
     // Display settings
     setFontSize: (size: number) => void;
-    setLocale: (locale: string) => void;
     // Re-render with updated settings
     rerender: () => Promise<void>;
+    // Reload theme CSS (for settings baked into theme CSS) then re-render
+    reloadThemeAndRerender: () => Promise<void>;
     // Platform object has all services: platform.cache, platform.i18n, etc.
   }
 }
 
 // Expose API to window for host app to call (e.g. via runJavaScript)
-// Supports both object payload and legacy positional arguments
-window.loadMarkdown = (
-  contentOrPayload: string | LoadMarkdownPayload, 
-  filename?: string, 
-  themeId?: string, 
-  scrollLine?: number
-) => {
-  // Check if first argument is object payload or string content
-  if (typeof contentOrPayload === 'object' && contentOrPayload !== null) {
-    handleLoadMarkdown(contentOrPayload);
-  } else {
-    // Legacy: positional arguments
-    handleLoadMarkdown({ content: contentOrPayload, filename, themeId, scrollLine });
-  }
+window.openDocument = (payload: LoadMarkdownPayload) => {
+  handleLoadMarkdown(payload);
 };
 
-// Set theme (WebView loads theme data itself using shared loadAndApplyTheme)
-window.setTheme = (themeId: string) => {
-  handleSetTheme({ themeId });
+window.updateContent = (payload: LoadMarkdownPayload) => {
+  handleLoadMarkdown(payload);
+};
+
+window.syncHostUi = async (payload: SyncHostUiPayload) => {
+  await syncHostUi(payload);
 };
 
 window.exportDocx = () => {
@@ -615,15 +729,19 @@ window.setFontSize = (size: number) => {
   }
 };
 
-window.setLocale = (locale: string) => {
-  handleSetLocale({ locale });
-};
-
 window.rerender = async () => {
   // Re-render current markdown with updated settings
-  if (currentMarkdown) {
-    await handleLoadMarkdown({ content: currentMarkdown, filename: currentFilename || '', forceRender: true });
+  await rerenderCurrentDocumentPreservingScroll();
+};
+
+// Reload theme CSS (for settings baked into theme CSS like firstLineIndent) then re-render
+window.reloadThemeAndRerender = async () => {
+  try {
+    await loadAndApplyTheme(currentThemeId);
+  } catch (error) {
+    console.error('[Mobile] Failed to reload theme:', error);
   }
+  await rerenderCurrentDocumentPreservingScroll();
 };
 
 // Initialize when DOM is ready

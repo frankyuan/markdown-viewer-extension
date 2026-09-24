@@ -1,6 +1,8 @@
 // GitBook Navigation Panel Manager
 // Handles GitBook SUMMARY.md discovery and navigation panel functionality
 
+import type { BookPage, BookTocEntry, BookTocHeading, BookTocPage } from '../../../../src/types/book-export';
+
 interface FileState {
   gitbookPanelVisible?: boolean;
   [key: string]: unknown;
@@ -15,20 +17,17 @@ interface GitbookPanelOptions {
   onNavigateFile?: (url: string, content: string) => Promise<void>;
 }
 
-interface GitbookNavItem {
-  title: string;
-  href: string;
-  depth: number;
-}
-
 interface GitbookPanel {
   generateGitbookPanel(): Promise<void>;
   setupResponsivePanel(): Promise<void>;
-}
-
-function logDebug(message: string, ...args: unknown[]): void {
-  void message;
-  void args;
+  /** Get the parsed SUMMARY.md navigation items (empty when no book found) */
+  getGitbookNavItems(): BookPage[];
+  /** Get the parsed SUMMARY.md outline including group headings. */
+  getGitbookNavEntries(): BookTocEntry[];
+  /** Derive a book title from the SUMMARY.md location (null when unknown) */
+  getGitbookBookTitle(): string | null;
+  /** Preferred export filename base for the detected book */
+  getGitbookBookExportName(): string | null;
 }
 
 function isMarkdownDocumentUrl(url: string): boolean {
@@ -103,32 +102,128 @@ function getRepositoryRootPath(url: string): string {
   }
 }
 
-function parseGitbookSummary(summaryContent: string, summaryUrl: string): GitbookNavItem[] {
-  const items: GitbookNavItem[] = [];
-  const lines = summaryContent.split(/\r?\n/);
+function getSummaryDirectoryName(summaryUrl: string): string | null {
+  try {
+    const parsed = new URL(summaryUrl, window.location.href);
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    if (segments.length < 2) {
+      return null;
+    }
+    const summaryFile = segments[segments.length - 1]?.toLowerCase();
+    if (summaryFile !== 'summary.md') {
+      return null;
+    }
+    const directory = segments[segments.length - 2] || '';
+    return directory ? decodeURIComponent(directory) : null;
+  } catch {
+    return null;
+  }
+}
 
-  for (const line of lines) {
-    const match = line.match(/^(\s*)(?:[-*+]|\d+\.)\s+\[([^\]]+)\]\(([^)]+)\)\s*$/);
+/**
+ * Boilerplate SUMMARY.md headings that are not real book titles.
+ * (GitBook's default template starts with "# Summary".)
+ */
+const SUMMARY_TITLE_BLOCKLIST = new Set([
+  'summary', 'table of contents', 'contents', 'index',
+  '目录', '目錄', '内容', '內容',
+]);
+
+/**
+ * Extract a book title from SUMMARY.md's first heading. Returns null when
+ * there is no heading or it is boilerplate — callers must not fall back to
+ * the directory name as an in-document title.
+ */
+function extractSummaryBookTitle(summaryContent: string): string | null {
+  for (const line of summaryContent.split(/\r?\n/)) {
+    const match = line.match(/^\s*(#{1,6})\s+(.+?)\s*#*\s*$/);
     if (!match) {
       continue;
     }
-
-    const indent = match[1] || '';
     const title = match[2].trim();
-    const target = normalizeSummaryLinkTarget(match[3]);
-    if (!target || /^(?:mailto:|javascript:|#)/i.test(target)) {
+    if (title && !SUMMARY_TITLE_BLOCKLIST.has(title.toLowerCase())) {
+      return title;
+    }
+    return null;
+  }
+  return null;
+}
+
+function isSummaryTitleBlocklisted(title: string): boolean {
+  return SUMMARY_TITLE_BLOCKLIST.has(title.trim().toLowerCase());
+}
+
+function toIndentDepth(indent: string): number {
+  return Math.floor(indent.replace(/\t/g, '  ').length / 2);
+}
+
+function isPageEntry(entry: BookTocEntry): entry is BookTocPage {
+  return entry.type === 'page';
+}
+
+export function parseGitbookSummary(summaryContent: string, summaryUrl: string): BookTocEntry[] {
+  const items: BookTocEntry[] = [];
+  const lines = summaryContent.split(/\r?\n/);
+  let markdownHeadingBaseDepth: number | null = null;
+
+  for (const line of lines) {
+    const headingMatch = line.match(/^\s*(#{2,6})\s+(.+?)\s*#*\s*$/);
+    if (headingMatch) {
+      const title = headingMatch[2].trim();
+      const depth = Math.max(0, headingMatch[1].length - 2);
+      if (!title || isSummaryTitleBlocklisted(title)) {
+        continue;
+      }
+      items.push({
+        type: 'heading',
+        title,
+        depth,
+      });
+      markdownHeadingBaseDepth = depth;
       continue;
     }
 
-    let href = '';
-    try {
-      href = new URL(target, summaryUrl).href;
-    } catch {
+    const linkMatch = line.match(/^(\s*)(?:[-*+]|\d+\.)\s+\[([^\]]+)\]\(([^)]+)\)\s*$/);
+    if (linkMatch) {
+      const indent = linkMatch[1] || '';
+      const title = linkMatch[2].trim();
+      const target = normalizeSummaryLinkTarget(linkMatch[3]);
+      if (!target || /^(?:mailto:|javascript:|#)/i.test(target)) {
+        continue;
+      }
+
+      let href = '';
+      try {
+        href = new URL(target, summaryUrl).href;
+      } catch {
+        continue;
+      }
+
+      items.push({
+        type: 'page',
+        title,
+        href,
+        depth: toIndentDepth(indent) + (markdownHeadingBaseDepth === null ? 0 : markdownHeadingBaseDepth + 1),
+      });
       continue;
     }
 
-    const depth = Math.floor(indent.replace(/\t/g, '  ').length / 2);
-    items.push({ title, href, depth });
+    const listHeadingMatch = line.match(/^(\s*)(?:[-*+]|\d+\.)\s+(.+?)\s*$/);
+    if (!listHeadingMatch) {
+      continue;
+    }
+
+    const title = listHeadingMatch[2].trim();
+    if (!title || /^\[[ xX]\]\s+/.test(title) || isSummaryTitleBlocklisted(title)) {
+      continue;
+    }
+
+    items.push({
+      type: 'heading',
+      title,
+      depth: toIndentDepth(listHeadingMatch[1] || ''),
+    });
+    markdownHeadingBaseDepth = null;
   }
 
   return items;
@@ -142,38 +237,30 @@ async function readSummaryByRelativePath(
   try {
     const summaryParsedUrl = new URL(relativePath, currentUrl);
     const summaryUrl = summaryParsedUrl.href;
-    logDebug('Trying summary candidate', { relativePath, summaryUrl });
 
     if (readRelativeFile) {
       try {
         const content = await readRelativeFile(relativePath);
-        logDebug('Summary loaded via readRelativeFile', { summaryUrl, length: content.length });
         return { summaryUrl, content };
       } catch (error) {
-        logDebug('readRelativeFile failed, fallback to fetch', {
-          summaryUrl,
-          error: (error as Error).message,
-        });
+        void error;
       }
     }
 
     // Avoid fetch on local file URLs to prevent browser CORS errors in file origin.
     if (summaryParsedUrl.protocol === 'file:') {
-      logDebug('Skip fetch for file URL summary candidate', { summaryUrl });
       return null;
     }
 
     const response = await fetch(summaryUrl);
     if (!response.ok) {
-      logDebug('Summary fetch not ok', { summaryUrl, status: response.status });
       return null;
     }
 
     const content = await response.text();
-    logDebug('Summary loaded via fetch', { summaryUrl, length: content.length });
     return { summaryUrl, content };
   } catch (error) {
-    logDebug('Summary candidate failed', { relativePath, error: (error as Error).message });
+    void error;
     return null;
   }
 }
@@ -181,9 +268,8 @@ async function readSummaryByRelativePath(
 async function loadGitbookNavigation(
   currentUrl: string,
   readRelativeFile?: (relativePath: string) => Promise<string>
-): Promise<GitbookNavItem[] | null> {
+): Promise<{ entries: BookTocEntry[]; items: BookPage[]; summaryUrl: string; bookTitle: string | null } | null> {
   if (!isMarkdownDocumentUrl(currentUrl)) {
-    logDebug('Skip GitBook discovery for non-markdown URL', { currentUrl });
     return null;
   }
 
@@ -198,7 +284,17 @@ async function loadGitbookNavigation(
 
   let depth = 0;
   while (depth <= 20) {
-    let checkedAtLeastOne = false;
+    // Probe every name × baseUrl at this depth IN PARALLEL: each probe is an
+    // independent file read (background FS / postMessage round trip), so a
+    // sequential walk makes the worst case (no SUMMARY.md anywhere) pay 40+
+    // round trips serially. Parallelizing per depth cuts that to one round
+    // trip per depth. Priority is preserved: results are scanned in the same
+    // order as the old sequential loop (SUMMARY.md before summary.md).
+    const candidates: Array<{
+      relativePath: string;
+      baseUrl: string;
+      summaryUrl: string;
+    }> = [];
 
     for (const summaryName of summaryNames) {
       const relativePath = `${'../'.repeat(depth)}${summaryName}`;
@@ -211,7 +307,7 @@ async function loadGitbookNavigation(
         }
 
         const summaryUrl = summaryParsedUrl.href;
-        
+
         if (visitedUrls.has(summaryUrl)) {
           continue;
         }
@@ -223,33 +319,39 @@ async function loadGitbookNavigation(
           continue;
         }
 
-        checkedAtLeastOne = true;
+        candidates.push({ relativePath, baseUrl, summaryUrl });
+      }
+    }
 
-        const loaded = await readSummaryByRelativePath(relativePath, baseUrl, readRelativeFile);
+    if (candidates.length > 0) {
+      const loadedResults = await Promise.all(
+        candidates.map(({ relativePath, baseUrl }) =>
+          readSummaryByRelativePath(relativePath, baseUrl, readRelativeFile))
+      );
+
+      // First hit wins in the original (sequential) priority order.
+      for (let i = 0; i < candidates.length; i += 1) {
+        const loaded = loadedResults[i];
         if (!loaded) {
           continue;
         }
 
-        const navItems = parseGitbookSummary(loaded.content, loaded.summaryUrl);
-        logDebug('Summary parsed', {
-          summaryUrl: loaded.summaryUrl,
-          itemCount: navItems.length,
-        });
+        const navEntries = parseGitbookSummary(loaded.content, loaded.summaryUrl);
+        const navItems = navEntries.filter(isPageEntry).map(({ title, href, depth }) => ({ title, href, depth }));
         if (navItems.length > 0) {
-          return navItems;
+          return {
+            entries: navEntries,
+            items: navItems,
+            summaryUrl: loaded.summaryUrl,
+            bookTitle: extractSummaryBookTitle(loaded.content),
+          };
         }
       }
-    }
-
-    if (!checkedAtLeastOne && depth > 0) {
-      logDebug('Stopping GitBook discovery: reached repository root or URL root', { depth });
-      break;
     }
 
     depth += 1;
   }
 
-  logDebug('No SUMMARY.md found while walking upward', { currentUrl });
   return null;
 }
 
@@ -282,6 +384,12 @@ export function createGitbookPanel(
   isMobile: boolean,
   options: GitbookPanelOptions = {}
 ): GitbookPanel {
+  // Cached book data for whole-book export (export menu reads these)
+  let cachedNavItems: BookPage[] = [];
+  let cachedNavEntries: BookTocEntry[] = [];
+  let cachedSummaryUrl: string | null = null;
+  let cachedBookTitle: string | null = null;
+
   function getPanelElements(): {
     panelDiv: HTMLElement | null;
     sidebarBody: HTMLElement | null;
@@ -331,23 +439,37 @@ export function createGitbookPanel(
 
   async function renderGitbookPanelIfAvailable(panelDiv: HTMLElement): Promise<boolean> {
     const currentUrl = options.currentUrl || window.location.href;
-    const navItems = await loadGitbookNavigation(currentUrl, options.readRelativeFile);
-    if (!navItems || navItems.length === 0) {
-      logDebug('No GitBook items found, keeping panel hidden');
+    const bookNav = await loadGitbookNavigation(currentUrl, options.readRelativeFile);
+    if (!bookNav || bookNav.items.length === 0) {
+      cachedNavItems = [];
+      cachedNavEntries = [];
+      cachedSummaryUrl = null;
+      cachedBookTitle = null;
       setPanelVisibility(false);
       return false;
     }
 
+    cachedNavItems = bookNav.items;
+  cachedNavEntries = bookNav.entries;
+    cachedSummaryUrl = bookNav.summaryUrl;
+    cachedBookTitle = bookNav.bookTitle;
+    const navEntries = bookNav.entries;
+
     // Build TOC style list structure
     let panelHTML = '<ul class="gitbook-nav-list">';
-    for (const item of navItems) {
+    for (const item of navEntries) {
       const escapedTitle = item.title
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
-      const escapedHref = item.href.replace(/"/g, '&quot;');
       const indent = item.depth * 20;
+      if (item.type === 'heading') {
+        panelHTML += `<li class="gitbook-nav-heading" style="margin-left: ${indent}px"><span class="gitbook-nav-heading-text">${escapedTitle}</span></li>`;
+        continue;
+      }
+
+      const escapedHref = item.href.replace(/"/g, '&quot;');
       panelHTML += `<li style="margin-left: ${indent}px"><a href="${escapedHref}" data-href="${escapedHref}" data-title="${escapedTitle}">${escapedTitle}</a></li>`;
     }
     panelHTML += '</ul>';
@@ -363,8 +485,17 @@ export function createGitbookPanel(
         if (!href) {
           return;
         }
-        logDebug('Navigate via GitBook panel', { href, title });
-        
+
+        // Fall back to a real browser navigation when in-page navigation
+        // fails. A dead click (silent "no response") is worse than a page
+        // load: the browser will open the file directly and the content
+        // script re-renders it as a standalone document (with relative
+        // images resolved against the file's own directory).
+        const fallbackToNavigation = (reason: unknown): void => {
+          console.warn('[GitBook] In-page navigation failed, opening the file directly:', href, reason);
+          window.location.assign(href);
+        };
+
         try {
           let content: string | null = null;
 
@@ -372,20 +503,21 @@ export function createGitbookPanel(
             try {
               content = await options.readRelativeFile(href);
             } catch (error) {
-              logDebug('readRelativeFile failed for navigation target, fallback to fetch', {
-                href,
-                error: (error as Error).message,
-              });
+              void error;
             }
           }
 
           if (content === null) {
-            const response = await fetch(href);
-            if (!response.ok) {
-              console.error('Failed to fetch file:', response.status);
+            try {
+              const response = await fetch(href);
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+              }
+              content = await response.text();
+            } catch (error) {
+              fallbackToNavigation(error);
               return;
             }
-            content = await response.text();
           }
 
           // If there is no history state yet, keep URL unchanged.
@@ -395,20 +527,25 @@ export function createGitbookPanel(
           
           // Call navigation callback if provided
           if (options.onNavigateFile) {
-            await options.onNavigateFile(href, content);
+            try {
+              await options.onNavigateFile(href, content);
+            } catch (error) {
+              fallbackToNavigation(error);
+              return;
+            }
           }
           
           // Mark active item
           panelDiv.querySelectorAll('a').forEach(el => el.classList.remove('active'));
           link.classList.add('active');
         } catch (error) {
-          console.error('Navigation failed:', error);
+          // Last resort: never leave the click unanswered.
+          fallbackToNavigation(error);
         }
       });
     });
 
     markActiveGitbookItem(panelDiv);
-    logDebug('Rendered GitBook panel', { itemCount: navItems.length });
     return true;
   }
 
@@ -433,7 +570,6 @@ export function createGitbookPanel(
   async function generateGitbookPanel(): Promise<void> {
     const panelDiv = document.getElementById('gitbook-panel');
     if (!panelDiv) {
-      logDebug('GitBook panel container not found');
       return;
     }
 
@@ -444,8 +580,42 @@ export function createGitbookPanel(
     // Panel is always shown when SUMMARY.md is available; nothing to do here.
   }
 
+  /**
+   * Get the parsed SUMMARY.md navigation items (empty when no book found).
+   */
+  function getGitbookNavItems(): BookPage[] {
+    return cachedNavItems;
+  }
+
+  function getGitbookNavEntries(): BookTocEntry[] {
+    return cachedNavEntries;
+  }
+
+  /**
+   * Book title from SUMMARY.md's own heading (null when there is no suitable
+   * title — the directory name is intentionally NOT used, it would make a
+   * weird in-document title).
+   */
+  function getGitbookBookTitle(): string | null {
+    return cachedBookTitle;
+  }
+
+  /**
+   * Preferred export filename base: first the explicit SUMMARY heading, then
+   * the SUMMARY.md parent directory name. This keeps the document title logic
+   * conservative while avoiding exports named after the current page (e.g.
+   * README.docx).
+   */
+  function getGitbookBookExportName(): string | null {
+    return cachedBookTitle || (cachedSummaryUrl ? getSummaryDirectoryName(cachedSummaryUrl) : null);
+  }
+
   return {
     generateGitbookPanel,
     setupResponsivePanel,
+    getGitbookNavItems,
+    getGitbookNavEntries,
+    getGitbookBookTitle,
+    getGitbookBookExportName,
   };
 }

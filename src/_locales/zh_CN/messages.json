@@ -19,6 +19,30 @@
     "message": "未知错误",
     "description": "错误信息缺失时的提示"
   },
+  "book_export_docx": {
+    "message": "导出整书为 DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_epub": {
+    "message": "导出整书为 EPUB",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
+  "book_export_failed": {
+    "message": "整书导出失败：{0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "导出整书为 PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "有 {0} 个页面被跳过，未导出",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "导出整书",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "清空缓存",
     "description": "清空按钮"
@@ -175,6 +199,10 @@
     "message": "复制为 PNG",
     "description": "Context menu item for copying a diagram as PNG"
   },
+  "copy_table": {
+    "message": "复制表格",
+    "description": "Context menu item for copying a rendered table as spreadsheet cells"
+  },
   "delete": {
     "message": "删除",
     "description": "Delete button text"
@@ -203,6 +231,10 @@
     "message": "导出为 DOCX",
     "description": "导出菜单中的 DOCX 项"
   },
+  "export_menu_export_epub": {
+    "message": "导出为 EPUB",
+    "description": "Export menu item for exporting the current document to EPUB"
+  },
   "export_menu_export_html": {
     "message": "导出为 HTML",
     "description": "Export menu item for exporting to HTML"
@@ -220,7 +252,7 @@
     "description": "导出中提示"
   },
   "extensionDescription": {
-    "message": "Markdown 导出完美 Word — Mermaid、PlantUML、Vega、drawio、canvas、信息图、Graphviz、LaTeX 公式可编辑，代码高亮，本地处理.",
+    "message": "本地预览 Markdown，并导出包含图表、可编辑公式和代码高亮的精致 Word 文档。",
     "description": "扩展简介"
   },
   "extensionName": {
@@ -251,6 +283,34 @@
     "message": "并启用「允许访问文件网址」选项",
     "description": "Suffix for file access warning"
   },
+  "file_access_disabled_suffix_firefox": {
+    "message": "并在「权限与数据」中启用「访问您计算机上的本地文件」",
+    "description": "Suffix for the Firefox file access warning"
+  },
+  "file_access_enable_button": {
+    "message": "启用本地文件访问",
+    "description": "Button that requests local file access"
+  },
+  "local_file_access_title": {
+    "message": "无法读取本地图片",
+    "description": "Title of the local file access prompt"
+  },
+  "local_file_access_message": {
+    "message": "Firefox 不允许扩展读取本地文件，因此「{0}」中的图片无法嵌入。请选择包含这些图片的文件夹——文件不会被上传，仅用于本文档的读取。",
+    "description": "Prompt shown when the folder name is known"
+  },
+  "local_file_access_message_generic": {
+    "message": "Firefox 不允许扩展读取本地文件，因此本文档中的本地图片无法嵌入。请选择包含这些图片的文件夹——文件不会被上传，仅用于本文档的读取。",
+    "description": "Prompt shown without a folder name"
+  },
+  "local_file_access_pick": {
+    "message": "选择文件夹",
+    "description": "Button that opens the folder picker"
+  },
+  "local_file_access_skip": {
+    "message": "本次不带图片导出",
+    "description": "Button that exports without embedding local images"
+  },
   "file_access_settings_link": {
     "message": "扩展设置页面",
     "description": "Link text to extension settings"
@@ -271,13 +331,9 @@
     "message": "链接已复制，请粘贴到地址栏打开",
     "description": "Message shown when file URL is copied to clipboard in Firefox"
   },
-  "heading_h2_format": {
-    "message": "第{0}章",
-    "description": "Format for h2 headings. {0} is the chapter number."
-  },
-  "heading_h2_numerals": {
-    "message": "chinese",
-    "description": "Numeral system for h2: chinese, arabic, roman"
+  "heading_anchor_title": {
+    "message": "链接到此章节",
+    "description": "Tooltip for the hover anchor icon shown next to a heading"
   },
   "history_clear": {
     "message": "清空历史",
@@ -387,13 +443,45 @@
     "message": "添加批注…",
     "description": "Placeholder for the note input in the annotation popup and sidebar"
   },
-  "remark_all_cleared": {
-    "message": "所有批注已清空",
-    "description": "Temporary success state after clearing all remarks"
+  "remark_cfg_auto_delete": {
+    "message": "自动删除空批注",
+    "description": ""
   },
-  "remark_cancel": {
-    "message": "取消并移除",
-    "description": "Cancel button in the annotation popup"
+  "remark_cfg_close_after_copy": {
+    "message": "复制后关闭标签页",
+    "description": ""
+  },
+  "remark_cfg_default_color": {
+    "message": "默认颜色",
+    "description": ""
+  },
+  "remark_cfg_font_size": {
+    "message": "字体大小",
+    "description": ""
+  },
+  "remark_cfg_highlight_style": {
+    "message": "高亮样式",
+    "description": ""
+  },
+  "remark_cfg_style_bg": {
+    "message": "背景色",
+    "description": ""
+  },
+  "remark_cfg_style_border": {
+    "message": "底部边框",
+    "description": ""
+  },
+  "remark_cfg_style_underline": {
+    "message": "下划线",
+    "description": ""
+  },
+  "remark_cfg_style_wavy": {
+    "message": "波浪线",
+    "description": ""
+  },
+  "remark_cfg_title": {
+    "message": "批注模式",
+    "description": "Title for remark mode settings card"
   },
   "remark_clear_all": {
     "message": "清空所有批注",
@@ -415,18 +503,6 @@
     "message": "建议",
     "description": "Label for the yellow annotation color"
   },
-  "remark_copied": {
-    "message": "已复制！",
-    "description": "Feedback shown after remarks are successfully copied"
-  },
-  "remark_copy_btn": {
-    "message": "复制批注",
-    "description": "Button label to copy all remarks to clipboard and exit Remark Mode"
-  },
-  "remark_copy_failed": {
-    "message": "复制失败",
-    "description": "Feedback shown when copying remarks fails"
-  },
   "remark_copy_tooltip": {
     "message": "复制所有批注到剪贴板",
     "description": "Tooltip for the Copy remarks button"
@@ -439,9 +515,9 @@
     "message": "已删除",
     "description": "Status label shown after a remark is deleted"
   },
-  "remark_edit_note": {
-    "message": "点击编辑",
-    "description": "Tooltip on a remark note in the sidebar indicating it is editable"
+  "remark_download_tooltip": {
+    "message": "将标注下载为文件",
+    "description": "Tooltip for the button that downloads all remarks as a portable file"
   },
   "remark_empty_hint": {
     "message": "选择文本以添加批注",
@@ -459,6 +535,10 @@
     "message": "备注",
     "description": "Label preceding the note text in exported remarks"
   },
+  "remark_import_tooltip": {
+    "message": "从文件导入并合并标注",
+    "description": "Tooltip for the button that imports remarks from a file and merges them"
+  },
   "remark_mode": {
     "message": "批注模式",
     "description": "Toolbar button tooltip to enter Remark Mode"
@@ -475,10 +555,6 @@
     "message": "从列表移除",
     "description": "Menu item to remove file from recent list"
   },
-  "reset": {
-    "message": "重置",
-    "description": "Reset button"
-  },
   "save_as_drawio": {
     "message": "保存为 DrawIO",
     "description": "Context menu item for saving a PlantUML diagram as DrawIO"
@@ -494,6 +570,10 @@
   "save_image_as": {
     "message": "图片另存为…",
     "description": "Context menu item for saving an image"
+  },
+  "save_table_as_xlsx": {
+    "message": "另存为 Excel (.xlsx)",
+    "description": "Context menu item for saving a rendered table as an Excel (.xlsx) file"
   },
   "search_case_sensitive": {
     "message": "区分大小写",
@@ -520,7 +600,7 @@
     "description": "自动刷新复选框标签"
   },
   "settings_auto_refresh_interval": {
-    "message": "刷新间隔:",
+    "message": "刷新间隔",
     "description": "刷新间隔选择器标签"
   },
   "settings_auto_refresh_note": {
@@ -534,6 +614,18 @@
   "settings_cache_title": {
     "message": "缓存",
     "description": "缓存设置区块标题"
+  },
+  "settings_diagram_layout": {
+    "message": "图表对齐",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "居中",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "靠左",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "表情符号样式",
@@ -556,11 +648,11 @@
     "description": "Option to use Segoe UI Emoji"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX：分隔线处理",
+    "message": "分隔线处理",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "隐藏（空行）",
+    "message": "隐藏",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -575,8 +667,32 @@
     "message": "分页",
     "description": "Option to export horizontal rules as page breaks in DOCX"
   },
+  "settings_first_line_indent": {
+    "message": "首行缩进",
+    "description": "Label for first-line indent selector"
+  },
+  "settings_first_line_indent_1": {
+    "message": "1 字符",
+    "description": "Option: 1 character first-line indent"
+  },
+  "settings_first_line_indent_2": {
+    "message": "2 字符",
+    "description": "Option: 2 characters first-line indent"
+  },
+  "settings_first_line_indent_3": {
+    "message": "3 字符",
+    "description": "Option: 3 characters first-line indent"
+  },
+  "settings_first_line_indent_4": {
+    "message": "4 字符",
+    "description": "Option: 4 characters first-line indent"
+  },
+  "settings_first_line_indent_off": {
+    "message": "不缩进",
+    "description": "Option to disable first-line indent"
+  },
   "settings_frontmatter_display": {
-    "message": "Frontmatter 显示:",
+    "message": "Frontmatter 显示",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -599,6 +715,18 @@
     "message": "扩展设置",
     "description": "设置区标题"
   },
+  "settings_image_layout": {
+    "message": "图片对齐",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "居中",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "靠左",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "界面设置",
     "description": "界面设置区标题"
@@ -616,7 +744,7 @@
     "description": "语言更改成功提示"
   },
   "settings_max_cache_label": {
-    "message": "最大缓存项目数:",
+    "message": "最大缓存项目数",
     "description": "最大缓存标签"
   },
   "settings_reset_btn": {
@@ -680,7 +808,7 @@
     "description": "主题切换成功时显示的消息"
   },
   "settings_theme_label": {
-    "message": "选择主题：",
+    "message": "选择主题",
     "description": "主题选择器标签"
   },
   "share": {
@@ -724,8 +852,8 @@
     "description": "布局按钮正常模式提示"
   },
   "toolbar_print_disabled_title": {
-    "message": "打印功能仅适用于本地文件",
-    "description": "远程文件时打印按钮禁用提示"
+    "message": "打印功能受页面安全策略（沙盒）限制",
+    "description": "沙盒限制时打印按钮禁用提示"
   },
   "toolbar_print_title": {
     "message": "打印",
@@ -760,8 +888,16 @@
     "description": "Button to open directory picker"
   },
   "workspace_desc": {
-    "message": "打开本地目录以浏览和预览支持的文件。",
+    "message": "打开本地目录，或将文件、文件夹拖到此处进行浏览和预览。",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "后退",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "前进",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "打开工作区",

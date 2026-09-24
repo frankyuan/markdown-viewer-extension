@@ -1,0 +1,167 @@
+# CI — fibjs compatibility tests plus native Node.js/Playwright E2E
+#
+# Release builds live in release.yml: pushing a `v<version>` tag builds every
+# platform and attaches the installers to the GitHub Release for that tag.
+#
+# The fibjs entry covers the compatibility-sensitive unit and contract tests.
+# Installed-extension E2E runs as a separate native Node.js process so the
+# browser lifecycle is deterministic and independent of fibjs.
+#
+# fibjs distribution: the suite needs a dev build WITH CSSOM support
+# (element.style, added after v0.37.0 — see docs/dev/fibjs-dom-style-limitation.md).
+# There is no official binary download for the dev line, so the workflow
+# extracts the fibjs binary straight out of the fibjs/dev docker image and runs
+# it on the VM (no container-internal browser setup needed). The image is
+# multi-arch; the ubuntu runner pulls the amd64 variant automatically.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Ad-hoc low-version runs, e.g. versions: "121 123"
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: 'Chrome for Testing versions for the matrix (space separated, prefixes allowed)'
+        default: '120 121 122 123'
+
+env:
+  # Chrome for Testing versions covered by the matrix job (see below).
+  CF_T_VERSIONS: ${{ github.event.inputs.versions || '120 121 122 123' }}
+
+jobs:
+  test:
+    name: fibjs tests + Node.js Playwright E2E
+    runs-on: ubuntu-latest
+    steps:
+      # The homepage-i18n gate reads docs/index.html and docs/assets/js/i18n/*.js,
+      # which live in the `docs` submodule: without submodules the directory is
+      # empty and the gate cannot run. Both submodule remotes are SSH URLs, but
+      # the repos are public and actions/checkout rewrites git@github.com:… to
+      # HTTPS when no ssh-key is supplied, so no credentials are needed here.
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      # Extract fibjs (dev build incl. CSSOM) from the fibjs/dev image
+      - name: Extract fibjs from fibjs/dev image
+        run: |
+          docker create --name fibjs-extract fibjs/dev
+          docker cp fibjs-extract:/usr/local/bin/fibjs ./fibjs
+          docker rm fibjs-extract
+          chmod +x ./fibjs
+          ./fibjs --version
+          sudo mv ./fibjs /usr/local/bin/fibjs
+          fibjs --version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      # Google Chrome for suites that launch channel:'chrome'
+      - name: Setup Google Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      # Playwright Chromium for the installed-extension e2e (channel:'chromium',
+      # needed because branded Chrome refuses --load-extension on macOS/Windows).
+      # The range must float together with the top-level playwright-core
+      # dependency (package-lock.json is gitignored, so `npm install` resolves
+      # the caret range to the newest release): playwright pins its
+      # playwright-core exactly, so a caret range here dedupes to the same
+      # version and downloads the Chromium revision that version expects —
+      # e.g. playwright-core 1.63.0 needs chromium-1243, 1.62.1 shipped 1234.
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@^1.62.1
+          npx playwright install chromium --with-deps
+
+      # Browser/export contract suites read dist/cli assets; the extension
+      # E2E loads dist/chrome.
+      - name: Build CLI and Chrome extension
+        run: |
+          npm run build:cli
+          npm run build:chrome
+
+      - name: Run fibjs compatibility tests
+        run: npm run test:unit
+
+      - name: Run installed-extension E2E (Node.js + Playwright)
+        run: npm run test:e2e
+        env:
+          MV_E2E_ARTIFACT_DIR: test-results/extension-e2e
+
+      - name: Upload E2E diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-e2e-diagnostics
+          path: test-results/extension-e2e
+          if-no-files-found: ignore
+
+  # Low-version coverage for the installed extension.
+  #
+  # The bundled Playwright Chromium is always the newest, so version-specific
+  # platform behaviour can only be checked against real older builds — e.g. the
+  # contextMenus API only gained Promise support in Chrome 123, which is what a
+  # Windows user on Chrome 120-122 reported as
+  # "Unchecked runtime.lastError: Cannot find menu item with id preview-as-markdown".
+  #
+  # Why the x64 Linux runner: Chrome 120/121 crash on newer macOS hosts (macOS 26)
+  # before any extension code runs, so the low versions can only be covered here.
+  #
+  # The probe runs on `node --test` instead of fibjs: it needs only node:test and
+  # playwright-core, and Node 22.18+/24 strips the TypeScript types natively, so
+  # this job does not need the fibjs dev build.
+  chrome-matrix:
+    name: Chrome version matrix (${{ github.event.inputs.versions || '120 121 122 123' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      # The probe loads dist/chrome (same build the main job tests).
+      - name: Build Chrome extension
+        run: npm run build:chrome
+
+      # Shared libraries for Chrome for Testing; no second browser download.
+      - name: Install browser dependencies
+        run: |
+          npm install --no-save playwright@^1.62.1
+          npx playwright install-deps chromium
+
+      # The Chrome for Testing archives (~140 MB each) dominate the job. Bump the
+      # key when CF_T_VERSIONS changes so the new versions get cached too.
+      - name: Cache Chrome for Testing builds
+        uses: actions/cache@v4
+        with:
+          path: .cache/chrome-for-testing
+          key: cft-linux64-v1
+          restore-keys: cft-linux64-
+
+      - name: Run version matrix (contextMenus probe)
+        run: MV_TEST_RUNNER=node node scripts/chrome-test-matrix.js --strict $CF_T_VERSIONS
+
+      # Availability check on the oldest version in the list: the full
+      # installed-extension group (open modes × fixture matrix, in-page menus,
+      # browser menu probe). Informational only — the fixture matrix has a known
+      # intermittent cold-start stall (see the diagram/offscreen flake that also
+      # fails `npm test` on the newest Chromium), so a red here is not a
+      # regression. The step above is the gate: it fails if a version cannot run.
+      - name: Run full extension e2e on the oldest version (informational)
+        continue-on-error: true
+        run: |
+          set -- $CF_T_VERSIONS
+          echo "oldest version in the list: $1"
+          MV_TEST_RUNNER=node node scripts/chrome-test-matrix.js --strict \
+            --test test/suites/extension-e2e/index.js "$1"

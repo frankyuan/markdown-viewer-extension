@@ -19,6 +19,30 @@
     "message": "Nežinoma klaida",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Eksportuoti knygą į DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_epub": {
+    "message": "Eksportuoti knygą į EPUB",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
+  "book_export_failed": {
+    "message": "Nepavyko eksportuoti knygos: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Eksportuoti knygą į PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "Praleista {0} puslapis(-iai)",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Eksportuoti knygą",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Išvalyti talpyklą",
     "description": "Clear cache button"
@@ -175,6 +199,10 @@
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
   },
+  "copy_table": {
+    "message": "Kopijuoti lentelę",
+    "description": "Context menu item for copying a rendered table as spreadsheet cells"
+  },
   "delete": {
     "message": "Ištrinti",
     "description": "Delete button text"
@@ -203,6 +231,10 @@
     "message": "Eksportuoti į DOCX",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_epub": {
+    "message": "Eksportuoti į EPUB",
+    "description": "Export menu item for exporting the current document to EPUB"
+  },
   "export_menu_export_html": {
     "message": "Eksportuoti į HTML",
     "description": "Export menu item for exporting to HTML"
@@ -220,7 +252,7 @@
     "description": "Fallback message when DOCX export fails"
   },
   "extensionDescription": {
-    "message": "Markdown į tobulą Word — Mermaid, PlantUML, Vega, drawio, infografika, Graphviz, LaTeX, kodo paryškinimas, vietinis apdorojimas.",
+    "message": "Peržiūrėkite Markdown vietoje ir eksportuokite tvarkingus Word dokumentus su diagramomis, formulėmis ir kodu.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {
@@ -251,6 +283,14 @@
     "message": "ir įjunkite 'Leisti prieigą prie failų URL'",
     "description": "Suffix for file access warning"
   },
+  "file_access_disabled_suffix_firefox": {
+    "message": "ir įjunkite „Prieiga prie vietinių failų jūsų kompiuteryje“ skiltyje Leidimai ir duomenys",
+    "description": "Suffix for the Firefox file access warning"
+  },
+  "file_access_enable_button": {
+    "message": "Leisti prieigą prie vietinių failų",
+    "description": "Button that requests local file access"
+  },
   "file_access_settings_link": {
     "message": "plėtinio nustatymų puslapyje",
     "description": "Link text to extension settings"
@@ -271,13 +311,9 @@
     "message": "URL nukopijuotas. Įklijuokite adreso juostoje, kad atidarytumėte.",
     "description": "Message shown when file URL is copied to clipboard in Firefox"
   },
-  "heading_h2_format": {
-    "message": "Skyrius {0}",
-    "description": "Format for h2 headings. {0} is the chapter number."
-  },
-  "heading_h2_numerals": {
-    "message": "arabic",
-    "description": "Numeral system for h2: chinese, arabic, roman"
+  "heading_anchor_title": {
+    "message": "Nuoroda į šį skyrių",
+    "description": "Tooltip for the hover anchor icon shown next to a heading"
   },
   "history_clear": {
     "message": "Išvalyti istoriją",
@@ -339,6 +375,26 @@
     "message": "Mažinti",
     "description": "Tooltip for zooming out in the diagram lightbox"
   },
+  "local_file_access_message": {
+    "message": "Firefox neleidžia šiam plėtiniui skaityti vietinių failų, todėl aplanko {0} vaizdų įterpti nepavyks. Pasirinkite aplanką, kuriame jie yra – pasirinkti failai lieka jūsų kompiuteryje ir skaitomi tik šiam dokumentui.",
+    "description": "Prompt shown when the folder name is known"
+  },
+  "local_file_access_message_generic": {
+    "message": "Firefox neleidžia šiam plėtiniui skaityti vietinių failų, todėl šio dokumento vietinių vaizdų įterpti nepavyks. Pasirinkite aplanką, kuriame jie yra – pasirinkti failai lieka jūsų kompiuteryje ir skaitomi tik šiam dokumentui.",
+    "description": "Prompt shown without a folder name"
+  },
+  "local_file_access_pick": {
+    "message": "Pasirinkti aplanką",
+    "description": "Button that opens the folder picker"
+  },
+  "local_file_access_skip": {
+    "message": "Eksportuoti be vaizdų",
+    "description": "Button that exports without embedding local images"
+  },
+  "local_file_access_title": {
+    "message": "Nepavyko nuskaityti vietinių vaizdų",
+    "description": "Title of the local file access prompt"
+  },
   "more": {
     "message": "Daugiau",
     "description": "More options menu"
@@ -387,13 +443,45 @@
     "message": "Pridėti pastabą…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
-  "remark_all_cleared": {
-    "message": "Visos pastabos išvalytos",
-    "description": "Temporary success state after clearing all remarks"
+  "remark_cfg_auto_delete": {
+    "message": "Automatiškai trinti tuščias pastabas",
+    "description": "Config: auto-delete annotations with no note"
   },
-  "remark_cancel": {
-    "message": "Atšaukti ir pašalinti",
-    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  "remark_cfg_close_after_copy": {
+    "message": "Uždaryti skirtuką po kopijavimo",
+    "description": "Config: close the file tab after copying remarks"
+  },
+  "remark_cfg_default_color": {
+    "message": "Numatytoji spalva",
+    "description": "Config: default annotation color"
+  },
+  "remark_cfg_font_size": {
+    "message": "Šrifto dydis",
+    "description": "Config: sidebar font size"
+  },
+  "remark_cfg_highlight_style": {
+    "message": "Paryškinimo stilius",
+    "description": "Config: how text is visually marked"
+  },
+  "remark_cfg_style_bg": {
+    "message": "Fonas",
+    "description": "Highlight style: colored background"
+  },
+  "remark_cfg_style_border": {
+    "message": "Rėmelis",
+    "description": "Highlight style: bottom border"
+  },
+  "remark_cfg_style_underline": {
+    "message": "Pabraukimas",
+    "description": "Highlight style: solid underline"
+  },
+  "remark_cfg_style_wavy": {
+    "message": "Banguotas",
+    "description": "Highlight style: wavy underline"
+  },
+  "remark_cfg_title": {
+    "message": "Anotacijų režimas",
+    "description": "Title for remark mode settings card"
   },
   "remark_clear_all": {
     "message": "Išvalyti visas pastabas",
@@ -415,18 +503,6 @@
     "message": "Siūlymas",
     "description": "Label for the yellow remark category"
   },
-  "remark_copied": {
-    "message": "Nukopijuota!",
-    "description": "Temporary success state after copying remarks"
-  },
-  "remark_copy_btn": {
-    "message": "Nukopijuoti pastabas",
-    "description": "Button text for copying all remarks"
-  },
-  "remark_copy_failed": {
-    "message": "Nukopijuoti nepavyko",
-    "description": "Temporary error state when copying remarks fails"
-  },
   "remark_copy_tooltip": {
     "message": "Nukopijuoti visas pastabas į iškarpinę",
     "description": "Tooltip for copying all remarks"
@@ -439,9 +515,9 @@
     "message": "Ištrinta",
     "description": "Status label shown after a remark is deleted"
   },
-  "remark_edit_note": {
-    "message": "Spustelėkite, kad redaguotumėte",
-    "description": "Tooltip for editing an existing remark note"
+  "remark_download_tooltip": {
+    "message": "Atsisiųsti pastabas kaip failą",
+    "description": "Tooltip for the button that downloads all remarks as a portable file"
   },
   "remark_empty_hint": {
     "message": "Pasirinkite tekstą pastaboms pridėti",
@@ -459,6 +535,10 @@
     "message": "Pastaba",
     "description": "Label preceding the note text in exported remarks"
   },
+  "remark_import_tooltip": {
+    "message": "Importuoti ir sujungti pastabas iš failo",
+    "description": "Tooltip for the button that imports remarks from a file and merges them"
+  },
   "remark_mode": {
     "message": "Pastabų režimas",
     "description": "Toolbar button title for entering remark mode"
@@ -475,10 +555,6 @@
     "message": "Pašalinti iš sąrašo",
     "description": "Menu item to remove file from recent list"
   },
-  "reset": {
-    "message": "Atstatyti",
-    "description": "Reset button"
-  },
   "save_as_drawio": {
     "message": "Išsaugoti kaip DrawIO",
     "description": "Context menu item for saving a PlantUML diagram as DrawIO"
@@ -494,6 +570,10 @@
   "save_image_as": {
     "message": "Išsaugoti vaizdą kaip…",
     "description": "Context menu item for saving an image"
+  },
+  "save_table_as_xlsx": {
+    "message": "Išsaugoti kaip Excel (.xlsx)",
+    "description": "Context menu item for saving a rendered table as an Excel (.xlsx) file"
   },
   "search_case_sensitive": {
     "message": "Skirti didžiąsias/mažąsias",
@@ -520,7 +600,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Atnaujinimo intervalas:",
+    "message": "Atnaujinimo intervalas",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -534,6 +614,18 @@
   "settings_cache_title": {
     "message": "Podėlis",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Diagramų išdėstymas",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Centre",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Kairėje",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Emoji stilius",
@@ -556,11 +648,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Horizontalių linijų apdorojimas",
+    "message": "Horizontalių linijų apdorojimas",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Slėpti (tuščia eilutė)",
+    "message": "Slėpti",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -575,8 +667,32 @@
     "message": "Puslapio lūžis",
     "description": "Option to export horizontal rules as page breaks in DOCX"
   },
+  "settings_first_line_indent": {
+    "message": "Pirmos eilutės įtrauka",
+    "description": "Label for first-line indent selector"
+  },
+  "settings_first_line_indent_1": {
+    "message": "1 simbolis",
+    "description": "Option: 1 character first-line indent"
+  },
+  "settings_first_line_indent_2": {
+    "message": "2 simboliai",
+    "description": "Option: 2 characters first-line indent"
+  },
+  "settings_first_line_indent_3": {
+    "message": "3 simboliai",
+    "description": "Option: 3 characters first-line indent"
+  },
+  "settings_first_line_indent_4": {
+    "message": "4 simboliai",
+    "description": "Option: 4 characters first-line indent"
+  },
+  "settings_first_line_indent_off": {
+    "message": "Be įtraukos",
+    "description": "Option to disable first-line indent"
+  },
   "settings_frontmatter_display": {
-    "message": "Frontmatter rodymas:",
+    "message": "Frontmatter rodymas",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -599,6 +715,18 @@
     "message": "Plėtinio nustatymai",
     "description": "Heading for settings section"
   },
+  "settings_image_layout": {
+    "message": "Vaizdų išdėstymas",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Centre",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Kairėje",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Sąsajos nustatymai",
     "description": "Heading for interface settings section"
@@ -616,7 +744,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Maks. talpyklos elementų:",
+    "message": "Maks. talpyklos elementų",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -680,7 +808,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "Pasirinkite temą:",
+    "message": "Pasirinkite temą",
     "description": "Label for theme selector"
   },
   "share": {
@@ -724,8 +852,8 @@
     "description": "Toolbar layout toggle tooltip for normal mode"
   },
   "toolbar_print_disabled_title": {
-    "message": "Spausdinimas galimas tik vietiniams failams",
-    "description": "Tooltip when print button is disabled for remote files"
+    "message": "Spausdinimas blokuojamas puslapio saugumo politikos (smėlio dėžutė)",
+    "description": "Tooltip when print button is disabled due to sandbox restriction"
   },
   "toolbar_print_title": {
     "message": "Spausdinti",
@@ -762,6 +890,14 @@
   "workspace_desc": {
     "message": "Atidarykite vietinį katalogą, kad galėtumėte naršyti ir peržiūrėti palaikomus failus.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Atgal",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Pirmyn",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Atidaryti darbo sritį",

@@ -19,6 +19,30 @@
     "message": "Ukjent feil",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Eksporter bok til DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_epub": {
+    "message": "Eksporter bok til EPUB",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
+  "book_export_failed": {
+    "message": "Kunne ikke eksportere boken: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Eksporter bok til PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} side(r) hoppet over",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Eksporter bok",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Tøm cache",
     "description": "Clear cache button"
@@ -175,6 +199,10 @@
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
   },
+  "copy_table": {
+    "message": "Kopier tabell",
+    "description": "Context menu item for copying a rendered table as spreadsheet cells"
+  },
   "delete": {
     "message": "Delete",
     "description": "Delete button text"
@@ -203,6 +231,10 @@
     "message": "Eksporter til DOCX",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_epub": {
+    "message": "Eksporter til EPUB",
+    "description": "Export menu item for exporting the current document to EPUB"
+  },
   "export_menu_export_html": {
     "message": "Eksporter til HTML",
     "description": "Export menu item for exporting to HTML"
@@ -220,7 +252,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown til perfekt Word — Mermaid, PlantUML, Vega, drawio, infografikk, Graphviz, LaTeX, kodeuthevning, lokal behandling.",
+    "message": "Forhåndsvis Markdown lokalt og eksporter ryddige Word-dokumenter med diagrammer, formler og kodeutheving.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {
@@ -251,6 +283,14 @@
     "message": "og aktiver 'Tillat tilgang til fil-URL-er'",
     "description": "Suffix for file access warning"
   },
+  "file_access_disabled_suffix_firefox": {
+    "message": "og slå på «Tilgang til lokale filer på datamaskinen» under Tillatelser og data",
+    "description": "Suffix for the Firefox file access warning"
+  },
+  "file_access_enable_button": {
+    "message": "Tillat tilgang til lokale filer",
+    "description": "Button that requests local file access"
+  },
   "file_access_settings_link": {
     "message": "utvidelsesinnstillingsside",
     "description": "Link text to extension settings"
@@ -271,13 +311,9 @@
     "message": "URL kopiert. Lim inn i adressefeltet for å åpne.",
     "description": "Message shown when file URL is copied to clipboard in Firefox"
   },
-  "heading_h2_format": {
-    "message": "Kapittel {0}",
-    "description": "Format for h2 headings. {0} is the chapter number."
-  },
-  "heading_h2_numerals": {
-    "message": "arabic",
-    "description": "Numeral system for h2: chinese, arabic, roman"
+  "heading_anchor_title": {
+    "message": "Lenke til denne delen",
+    "description": "Tooltip for the hover anchor icon shown next to a heading"
   },
   "history_clear": {
     "message": "Tøm historikk",
@@ -339,6 +375,26 @@
     "message": "Zoom ut",
     "description": "Tooltip for zooming out in the diagram lightbox"
   },
+  "local_file_access_message": {
+    "message": "Firefox hindrer denne utvidelsen i å lese lokale filer, så bildene i mappen {0} kan ikke bygges inn. Velg mappen som inneholder dem – de valgte filene blir på datamaskinen din og leses bare for dette dokumentet.",
+    "description": "Prompt shown when the folder name is known"
+  },
+  "local_file_access_message_generic": {
+    "message": "Firefox hindrer denne utvidelsen i å lese lokale filer, så lokale bilder i dette dokumentet kan ikke bygges inn. Velg mappen som inneholder dem – de valgte filene blir på datamaskinen din og leses bare for dette dokumentet.",
+    "description": "Prompt shown without a folder name"
+  },
+  "local_file_access_pick": {
+    "message": "Velg mappe",
+    "description": "Button that opens the folder picker"
+  },
+  "local_file_access_skip": {
+    "message": "Eksporter uten bilder denne gangen",
+    "description": "Button that exports without embedding local images"
+  },
+  "local_file_access_title": {
+    "message": "Lokale bilder kan ikke leses",
+    "description": "Title of the local file access prompt"
+  },
   "more": {
     "message": "More",
     "description": "More menu tooltip"
@@ -387,13 +443,45 @@
     "message": "Legg til merknad…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
-  "remark_all_cleared": {
-    "message": "Alle merknader er fjernet",
-    "description": "Temporary success state after clearing all remarks"
+  "remark_cfg_auto_delete": {
+    "message": "Slett tomme notater automatisk",
+    "description": "Config: auto-delete annotations with no note"
   },
-  "remark_cancel": {
-    "message": "Avbryt og fjern",
-    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  "remark_cfg_close_after_copy": {
+    "message": "Lukk fane etter kopiering",
+    "description": "Config: close the file tab after copying remarks"
+  },
+  "remark_cfg_default_color": {
+    "message": "Standardfarge",
+    "description": "Config: default annotation color"
+  },
+  "remark_cfg_font_size": {
+    "message": "Skriftstørrelse",
+    "description": "Config: sidebar font size"
+  },
+  "remark_cfg_highlight_style": {
+    "message": "Uthevingsstil",
+    "description": "Config: how text is visually marked"
+  },
+  "remark_cfg_style_bg": {
+    "message": "Bakgrunn",
+    "description": "Highlight style: colored background"
+  },
+  "remark_cfg_style_border": {
+    "message": "Ramme",
+    "description": "Highlight style: bottom border"
+  },
+  "remark_cfg_style_underline": {
+    "message": "Understreket",
+    "description": "Highlight style: solid underline"
+  },
+  "remark_cfg_style_wavy": {
+    "message": "Bølget",
+    "description": "Highlight style: wavy underline"
+  },
+  "remark_cfg_title": {
+    "message": "Merknadsmodus",
+    "description": "Title for remark mode settings card"
   },
   "remark_clear_all": {
     "message": "Fjern alle merknader",
@@ -415,18 +503,6 @@
     "message": "Forslag",
     "description": "Label for the yellow remark category"
   },
-  "remark_copied": {
-    "message": "Kopiert!",
-    "description": "Temporary success state after copying remarks"
-  },
-  "remark_copy_btn": {
-    "message": "Kopier merknader",
-    "description": "Button text for copying all remarks"
-  },
-  "remark_copy_failed": {
-    "message": "Kopiering mislyktes",
-    "description": "Temporary error state when copying remarks fails"
-  },
   "remark_copy_tooltip": {
     "message": "Kopier alle merknader til utklippstavlen",
     "description": "Tooltip for copying all remarks"
@@ -439,9 +515,9 @@
     "message": "Slettet",
     "description": "Status label shown after a remark is deleted"
   },
-  "remark_edit_note": {
-    "message": "Klikk for å redigere",
-    "description": "Tooltip for editing an existing remark note"
+  "remark_download_tooltip": {
+    "message": "Last ned merknader som en fil",
+    "description": "Tooltip for the button that downloads all remarks as a portable file"
   },
   "remark_empty_hint": {
     "message": "Velg tekst for å legge til merknader",
@@ -459,6 +535,10 @@
     "message": "Merknad",
     "description": "Label preceding the note text in exported remarks"
   },
+  "remark_import_tooltip": {
+    "message": "Importer og slå sammen merknader fra en fil",
+    "description": "Tooltip for the button that imports remarks from a file and merges them"
+  },
   "remark_mode": {
     "message": "Merknadsmodus",
     "description": "Toolbar button title for entering remark mode"
@@ -475,10 +555,6 @@
     "message": "Remove from list",
     "description": "Menu item to remove file from recent list"
   },
-  "reset": {
-    "message": "Tilbakestill",
-    "description": "Reset button"
-  },
   "save_as_drawio": {
     "message": "Lagre som DrawIO",
     "description": "Context menu item for saving a PlantUML diagram as DrawIO"
@@ -494,6 +570,10 @@
   "save_image_as": {
     "message": "Lagre bilde som…",
     "description": "Context menu item for saving an image"
+  },
+  "save_table_as_xlsx": {
+    "message": "Lagre som Excel (.xlsx)",
+    "description": "Context menu item for saving a rendered table as an Excel (.xlsx) file"
   },
   "search_case_sensitive": {
     "message": "Skill mellom store/små bokstaver",
@@ -520,7 +600,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Oppdateringsintervall:",
+    "message": "Oppdateringsintervall",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -534,6 +614,18 @@
   "settings_cache_title": {
     "message": "Hurtigbuffer",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Diagramlayout",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Sentrert",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Venstre",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Emoji-stil",
@@ -556,11 +648,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Håndtering av horisontale linjer",
+    "message": "Håndtering av horisontale linjer",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Skjul (tom linje)",
+    "message": "Skjul",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -575,8 +667,32 @@
     "message": "Sideskift",
     "description": "Option to export horizontal rules as page breaks in DOCX"
   },
+  "settings_first_line_indent": {
+    "message": "Innrykk for første linje",
+    "description": "Label for first-line indent selector"
+  },
+  "settings_first_line_indent_1": {
+    "message": "1 tegn",
+    "description": "Option: 1 character first-line indent"
+  },
+  "settings_first_line_indent_2": {
+    "message": "2 tegn",
+    "description": "Option: 2 characters first-line indent"
+  },
+  "settings_first_line_indent_3": {
+    "message": "3 tegn",
+    "description": "Option: 3 characters first-line indent"
+  },
+  "settings_first_line_indent_4": {
+    "message": "4 tegn",
+    "description": "Option: 4 characters first-line indent"
+  },
+  "settings_first_line_indent_off": {
+    "message": "Ingen innrykk",
+    "description": "Option to disable first-line indent"
+  },
   "settings_frontmatter_display": {
-    "message": "Frontmatter-visning:",
+    "message": "Frontmatter-visning",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -599,6 +715,18 @@
     "message": "Utvidelsesinnstillinger",
     "description": "Heading for settings section"
   },
+  "settings_image_layout": {
+    "message": "Bildelayout",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Sentrert",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Venstre",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Grensesnittinnstillinger",
     "description": "Heading for interface settings section"
@@ -616,7 +744,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Maksimum cachede elementer:",
+    "message": "Maksimum cachede elementer",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -724,8 +852,8 @@
     "description": "Toolbar layout toggle tooltip for normal mode"
   },
   "toolbar_print_disabled_title": {
-    "message": "Utskrift er kun tilgjengelig for lokale filer",
-    "description": "Tooltip when print button is disabled for remote files"
+    "message": "Utskrift er blokkert av sidens sikkerhetspolicy (sandkasse)",
+    "description": "Tooltip when print button is disabled due to sandbox restriction"
   },
   "toolbar_print_title": {
     "message": "Skriv ut",
@@ -762,6 +890,14 @@
   "workspace_desc": {
     "message": "Åpne en lokal katalog for å bla gjennom og forhåndsvise støttede filer.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Tilbake",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Frem",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Åpne arbeidsområde",

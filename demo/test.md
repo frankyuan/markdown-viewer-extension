@@ -28,15 +28,17 @@ tags: [markdown, test, demo]
 6. **数学公式** - KaTeX 行内和块级公式
 7. **Mermaid 图表** - [完整演示](./mermaid-demo.md)，[锚点](./mermaid-demo.md#业务流程图)
 8. **Vega-Lite 图表** - [完整演示](./vega-demo.md)
-9. **DOT 图表** - [完整演示](./dot-demo.md)
-10. **Infographic 图表** - [完整演示](./infographic-demo.md)
-11. **Canvas 画布** - [完整演示](./canvas-demo.md)
-12. **PlantUML 图表** - [完整演示](./plantuml-demo.md)
-13. **drawio 画布** - drawio XML 原生图表
-14. **HTML 混合** - [完整演示](./html-demo.md)
-15. **Emoji 短代码** - [完整演示](./emoji-demo.md)
-16. **边界测试** - 错误处理、极端情况
-17. **Inline HTML 详测** - [完整演示](./inline-html-test.md)
+9. **ECharts 图表** - [完整演示](./echarts-demo.md)
+10. **DOT 图表** - [完整演示](./dot-demo.md)
+11. **Infographic 图表** - [完整演示](./infographic-demo.md)
+12. **Canvas 画布** - [完整演示](./canvas-demo.md)
+13. **PlantUML 图表** - [完整演示](./plantuml-demo.md)
+14. **drawio 画布** - drawio XML 原生图表
+15. **HTML 混合** - [完整演示](./html-demo.md)
+16. **Emoji 短代码** - [完整演示](./emoji-demo.md)
+17. **脚注** - 脚注引用和定义语法
+18. **边界测试** - 错误处理、极端情况
+19. **Inline HTML 详测** - [完整演示](./inline-html-test.md)
 
 ---
 
@@ -76,13 +78,13 @@ tags: [markdown, test, demo]
 
 ### 1.4 上标和下标
 
-**上标语法** 使用 `^text^` 包围：
-- 数学表达：x^2^ + y^2^ = z^2^
-- 化学式：Ca^2+^, Fe^3+^
+**上标语法** 使用 `<sup>` 标签：
+- 数学表达：x<sup>2</sup> + y<sup>2</sup> = z<sup>2</sup>
+- 化学式：Ca<sup>2+</sup>, Fe<sup>3+</sup>
 
-**下标语法** 使用 `~text~` 包围：
-- 化学式：H~2~O, CO~2~, H~2~SO~4~
-- 数学下标：a~1~, a~2~, ..., a~n~
+**下标语法** 使用 `<sub>` 标签：
+- 化学式：H<sub>2</sub>O, CO<sub>2</sub>, H<sub>2</sub>SO<sub>4</sub>
+- 数学下标：a<sub>1</sub>, a<sub>2</sub>, ..., a<sub>n</sub>
 
 ### 1.5 特殊字符和转义
 
@@ -104,6 +106,71 @@ tags: [markdown, test, demo]
 
 ---
 
+### 1.7 脚注测试
+
+**基本脚注语法：**
+
+这是正文内容，这里有一个脚注引用[^1]。
+
+[^1]: 这是脚注1的详细说明内容。
+
+**多个脚注：**
+
+Markdown Viewer 是一个强大的浏览器扩展[^mve]。
+
+[^mve]: Markdown Viewer Extension - 一个支持多种图表和扩展语法的 Chrome/Firefox/Edge 扩展。
+
+它支持流程图、数学公式等丰富功能[^features]。
+
+[^features]: 支持的功能包括：
+    - Mermaid 图表渲染
+    - KaTeX 数学公式
+    - PlantUML 图表
+    - Vega-Lite 数据可视化
+    - ECharts 交互式图表
+    - 以及更多...
+
+**脚注中的格式化文本：**
+
+脚注内容可以包含格式化文本[^formatting]。
+
+[^formatting]: 脚注中可以包含 **粗体**、*斜体*、`行内代码`，甚至 [链接](https://github.com)。
+
+**脚注中的代码块：**
+
+脚注也可以包含代码块[^code-note]。
+
+[^code-note]: 脚注中的代码示例：
+    ```javascript
+    // 这是脚注中的代码块
+    const greeting = "Hello, Footnote!";
+    console.log(greeting);
+    ```
+
+**长脚注测试：**
+
+这是一段较长的脚注内容测试，用于验证脚注在包含多段落文本时的渲染效果[^long-note]。
+
+[^long-note]: 这是第一段脚注内容。它包含多段文本，用于测试长脚注的排版效果。
+
+    这是第二段脚注内容。脚注应该支持多个段落，每段之间用空行分隔。
+
+    这是第三段脚注内容，验证更多段落的渲染是否正常。
+
+**数字脚注和命名脚注混合：**
+
+数字脚注[^2]和命名脚注可以混合使用，这是 Markdown 脚注的一个重要特性。
+
+[^2]: 这是数字脚注2的内容。
+
+**行内脚注（可选语法）：**
+
+部分 Markdown 实现支持行内脚注语法[^inline]，但这并不被所有解析器支持。
+
+[^inline]: 行内脚注是指脚注内容直接写在引用位置，而非文档末尾。
+
+---
+
 ## 2. 链接和引用
 
 ### 2.1 超链接
@@ -122,6 +189,7 @@ tags: [markdown, test, demo]
 ![Random Photo](https://picsum.photos/400/300)
 
 **本地图片（相对路径）：**
+
 ![Icon](../icons/icon128.png)
 
 **Base64 Data URI 图片：**
@@ -265,6 +333,41 @@ tags: [markdown, test, demo]
   > 引用块后续文字。
 - 列表项三
 
+### 3.6 列表长文本换行测试
+
+**无序列表长文本：**
+
+- 这是一个包含超长文本的无序列表项，用于测试列表项内文字自动换行时的缩进效果。当文字内容超出单行宽度时，后续行应该正确对齐到文本起始位置，不应与列表图标重叠或产生异常缩进。
+- 另一个长文本项，用于验证多个连续长列表项之间的间距和对齐是否一致。软换行的后续行应该保持与首行文本相同的左对齐位置，确保列表的可读性和视觉一致性。
+- 短文本项（对比用）
+
+**有序列表长文本：**
+
+1. 这是一个包含超长文本的有序列表项，用于测试编号后的文字在自动换行时的缩进表现。软换行的后续行应当与首行文本的左边缘对齐，而编号应当保持在悬挂缩进区域内，不挤占正文空间。
+2. 第二个长文本项用于验证有序列表中多位编号（如 10、11、12）的右对齐效果。当编号位数增加时，编号应向左扩展，正文起始位置保持不变，确保所有列表项正文左边缘在一条垂直线上对齐。
+3. 短文本项（对比用）
+
+4. 第四个列表项，同样包含较长的文本内容来测试换行行为。这一项的存在是为了确保在多个长文本列表项连续排列时，各项之间的垂直间距保持一致，不会因为文本长度不同而产生不均匀的间隔。
+5. 第五项继续验证长文本的排版效果，同时也是为了测试单数编号和双数编号之间的过渡是否平滑，以及编号位数变化时正文位置是否稳定不变。
+6. 第六项短文本
+7. 第七项短文本
+8. 第八项短文本
+9. 第九项短文本
+10. 第十项——这是一个编号为两位数的列表项，用于验证编号位数从一位变为两位时，编号右对齐机制是否正确生效，以及正文起始位置是否与前面 1-9 的列表项保持一致。
+11. 第十一项继续验证两位编号的稳定性，同时测试多个连续两位编号列表项的排版一致性。
+12. 第十二项——最后一项两位编号长文本，确保编号扩展方向正确且正文位置不发生偏移。
+
+**引用块内列表长文本：**
+
+> 引用块内的长文本列表测试：
+> - 这是一个引用块内的无序列表长文本项，用于测试在引用块上下文中的列表项文字换行是否正确。在引用块内部，列表的缩进不应叠加主题首行缩进，而应使用引用块专属的无额外缩进配置。
+> - 第二个引用块内列表长文本项，用于验证多个列表项之间的一致性及引用块左边框与列表项文字的间距是否合理。
+> 
+> 引用块内的有序列表测试：
+> 1. 引用块内有序列表的第一个长文本项，验证编号和正文在引用块上下文中的定位是否准确。正文不应跟随全局首行缩进设置，而应保持与引用块内普通段落相同的缩进基准。
+> 2. 第二个引用块内有序列表长文本项，验证多个列表项以及编号变化时的稳定性。
+> 3. 短文本（对比）
+
 ---
 
 ## 4. 表格
@@ -332,6 +435,19 @@ tags: [markdown, test, demo]
 
 上表导出 docx 时，Name 应该为两行。
 
+| Name | Description |
+|------|-------------|
+| `rt1`, `rt2` |  Foo. |
+| `tc`         | Bar. |
+> 这个引用块与表格之间需要留白
+
+| Name | Description |
+|------|-------------|
+| `rt1`, `rt2` |
+| `tc`         |
+
+上表导出 docx 时，表体不应该缺列。
+
 ---
 
 ## 5. 代码
@@ -386,6 +502,28 @@ WHERE u.created_at >= '2024-01-01'
 GROUP BY u.id, u.username
 ORDER BY post_count DESC
 LIMIT 20;
+```
+
+**MarkDown：**
+```markdown
+# <想法 slug>
+> 状态：评估中 / go / needs-clarification / kill · 日期 · 评估人
+> 输入：<文本 / 链接 / 工单 / 代码指针>
+
+## intake — 原始想法（**不改写**）
+## research
+### 支持证据
+- <陈述> — 来源 <…> — 置信度 <cited / ASSUMPTION>
+### 反对证据（**必须有**）
+- <陈述> — 来源 <…> — 置信度 <…>
+## problem
+- 受影响用户 · 目标 · **非目标** · 成功度量 · **不作为的代价**
+## concept（2–3 个）
+| 方案 | 一句话 | appetite（时间/成本上限） | 取舍 | 可逆性 |
+## decide
+| 判据 | 评级 strong / adequate / weak / unknown | 理由（指回上面的产物） |
+**裁决**：<go / needs-clarification / kill> — <一句话理由>
+**交接**：<go → 给 requirements.md 的摘要；kill → 归档位置>
 ```
 
 ---
@@ -521,11 +659,52 @@ pie title 功能使用分布
 
 ---
 
-## 9. DOT 图表 (Graphviz)
+## 9. ECharts 图表
+
+> 📖 完整演示请查看 [ECharts 图表完整演示](./echarts-demo.md)
+
+### 9.1 柱状图
+
+```echarts
+{
+  "width": 500,
+  "height": 300,
+  "title": { "text": "产品销量", "left": "center" },
+  "tooltip": { "trigger": "axis" },
+  "xAxis": { "type": "category", "data": ["A", "B", "C", "D", "E"] },
+  "yAxis": { "type": "value" },
+  "series": [{ "type": "bar", "data": [28, 55, 43, 91, 81] }]
+}
+```
+
+### 9.2 饼图
+
+```echarts
+{
+  "width": 400,
+  "height": 300,
+  "title": { "text": "访问来源", "left": "center" },
+  "tooltip": { "trigger": "item" },
+  "series": [{
+    "type": "pie",
+    "radius": "60%",
+    "data": [
+      { "value": 1048, "name": "直接访问" },
+      { "value": 735, "name": "搜索引擎" },
+      { "value": 580, "name": "联盟广告" },
+      { "value": 484, "name": "视频广告" }
+    ]
+  }]
+}
+```
+
+---
+
+## 10. DOT 图表 (Graphviz)
 
 > 📖 完整演示请查看 [DOT 图表完整演示](./dot-demo.md)
 
-### 9.1 简单有向图
+### 10.1 简单有向图
 
 ```dot
 digraph G {
@@ -535,7 +714,7 @@ digraph G {
 }
 ```
 
-### 9.2 带样式的有向图
+### 10.2 带样式的有向图
 
 ```dot
 digraph G {
@@ -551,17 +730,17 @@ digraph G {
 
 ---
 
-## 10. HTML 混合内容
+## 11. HTML 混合内容
 
 > 📖 完整演示请查看 [HTML 混合内容完整演示](./html-demo.md)
 
-### 10.1 提示框
+### 11.1 提示框
 
 <div style="padding: 15px; background: #f0f9ff; border-left: 4px solid #0284c7; margin: 10px 0;">
   <strong>💡 提示：</strong>这是一个使用 HTML 编写的提示框。
 </div>
 
-### 10.2 状态卡片
+### 11.2 状态卡片
 
 <div style="display: flex; gap: 10px; margin: 20px 0;">
   <div style="flex: 1; padding: 15px; background: #dcfce7; border-radius: 8px;">
@@ -574,7 +753,7 @@ digraph G {
   </div>
 </div>
 
-### 10.3 Inline HTML 详测
+### 11.3 Inline HTML 详测
 
 > 📖 完整演示请查看 [Inline HTML 全面测试](./inline-html-test.md)
 
@@ -583,13 +762,13 @@ digraph G {
 - 常见样式标签（移除标签保留内容）：<mark>highlight</mark> <small>small</small>
 - 键盘按键：Press <kbd>Ctrl</kbd>+<kbd>C</kbd>
 
-### 10.4 本地图片
+### 11.4 本地图片
 
 <div>
   <img src="../icons/icon128.png">
 </div>
 
-### 10.5 远程图片
+### 11.5 远程图片
 
 <div>
   <img src="https://picsum.photos/400/300">
@@ -597,11 +776,11 @@ digraph G {
 
 ---
 
-## 11. Infographic 图表
+## 12. Infographic 图表
 
 > 📖 完整演示请查看 [Infographic 图表完整演示](./infographic-demo.md)
 
-### 11.1 流程箭头
+### 12.1 流程箭头
 
 ```infographic
 infographic list-row-simple-horizontal-arrow
@@ -616,7 +795,7 @@ data
       desc 收尾总结
 ```
 
-### 11.2 金字塔图
+### 12.2 金字塔图
 
 ```infographic
 infographic sequence-pyramid-simple
@@ -633,7 +812,7 @@ data
       desc 云和系统基础
 ```
 
-### 11.3 漏斗图
+### 12.3 漏斗图
 
 ```infographic
 infographic sequence-filter-mesh-simple
@@ -651,7 +830,7 @@ data
       desc 125 付费客户
 ```
 
-### 11.4 思维导图
+### 12.4 思维导图
 
 ```infographic
 infographic hierarchy-mindmap-branch-gradient-compact-card
@@ -676,11 +855,11 @@ data
 
 ---
 
-## 12. Canvas 画布
+## 13. Canvas 画布
 
 > 📖 完整演示请查看 [Canvas 画布完整演示](./canvas-demo.md)
 
-### 12.1 简单流程
+### 13.1 简单流程
 
 ```canvas
 {
@@ -698,7 +877,7 @@ data
 }
 ```
 
-### 12.2 带分组的画布
+### 13.2 带分组的画布
 
 ```canvas
 {
@@ -719,11 +898,11 @@ data
 
 ---
 
-## 13. PlantUML 图表
+## 14. PlantUML 图表
 
 > 📖 完整演示请查看 [PlantUML 图表完整演示](./plantuml-demo.md)
 
-### 13.1 类图
+### 14.1 类图
 
 ```plantuml
 @startuml
@@ -751,7 +930,7 @@ Order "*" -- "*" Product : contains
 @enduml
 ```
 
-### 13.2 序列图
+### 14.2 序列图
 
 ```puml
 @startuml
@@ -769,7 +948,7 @@ App --> User : 显示页面
 @enduml
 ```
 
-### 13.3 活动图
+### 14.3 活动图
 
 ```plantuml
 @startuml
@@ -789,7 +968,7 @@ stop
 
 ---
 
-## 14. drawio 画布
+## 15. drawio 画布
 
 # 网络架构图
 
@@ -943,19 +1122,19 @@ stop
 </mxfile>
 ```
 
-## 15. 图片处理
+## 16. 图片处理
 
-### 14.1 SVG 文件测试
+### 16.1 SVG 文件测试
 
 **本地 SVG 文件：**
 ![Basic SVG](./test.svg)
 
-### 14.2 Data URL SVG 测试
+### 16.2 Data URL SVG 测试
 
 **Base64 编码格式：**
 ![Simple Shapes](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB4PSIxMCIgeT0iMTAiIHdpZHRoPSI4MCIgaGVpZ2h0PSI0MCIgZmlsbD0iIzMzNzNkYyIgcng9IjUiLz4KICA8Y2lyY2xlIGN4PSIxNTAiIGN5PSIzMCIgcj0iMjAiIGZpbGw9IiNlZjQ0NDQiLz4KICA8dGV4dCB4PSIxMCIgeT0iODAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzM3NDE1MSI+RGF0YSBVUkwgU1ZHPC90ZXh0Pgo8L3N2Zz4=)
 
-### 14.3 svg in code block
+### 16.3 svg in code block
 
 ```svg
 <?xml version="1.0" encoding="UTF-8"?>
@@ -967,28 +1146,28 @@ stop
 
 ---
 
-## 16. 边界测试
+## 17. 边界测试
 
-### 15.1 错误的 Mermaid 语法
+### 17.1 错误的 Mermaid 语法
 
 ```mermaid
 invalid syntax here
 this should show an error message
 ```
 
-### 15.2 错误的数学公式
+### 17.2 错误的数学公式
 
 $$
 \invalid{command}
 \undefined{function}
 $$
 
-### 15.3 空代码块
+### 17.3 空代码块
 
 ```javascript
 ```
 
-### 15.4 极端情况
+### 17.4 极端情况
 
 **超长文本行：**
 这是一个非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常长的文本行，用于测试文本的自动换行和布局处理能力。
@@ -999,5 +1178,51 @@ $$
 
 **错误的图片链接：**
 ![不存在的本地图片](./nonexistent.png)
+
+---
+
+## 18. 页内锚点测试
+
+### 18.1 标题锚点
+
+跳转到锚点测试标题：[点击这里](#17-%E9%A1%B5%E5%86%85%E9%94%9A%E7%82%B9%E6%B5%8B%E8%AF%95)
+
+### 18.2 子标题锚点
+
+跳转到三级子标题 Sub A：[Sub A](#sub-a)
+跳转到三级子标题 Sub B：[Sub B](#sub-b)
+跳转到三级子标题 Sub C：[Sub C](#sub-c)
+
+### Sub A
+
+这是 Sub A 的内容。点击上方链接应该滚动到这里。
+
+### Sub B
+
+这是 Sub B 的内容。
+
+### Sub C
+
+这是 Sub C 的内容。
+
+### 18.3 中文锚点
+
+跳转到中文标题测试：[中文标题测试](#中文标题测试)
+
+#### 中文标题测试
+
+这个标题的锚点应该能正常跳转。
+
+### 18.4 特殊字符锚点
+
+跳转到特殊字符标题：[特殊 @#$ 字符](#特殊-字符)
+
+#### 特殊 @#$ 字符
+
+此标题包含特殊字符，锚点需要正确 slugify。
+
+### 18.5 不存在的锚点（fallback）
+
+跳转到不存在的锚点：[不存在的标题](#nonexistent-heading) — 应该 fallback 到浏览器原生行为。
 
 ---

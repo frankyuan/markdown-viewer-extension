@@ -5,6 +5,7 @@
 
 import type { TranslateFunction, EscapeHtmlFunction, FileState } from './core';
 import type { DocxExporter } from './docx';
+import type { BookExportDocxResult, BookExportEpubResult, BookExportPdfResult, BookExportProgressHandler } from './book-export';
 
 // =============================================================================
 // Layout Types
@@ -38,9 +39,10 @@ export interface ToolbarManagerOptions {
   docxExporter: DocxExporter;
   cancelScrollRestore: () => void;
   updateActiveTocItem: () => void;
-  toolbarPrintDisabledTitle: string;
   /** Called before zoom changes to lock scroll position */
   onBeforeZoom?: () => void;
+  /** Set TOC visibility from the host/session state owner */
+  onSetTocVisibility?: (visible: boolean) => void;
   /** Whether to show source/preview toggle button */
   enableSourceToggle?: boolean;
   /** Toggle between markdown preview and source mode */
@@ -55,6 +57,12 @@ export interface ToolbarManagerOptions {
   getRemarkContainer?: () => HTMLElement | null;
   /** Get raw markdown for remark export */
   getRemarkRawMarkdown?: () => string;
+  /** Export the whole GitBook book to a single DOCX (provided when a book is present) */
+  onExportBookDocx?: (context: { onProgress: BookExportProgressHandler }) => Promise<BookExportDocxResult> | BookExportDocxResult;
+  /** Export the whole GitBook book to a single EPUB (provided when a book is present) */
+  onExportBookEpub?: (context: { onProgress: BookExportProgressHandler }) => Promise<BookExportEpubResult> | BookExportEpubResult;
+  /** Export the whole GitBook book to PDF via browser print (provided when a book is present) */
+  onExportBookPdf?: (context: { onProgress: BookExportProgressHandler }) => Promise<BookExportPdfResult> | BookExportPdfResult;
 }
 
 /**
@@ -82,4 +90,6 @@ export interface ToolbarManagerInstance {
   initializeToolbar: () => void;
   setupToolbarButtons: () => Promise<void>;
   setupKeyboardShortcuts: () => void;
+  /** Re-apply translated tooltips/aria-labels after the UI locale changed. */
+  applyLocale: () => void;
 }

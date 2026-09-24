@@ -69,7 +69,21 @@ export function getCurrentDocumentUrl(): string {
  */
 export function getFilenameFromURL(): string {
   const url = getCurrentDocumentUrl();
-  const urlParts = url.split('/');
+
+  const workspacePath = getWorkspaceHistoryPath(url);
+  if (workspacePath) {
+    const segments = workspacePath.split('/').filter(Boolean);
+    const workspaceFilename = segments[segments.length - 1] || workspacePath;
+    try {
+      return decodeURIComponent(workspaceFilename);
+    } catch {
+      return workspaceFilename;
+    }
+  }
+
+  // Strip query string before extracting filename
+  const urlWithoutQuery = url.split('?')[0];
+  const urlParts = urlWithoutQuery.split('/');
   let fileName = urlParts[urlParts.length - 1] || 'document.md';
 
   // Decode URL encoding
@@ -80,6 +94,32 @@ export function getFilenameFromURL(): string {
   }
 
   return fileName;
+}
+
+/**
+ * Convert filename to .md for saving markdown content.
+ * Preserves .slides.md; normalizes .markdown to .md; replaces other extensions.
+ */
+export function toMarkdownFilename(filename: string): string {
+  let mdFilename = filename || 'document.md';
+  const lower = mdFilename.toLowerCase();
+
+  if (lower.endsWith('.slides.md')) {
+    return mdFilename;
+  }
+  if (lower.endsWith('.markdown')) {
+    return mdFilename.slice(0, -'.markdown'.length) + '.md';
+  }
+  if (lower.endsWith('.md')) {
+    return mdFilename;
+  }
+
+  const lastDot = mdFilename.lastIndexOf('.');
+  if (lastDot > 0) {
+    return mdFilename.slice(0, lastDot) + '.md';
+  }
+
+  return mdFilename + '.md';
 }
 
 /**

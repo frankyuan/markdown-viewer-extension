@@ -3,11 +3,13 @@
 // Supports both Chrome (chrome.*) and Firefox (browser.*) APIs
 
 import { getWebExtensionApi } from '../../../src/utils/platform-info';
+import { decodeBytes, detectByteEncoding, hasMojibakeSymptoms } from '../../../src/utils/encoding-recovery';
 
 import {
   ALL_SUPPORTED_EXTENSIONS,
 } from '../../../src/types/formats';
 import { getCodePreviewMatchedExtension } from '../../../src/utils/code-preview';
+import { buildDiagramBlockSelector } from '../../../src/integration/host-page/language-map';
 
 const webExtensionApi = getWebExtensionApi();
 
@@ -38,7 +40,7 @@ function getMatchedExtension(path: string): string | null {
 /**
  * Check if this is a processable file based on content type and structure
  */
-function isProcessableContent(): boolean {
+function isProcessableContent(): boolean | null {
   // Check content type from document if available
   interface DocumentWithContentType {
     contentType?: string;
@@ -55,6 +57,12 @@ function isProcessableContent(): boolean {
     if (contentType.includes('text/plain') || contentType.includes('application/octet-stream')) {
       return true;
     }
+  }
+
+  // At document_start (notably in Firefox), metadata/body can be unavailable.
+  // Defer detection instead of assuming processable to avoid false positives.
+  if (!document.body) {
+    return null;
   }
 
   // For local files or when content type is not available, check if body contains raw content
@@ -79,7 +87,13 @@ function isProcessableContent(): boolean {
 }
 
 /**
- * Hide the page content immediately to prevent flash of unstyled content
+ * Hide the page content immediately to prevent flash of unstyled content.
+ *
+ * The page is kept fully hidden (opacity: 0) until the viewer renders, so the
+ * user never sees the raw markdown source the browser displays for .md files.
+ * Showing the raw text would not make the render finish any sooner — it only
+ * fills the boot window with an unpolished source-code view, which is why the
+ * hide was introduced and stays.
  */
 function hidePageContent(): void {
   // Add inline style to hide content immediately
@@ -108,7 +122,7 @@ function hidePageContent(): void {
 /**
  * Inject the main content script
  */
-function injectContentScript(): void {
+async function injectContentScript(): Promise<void> {
   // If user explicitly marked this session to view as raw, abort.
   try {
     if (sessionStorage.getItem('markdownViewerRawOverride') === '1') {
@@ -118,10 +132,67 @@ function injectContentScript(): void {
     // sessionStorage access denied
   }
 
-  // Hide content immediately before injection to prevent flashing
+  // Hide content immediately while preserving the raw body for detection.
   hidePageContent();
 
+  // Ensure the text document has been parsed before inspecting its decoded body.
+  if (!document.body && document.readyState === 'loading') {
+    await new Promise<void>((resolve) => {
+      document.addEventListener('DOMContentLoaded', () => resolve(), { once: true });
+    });
+  }
+
   const url = document.location.href;
+  const bodyText = document.body?.textContent || '';
+  // Only refetch when the decoded DOM shows clear misdecoding symptoms.
+  if (/^https?:/i.test(url) && hasMojibakeSymptoms(bodyText)) {
+    try {
+      const response = await fetch(url, { credentials: 'same-origin' });
+      if (response.ok) {
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        // Detect the real charset from the raw bytes instead of assuming
+        // UTF-8: genuinely legacy files (GBK/Big5/...) would otherwise turn
+        // into U+FFFD garbage, and single-byte legacy files that decoded
+        // correctly must not be touched.
+        const encoding = detectByteEncoding(bytes);
+        const recovered = encoding ? decodeBytes(bytes, encoding) : null;
+        // Skip rewriting when the detected encoding reproduces what the
+        // browser already decoded (the text is intact) or yielded nothing.
+        if (document.body && recovered && recovered !== bodyText) {
+          document.body.textContent = recovered;
+        }
+      }
+    } catch {
+      // Background injection and the viewer retain their own fallbacks.
+    }
+  }
+
+  // ── Clear the raw document immediately ─────────────────────────────────
+  // The raw markdown text has served its purpose (decoded + stashed). Wipe
+  // the body NOW and lift the opacity:0 hide so the page becomes visible
+  // right away; every later paint — the toolbar shell, the streamed content
+  // blocks — then shows immediately instead of waiting for the viewer to
+  // finish initializing before the hide is removed. The text is stashed on
+  // the isolated-world window (content scripts and the injected main.js
+  // share that world) for the viewer to pick up.
+  const stashedText = document.body?.textContent || '';
+  if (stashedText) {
+    try {
+      (window as unknown as { __mvStashedRawContent?: string }).__mvStashedRawContent = stashedText;
+    } catch { /* non-extensible window — keep body text as fallback */ }
+  }
+  document.body.innerHTML = '';
+  // Lift the hide but KEEP the color-scheme/background declarations so the
+  // empty page paints the UA canvas color (dark in dark mode) instead of
+  // flashing a bright white rectangle before the theme CSS arrives.
+  const preloadStyle = document.getElementById('markdown-viewer-preload');
+  if (preloadStyle) {
+    preloadStyle.textContent = `
+      :root { color-scheme: light dark; }
+      html, body { background: Canvas; }
+    `;
+  }
+
   const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
   const request = {
@@ -142,74 +213,116 @@ function injectContentScript(): void {
 }
 
 /**
+ * Detect <markdown-viewer> elements or diagram code blocks on an HTML page
+ * and request element-runtime injection if found.
+ *
+ * Used for:
+ *   - .html files that may contain <markdown-viewer> tags
+ *   - Any URL whose content type is text/html (e.g. GitHub blob pages where
+ *     the URL ends in .md but the page is rendered as HTML by the host site)
+ *
+ * Injection is lazy: if no target is found immediately, a MutationObserver
+ * watches for late-added elements.
+ */
+function detectHtmlPageContent(): void {
+  let injected = false;
+  const requestInject = (): void => {
+    if (injected) return;
+    injected = true;
+    const request = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      type: 'INJECT_ELEMENT_RUNTIME',
+      payload: {},
+      timestamp: Date.now(),
+      source: 'content-detector',
+    };
+    const sendPromise = webExtensionApi.runtime.sendMessage(request);
+    if (sendPromise && typeof sendPromise.then === 'function') {
+      sendPromise.catch(() => {
+        // Ignore errors - fire and forget
+      });
+    }
+  };
+
+  const hasMarkdownViewer = (): boolean => Boolean(document.querySelector('markdown-viewer'));
+
+  // Check if the page contains any diagram code block (PlantUML, Mermaid,
+  // Vega, DOT, etc.) that we can render. Uses the same selector as the
+  // scanner so detection stays in sync with rendering coverage.
+  const diagramSelector = buildDiagramBlockSelector();
+  const hasDiagramCodeBlock = (): boolean => Boolean(document.querySelector(diagramSelector));
+
+  const shouldInject = (): boolean => hasMarkdownViewer() || hasDiagramCodeBlock();
+
+  if (shouldInject()) {
+    requestInject();
+    return;
+  }
+
+  // Watch for late-added <markdown-viewer> elements or diagram code blocks;
+  // inject lazily.
+  const startObserver = (): void => {
+    if (!document.body) {
+      // body not ready yet — wait for DOMContentLoaded
+      document.addEventListener('DOMContentLoaded', startObserver, { once: true });
+      return;
+    }
+    if (shouldInject()) {
+      requestInject();
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      if (shouldInject()) {
+        observer.disconnect();
+        requestInject();
+      }
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  };
+  startObserver();
+}
+
+/**
  * Main detection and injection logic
  */
 async function detectAndInject(): Promise<void> {
   const path = document.location.pathname;
   const matchedExt = getMatchedExtension(path);
 
-  // Not a supported extension
+  // Not a supported extension — still check for diagram blocks on HTML pages.
+  // GitLab issue/merge-request/wiki pages (e.g. /group/project/-/issues/2)
+  // have no file extension but may contain diagram code blocks.
   if (!matchedExt) {
+    const contentType = (document as unknown as DocumentWithContentType).contentType
+      || (document as unknown as DocumentWithContentType).mimeType;
+    if (contentType && contentType.includes('text/html')) {
+      detectHtmlPageContent();
+    }
     return;
   }
 
   // HTML files: only request element-runtime injection if the page actually
-  // contains a <markdown-viewer> tag. Otherwise injecting CSS+JS would have
-  // global side effects (e.g. ui/styles.css sets body{overflow:hidden}) and
-  // break unrelated websites.
+  // contains a <markdown-viewer> tag or diagram code blocks. Otherwise
+  // injecting CSS+JS would have global side effects (e.g. ui/styles.css
+  // sets body{overflow:hidden}) and break unrelated websites.
   if (matchedExt === '.html') {
-    let injected = false;
-    const requestInject = (): void => {
-      if (injected) return;
-      injected = true;
-      const request = {
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        type: 'INJECT_ELEMENT_RUNTIME',
-        payload: {},
-        timestamp: Date.now(),
-        source: 'content-detector',
-      };
-      const sendPromise = webExtensionApi.runtime.sendMessage(request);
-      if (sendPromise && typeof sendPromise.then === 'function') {
-        sendPromise.catch(() => {
-          // Ignore errors - fire and forget
-        });
-      }
-    };
-
-    const hasMarkdownViewer = (): boolean => Boolean(document.querySelector('markdown-viewer'));
-
-    if (hasMarkdownViewer()) {
-      requestInject();
-      return;
-    }
-
-    // Watch for late-added <markdown-viewer> elements; inject lazily.
-    const startObserver = (): void => {
-      if (!document.body) {
-        // body not ready yet — wait for DOMContentLoaded
-        document.addEventListener('DOMContentLoaded', startObserver, { once: true });
-        return;
-      }
-      if (hasMarkdownViewer()) {
-        requestInject();
-        return;
-      }
-      const observer = new MutationObserver(() => {
-        if (hasMarkdownViewer()) {
-          observer.disconnect();
-          requestInject();
-        }
-      });
-      observer.observe(document.documentElement, { childList: true, subtree: true });
-    };
-    startObserver();
+    detectHtmlPageContent();
     return;
   }
 
   // Check if content is processable
   const processable = isProcessableContent();
+  if (processable === null) {
+    document.addEventListener('DOMContentLoaded', () => {
+      void detectAndInject();
+    }, { once: true });
+    return;
+  }
   if (!processable) {
+    // Page is HTML (e.g. GitHub blob page where URL ends in .md but content
+    // type is text/html). Fall back to HTML page detection so diagram code
+    // blocks on host sites can still be rendered.
+    detectHtmlPageContent();
     return;
   }
 

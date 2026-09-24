@@ -8,7 +8,7 @@
   "text": {
     "primary": "#292524",
     "secondary": "#57534e",
-    "muted": "#78716c"
+    "muted": "#5a534d"
   },
   
   "accent": {
@@ -19,8 +19,8 @@
   "background": {
     "page": "#fbf6ed",
     "surface": "#f5efe3",
-    "code": "#faf5ef",
-    "blockquote": "#f5ecdb"
+    "code": "#f2ead9",
+    "blockquote": "#efe8db"
   },
   
   "blockquote": {

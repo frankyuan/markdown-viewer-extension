@@ -8,6 +8,7 @@ import type { LocaleInfo, LocaleRegistry } from '../../utils/localization';
 import { translate, applyI18nText, getUiLocale } from './i18n-helpers';
 import { storageGet, storageSet } from './storage-helper';
 import type { EmojiStyle } from '../../types/docx.js';
+import { DEFAULT_SETTINGS } from '../../config/settings.generated';
 
 // Helper: Send message compatible with both Chrome and Firefox
 function safeSendMessage(message: unknown): void {
@@ -134,13 +135,17 @@ export type PanelSideMode = boolean;
  */
 interface Settings {
   maxCacheItems: number;
+  themeId?: string;
   preferredLocale: string;
   docxHrDisplay: 'pageBreak' | 'line' | 'hide';
   docxEmojiStyle?: EmojiStyle;
   frontmatterDisplay?: FrontmatterDisplay;
   tableMergeEmpty?: boolean;
   tableLayout?: TableLayout;
+  imageLayout?: 'left' | 'center';
+  diagramLayout?: 'left' | 'center';
   swapPanelSide?: PanelSideMode;
+  firstLineIndent?: number;
 }
 
 /**
@@ -177,13 +182,7 @@ export function createSettingsTabManager({
 }: SettingsTabManagerOptions): SettingsTabManager {
   let settings: Settings = {
     maxCacheItems: 1000,
-    preferredLocale: DEFAULT_SETTING_LOCALE,
-    docxHrDisplay: 'hide',
-    docxEmojiStyle: 'system',
-    frontmatterDisplay: 'hide',
-    tableMergeEmpty: true,
-    tableLayout: 'center',
-    swapPanelSide: false,
+    ...DEFAULT_SETTINGS,
   };
   let currentTheme = 'default';
   let themes: ThemeDefinition[] = [];
@@ -211,7 +210,7 @@ export function createSettingsTabManager({
       }
 
       if (!settings.docxHrDisplay) {
-        settings.docxHrDisplay = 'hide';
+        settings.docxHrDisplay = DEFAULT_SETTINGS.docxHrDisplay;
       }
 
       // Prefer the unified settings key, but keep fallback compatibility
@@ -255,7 +254,7 @@ export function createSettingsTabManager({
     // DOCX: Horizontal rule display
     const docxHrDisplayEl = document.getElementById('docx-hr-display') as HTMLSelectElement | null;
     if (docxHrDisplayEl) {
-      docxHrDisplayEl.value = settings.docxHrDisplay || 'hide';
+      docxHrDisplayEl.value = settings.docxHrDisplay || DEFAULT_SETTINGS.docxHrDisplay;
 
       // Add change listener for immediate save
       if (!docxHrDisplayEl.dataset.listenerAdded) {
@@ -270,7 +269,7 @@ export function createSettingsTabManager({
     // DOCX: Emoji style
     const docxEmojiStyleEl = document.getElementById('docx-emoji-style') as HTMLSelectElement | null;
     if (docxEmojiStyleEl) {
-        docxEmojiStyleEl.value = settings.docxEmojiStyle || 'system';
+        docxEmojiStyleEl.value = settings.docxEmojiStyle || DEFAULT_SETTINGS.docxEmojiStyle;
       if (!docxEmojiStyleEl.dataset.listenerAdded) {
         docxEmojiStyleEl.dataset.listenerAdded = 'true';
         docxEmojiStyleEl.addEventListener('change', async () => {
@@ -283,7 +282,7 @@ export function createSettingsTabManager({
     // Frontmatter display mode
     const frontmatterDisplayEl = document.getElementById('frontmatter-display') as HTMLSelectElement | null;
     if (frontmatterDisplayEl) {
-      frontmatterDisplayEl.value = settings.frontmatterDisplay || 'hide';
+      frontmatterDisplayEl.value = settings.frontmatterDisplay || DEFAULT_SETTINGS.frontmatterDisplay;
       if (!frontmatterDisplayEl.dataset.listenerAdded) {
         frontmatterDisplayEl.dataset.listenerAdded = 'true';
         frontmatterDisplayEl.addEventListener('change', async () => {
@@ -313,7 +312,7 @@ export function createSettingsTabManager({
     // Table layout
     const tableLayoutEl = document.getElementById('table-layout') as HTMLSelectElement | null;
     if (tableLayoutEl) {
-      tableLayoutEl.value = settings.tableLayout || 'center';
+      tableLayoutEl.value = settings.tableLayout || DEFAULT_SETTINGS.tableLayout;
       if (!tableLayoutEl.dataset.listenerAdded) {
         tableLayoutEl.dataset.listenerAdded = 'true';
         tableLayoutEl.addEventListener('change', async () => {
@@ -321,6 +320,36 @@ export function createSettingsTabManager({
           await saveSettingsToStorage();
           // Notify all tabs to re-render
           notifySettingChanged('tableLayout', settings.tableLayout);
+        });
+      }
+    }
+
+    // Image layout
+    const imageLayoutEl = document.getElementById('image-layout') as HTMLSelectElement | null;
+    if (imageLayoutEl) {
+      imageLayoutEl.value = settings.imageLayout || DEFAULT_SETTINGS.imageLayout;
+      if (!imageLayoutEl.dataset.listenerAdded) {
+        imageLayoutEl.dataset.listenerAdded = 'true';
+        imageLayoutEl.addEventListener('change', async () => {
+          settings.imageLayout = imageLayoutEl.value as 'left' | 'center';
+          await saveSettingsToStorage();
+          // Notify all tabs to re-render
+          notifySettingChanged('imageLayout', settings.imageLayout);
+        });
+      }
+    }
+
+    // Diagram layout
+    const diagramLayoutEl = document.getElementById('diagram-layout') as HTMLSelectElement | null;
+    if (diagramLayoutEl) {
+      diagramLayoutEl.value = settings.diagramLayout || DEFAULT_SETTINGS.diagramLayout;
+      if (!diagramLayoutEl.dataset.listenerAdded) {
+        diagramLayoutEl.dataset.listenerAdded = 'true';
+        diagramLayoutEl.addEventListener('change', async () => {
+          settings.diagramLayout = diagramLayoutEl.value as 'left' | 'center';
+          await saveSettingsToStorage();
+          // Notify all tabs to re-render
+          notifySettingChanged('diagramLayout', settings.diagramLayout);
         });
       }
     }
@@ -339,8 +368,25 @@ export function createSettingsTabManager({
       }
     }
 
+    // First-line indent
+    const firstLineIndentEl = document.getElementById('first-line-indent') as HTMLSelectElement | null;
+    if (firstLineIndentEl) {
+      firstLineIndentEl.value = String(settings.firstLineIndent ?? 2);
+      if (!firstLineIndentEl.dataset.listenerAdded) {
+        firstLineIndentEl.dataset.listenerAdded = 'true';
+        firstLineIndentEl.addEventListener('change', async () => {
+          settings.firstLineIndent = parseInt(firstLineIndentEl.value, 10);
+          await saveSettingsToStorage();
+          notifySettingChanged('firstLineIndent', settings.firstLineIndent);
+        });
+      }
+    }
+
     // Auto Refresh settings (Chrome only)
     loadAutoRefreshSettingsUI();
+
+    // Remark Mode settings
+    loadRemarkSettingsUI();
 
   }
 
@@ -599,6 +645,56 @@ export function createSettingsTabManager({
   }
 
   /**
+   * Remark Mode settings card
+   */
+  function loadRemarkSettingsUI(): void {
+    const REMARK_STORAGE_KEY = 'remarkConfig';
+    const autoDeleteEl = document.getElementById('remark-auto-delete-empty') as HTMLInputElement | null;
+    const closeAfterCopyEl = document.getElementById('remark-close-after-copy') as HTMLInputElement | null;
+    const highlightStyleEl = document.getElementById('remark-highlight-style') as HTMLSelectElement | null;
+    const defaultColorEl = document.getElementById('remark-default-color') as HTMLSelectElement | null;
+    const fontSizeEl = document.getElementById('remark-font-size') as HTMLSelectElement | null;
+
+    if (!autoDeleteEl || !closeAfterCopyEl || !highlightStyleEl || !defaultColorEl || !fontSizeEl) {
+      return;
+    }
+
+    // Load current remark config from storage
+    storageGet([REMARK_STORAGE_KEY]).then((result) => {
+      const cfg = (result[REMARK_STORAGE_KEY] || {}) as Record<string, unknown>;
+      autoDeleteEl.checked = cfg.autoDeleteEmpty !== false;
+      closeAfterCopyEl.checked = cfg.closeAfterCopy === true;
+      highlightStyleEl.value = (cfg.highlightStyle as string) || 'background';
+      defaultColorEl.value = (cfg.defaultColor as string) || 'yellow';
+      fontSizeEl.value = String(cfg.fontSize || 13);
+    }).catch(() => { /* use defaults already in HTML */ });
+
+    function saveRemarkConfig(): void {
+      const cfg = {
+        autoDeleteEmpty: autoDeleteEl!.checked,
+        closeAfterCopy: closeAfterCopyEl!.checked,
+        highlightStyle: highlightStyleEl!.value,
+        defaultColor: defaultColorEl!.value,
+        fontSize: parseInt(fontSizeEl!.value, 10),
+      };
+      storageSet({ [REMARK_STORAGE_KEY]: cfg }).then(() => {
+        showMessage(translate('settings_save_success'), 'success');
+      }).catch(() => {
+        showMessage(translate('settings_save_failed'), 'error');
+      });
+    }
+
+    // Wire change listeners
+    const elements = [autoDeleteEl, closeAfterCopyEl, highlightStyleEl, defaultColorEl, fontSizeEl];
+    elements.forEach((el) => {
+      if (!el.dataset.listenerAdded) {
+        el.dataset.listenerAdded = 'true';
+        el.addEventListener('change', saveRemarkConfig);
+      }
+    });
+  }
+
+  /**
    * Save settings to storage (internal helper)
    */
   async function saveSettingsToStorage(): Promise<void> {
@@ -693,9 +789,6 @@ export function createSettingsTabManager({
           themeSelector.appendChild(categoryGroup);
         });
 
-        // Update description
-        updateThemeDescription(currentTheme);
-
         // Add change listener
         themeSelector.addEventListener('change', (event) => {
           const target = event.target as HTMLSelectElement;
@@ -704,21 +797,6 @@ export function createSettingsTabManager({
       }
     } catch (error) {
       console.error('Failed to load themes:', error);
-    }
-  }
-
-  /**
-   * Update theme description display
-   * @param themeId - Theme ID
-   */
-  function updateThemeDescription(themeId: string): void {
-    const theme = themes.find(t => t.id === themeId);
-    const descEl = document.getElementById('theme-description');
-
-    if (descEl && theme) {
-      const locale = getUiLocale();
-      const useEnglish = !locale.startsWith('zh');
-      descEl.textContent = useEnglish ? theme.description_en : theme.description;
     }
   }
 
@@ -736,9 +814,6 @@ export function createSettingsTabManager({
         selectedTheme: themeId,
       });
       currentTheme = themeId;
-
-      // Update description
-      updateThemeDescription(themeId);
 
       // Notify all tabs to reload theme
       notifySettingChanged('themeId', themeId);
@@ -810,12 +885,7 @@ export function createSettingsTabManager({
     try {
       settings = {
         maxCacheItems: 1000,
-        preferredLocale: DEFAULT_SETTING_LOCALE,
-        docxHrDisplay: 'hide',
-        docxEmojiStyle: 'system',
-        tableMergeEmpty: true,
-        tableLayout: 'center',
-        swapPanelSide: false,
+        ...DEFAULT_SETTINGS,
       };
 
       await storageSet({

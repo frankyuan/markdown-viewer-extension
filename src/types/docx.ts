@@ -56,9 +56,17 @@ export interface DOCXRunStyle {
 /**
  * Internal paragraph spacing for theme configuration
  * Values are in twips (twentieth of a point, 1440 twips = 1 inch)
+ *
+ * lineRule semantics (mirrors OOXML w:spacing/@w:lineRule):
+ *  - 'auto'   (default): line is a multiple of single spacing (240 = 1.0x)
+ *  - 'exact'  : line is a FIXED height in twips (e.g. 560 = 28pt). Lines are
+ *               NOT expanded for tall inline content (images!), so paragraphs
+ *               that may contain inline images MUST override this.
+ *  - 'atLeast': line is a minimum height in twips, content can expand it.
  */
 export interface DOCXParagraphSpacing {
   line?: number;
+  lineRule?: 'auto' | 'atLeast' | 'exact';
   before?: number;
   after?: number;
 }
@@ -169,6 +177,11 @@ export interface DOCXBlockSpacing {
   blockquote?: DOCXParagraphSpacing & {
     paddingVertical?: number;
     paddingHorizontal?: number;
+    /** Line leading below the last paragraph line (line height minus char
+     *  height). Added to the first inner paragraph's spacing-before so the
+     *  top/bottom whitespace inside a blockquote stays equal without
+     *  relying on cell top margins. */
+    lineExtra?: number;
   };
   codeBlock?: DOCXParagraphSpacing;
   table?: DOCXParagraphSpacing;
@@ -198,6 +211,10 @@ export interface DOCXThemeStyles {
   /** Blockquote background shading (hex without #), omitted when theme does not define one */
   blockquoteBackground?: string;
   blockSpacing: DOCXBlockSpacing;
+  /** TableText paragraph spacing (before/after in twips) used to compensate cell margins */
+  tableTextSpacing?: DOCXParagraphSpacing;
+  /** Whether the current theme's layout scheme supports first-line indentation */
+  firstLineIndentEnabled?: boolean;
 }
 
 // =============================================================================

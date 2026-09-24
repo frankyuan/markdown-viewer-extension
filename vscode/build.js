@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'node:child_process';
+import { dagreShimPlugin } from '../scripts/dagre-shim-plugin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
@@ -33,7 +34,9 @@ function getVersion() {
 async function checkMissingKeys() {
   console.log('📦 Checking translations...');
   try {
-    await import('../scripts/check-missing-keys.js');
+    // Shared with the unit suite (test/suites/project-gates/i18n-keys.test.ts)
+    const { checkI18nKeys, printI18nKeyReport } = await import('../test/gates/i18n-keys.js');
+    printI18nKeyReport(checkI18nKeys());
   } catch (error) {
     console.error('⚠️  Warning: Failed to check translation keys:', error.message);
   }
@@ -42,6 +45,10 @@ async function checkMissingKeys() {
 // Sync supported formats
 const { default: syncFormats } = await import('../scripts/sync-formats.js');
 syncFormats();
+
+// Sync settings schema
+const { default: syncSettings } = await import('../scripts/sync-settings.js');
+syncSettings();
 
 /**
  * Copy directory recursively
@@ -66,6 +73,43 @@ function copyDirectory(sourceDir, targetDir) {
       fs.copyFileSync(sourcePath, targetPath);
     }
   }
+}
+
+function generateThemeBundles(outdir) {
+  const themesRoot = path.join(projectRoot, 'src', 'themes');
+  const registryPath = path.join(themesRoot, 'registry.json');
+  if (!fs.existsSync(registryPath)) {
+    return 0;
+  }
+
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  const bundlesDir = path.join(outdir, 'webview', 'themes', 'bundles');
+  fs.mkdirSync(bundlesDir, { recursive: true });
+
+  let bundleCount = 0;
+  for (const entry of registry.themes || []) {
+    const presetPath = path.join(themesRoot, 'presets', entry.file);
+    if (!fs.existsSync(presetPath)) {
+      continue;
+    }
+
+    const theme = JSON.parse(fs.readFileSync(presetPath, 'utf8'));
+    const bundle = {
+      theme,
+      layoutScheme: JSON.parse(fs.readFileSync(path.join(themesRoot, 'layout-schemes', `${theme.layoutScheme}.json`), 'utf8')),
+      colorScheme: JSON.parse(fs.readFileSync(path.join(themesRoot, 'color-schemes', `${theme.colorScheme}.json`), 'utf8')),
+      tableStyle: JSON.parse(fs.readFileSync(path.join(themesRoot, 'table-styles', `${theme.tableStyle}.json`), 'utf8')),
+      codeTheme: JSON.parse(fs.readFileSync(path.join(themesRoot, 'code-themes', `${theme.codeTheme}.json`), 'utf8')),
+    };
+
+    fs.writeFileSync(
+      path.join(bundlesDir, `${theme.id}.json`),
+      JSON.stringify(bundle)
+    );
+    bundleCount += 1;
+  }
+
+  return bundleCount;
 }
 
 /**
@@ -124,7 +168,8 @@ async function buildWebview() {
       '.ttf': 'empty',
       '.eot': 'empty'
     },
-    assetNames: '[name]'
+    assetNames: '[name]',
+    plugins: [dagreShimPlugin]
   });
 
   // Build iframe-render-worker bundle (heavy renderers: mermaid, vega, etc.)
@@ -153,7 +198,8 @@ async function buildWebview() {
       '.ttf': 'dataurl'
     },
     // Mermaid is loaded separately to keep bundle size manageable
-    external: ['mermaid', 'web-worker']
+    external: ['mermaid', 'web-worker'],
+    plugins: [dagreShimPlugin]
   });
 
   // Build CSS bundle separately
@@ -229,6 +275,8 @@ function copyAssets() {
   // Copy themes
   copyDirectory('src/themes', path.join(outdir, 'webview', 'themes'));
   console.log('  • themes');
+  const themeBundleCount = generateThemeBundles(outdir);
+  console.log(`  • ${themeBundleCount} theme bundles`);
 
   // Copy DrawIO stencils
   copyDirectory('node_modules/@markdown-viewer/drawio2svg/resources/stencils', path.join(outdir, 'webview', 'stencils'));

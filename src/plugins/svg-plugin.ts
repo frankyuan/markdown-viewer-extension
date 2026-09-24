@@ -5,22 +5,13 @@
  */
 import { BasePlugin } from './base-plugin';
 import type { DocumentService } from '../types/platform';
+import type { ASTNode } from '../types/index';
 import {
   ensureRelativeDotSlash,
   isAbsoluteFilesystemPath,
   isDocumentRelativeUrl,
   isNetworkUrl,
 } from '../utils/document-url';
-
-/**
- * AST node interface for SVG plugin
- */
-interface AstNode {
-  type: string;
-  lang?: string;
-  value?: string;
-  url?: string;
-}
 
 export class SvgPlugin extends BasePlugin {
   private _currentNodeType: string | null = null;
@@ -36,7 +27,7 @@ export class SvgPlugin extends BasePlugin {
    * @param node - AST node
    * @returns SVG content or URL, or null if not applicable
    */
-  extractContent(node: AstNode): string | null {
+  extractContent(node: ASTNode): string | null {
     // Store node type for isInline() to use
     this._currentNodeType = node.type;
 
@@ -139,6 +130,42 @@ export class SvgPlugin extends BasePlugin {
     } catch (error) {
       throw new Error(`Cannot load SVG file: ${url} - ${(error as Error).message}`);
     }
+  }
+
+  /**
+   * Plain-<img> fallback for a local SVG image whose source cannot be read.
+   *
+   * The browser can still load the file as an ordinary image — that is exactly
+   * how the equivalent .png node is rendered — so showing it beats replacing the
+   * picture with an error block when the platform blocks local file reads
+   * (Firefox content scripts cannot read file:// URLs at all).
+   *
+   * Only local image nodes in local documents qualify: network URLs never reach
+   * fetchContent() (the renderer loads them through <img> directly), and a
+   * data: URL needs no platform access.
+   *
+   * @param content - Extracted node content (the image URL)
+   * @param node - AST node being processed
+   * @returns Relative URL to render as <img>, or null when no fallback applies
+   */
+  createFetchFallbackUrl(content: string, node?: ASTNode): string | null {
+    const isImageNode = node ? node.type === 'image' : this._currentNodeType === 'image';
+    if (!isImageNode || !content) {
+      return null;
+    }
+    if (content.startsWith('data:') || isNetworkUrl(content)) {
+      return null;
+    }
+    // Only for local documents. There the browser loads the file itself (the
+    // same way it already loads the .png next to it), which beats an error
+    // block. For remote documents a failed fetch is far more likely to be a
+    // 404/CORS problem, where the error text is the more useful outcome.
+    if (typeof window === 'undefined' || window.location?.protocol !== 'file:') {
+      return null;
+    }
+    // Same normalization rehype-image-uri applies to every other image, so the
+    // fallback resolves exactly like a .png would.
+    return ensureRelativeDotSlash(content);
   }
 
   /**

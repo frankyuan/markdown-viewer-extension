@@ -5,6 +5,7 @@
 
 import type { PluginRenderResult, UnifiedRenderResult } from '../types/index';
 import { registerDiagramExport } from '../ui/diagram-export-registry';
+import { recordRenderDiagnostic } from '../core/render-diagnostics';
 
 /**
  * Convert unified plugin render result to HTML string
@@ -36,13 +37,14 @@ export function convertPluginResultToHTML(
     // Strategy: design width on the wrapper <div>; <img> stays fully auto, bounded by
     // max-width:100% and (in print) max-height. Both <img> dims auto so the CSS replaced-element
     // sizing algorithm preserves aspect ratio when max-height clamps tall diagrams.
+    // Alignment (centered by default, left with .diagram-layout-left) is controlled by
+    // container-level CSS classes, so no inline margin/text-align is set here.
     const displayWidth = Math.round((width || 0) / 4);
     const wrapperStyle = displayWidth > 0
-      ? `width: ${displayWidth}px; max-width: 100%; margin: 20px auto; text-align: center;`
-      : 'margin: 20px auto; text-align: center;';
+      ? `width: ${displayWidth}px; max-width: 100%;`
+      : '';
     const imgStyle = 'max-width: 100%; height: auto;';
 
-    // Data attributes for DOM diff matching - mark as rendered
     const dataAttrs = sourceHash 
       ? `data-source-hash="${sourceHash}" data-plugin-type="${pluginType}" data-plugin-rendered="true"` 
       : '';
@@ -60,6 +62,157 @@ export function convertPluginResultToHTML(
 }
 
 /**
+ * Create a DOM element from unified plugin render result.
+ *
+ * Uses createElement + explicit property assignment (img.src = ...) instead of
+ * HTML string parsing (outerHTML/innerHTML). This is required because Firefox
+ * has a known bug (Bug 2019834) where <img> elements with data: URI src
+ * inserted via HTML parsing fail to load on first encounter (clean cache),
+ * showing alt text instead of the image. Using createElement bypasses this
+ * bug and reliably loads data: URI images across all browsers.
+ *
+ * @param renderResult - Unified render result from plugin.renderToCommon()
+ * @param pluginType - Plugin type for alt text
+ * @param sourceHash - Content hash for DOM diff matching
+ * @param imgAttrs - Authored <img> attributes (width/height/alt) captured from
+ *   the markdown source; they override the renderer-derived display size
+ * @returns DOM element, or null for empty results
+ */
+export function createPluginResultElement(
+  renderResult: UnifiedRenderResult,
+  pluginType = 'diagram',
+  sourceHash?: string,
+  imgAttrs?: { width?: string | null; height?: string | null; alt?: string | null } | null
+): HTMLElement | null {
+  if (renderResult.type === 'empty') {
+    return null;
+  }
+
+  if (renderResult.type === 'error') {
+    const pre = document.createElement('pre');
+    // Same contract as createErrorHTML: the class + data attributes are how a
+    // host finds the blocks a document lost, independent of the message text
+    // (which is translated and therefore locale-dependent).
+    pre.className = 'mv-plugin-error';
+    pre.dataset.pluginType = pluginType;
+    pre.dataset.pluginStage = 'render';
+    pre.style.cssText = 'background: #fee; color: #8b0000; border-left: 4px solid #f00; padding: 10px; font-size: 12px; white-space: pre-wrap; word-break: break-word;';
+    pre.textContent = renderResult.content.text || '';
+    return pre;
+  }
+
+  // Handle PNG image format
+  if (renderResult.type === 'image') {
+    const { base64, width } = renderResult.content;
+    const { inline } = renderResult.display;
+    // Renderer outputs the PNG at 4x for retina sharpness; design display width
+    // is 1/4 of intrinsic. An authored width/height attribute from the source
+    // markdown wins over this derived size (standard <img> semantics).
+    const displayWidth = Math.round((width || 0) / 4);
+
+    const img = document.createElement('img');
+    // Key: set src via JS property assignment, NOT via HTML parser.
+    // This bypasses Firefox Bug 2019834 where data: URI images inserted via
+    // outerHTML/innerHTML fail to load on first encounter (clean cache).
+    img.src = `data:image/png;base64,${base64}`;
+    img.alt = (imgAttrs && imgAttrs.alt) || `${pluginType} diagram`;
+    img.style.cssText = 'max-width: 100%; height: auto;';
+
+    if (imgAttrs && imgAttrs.width) {
+      img.setAttribute('width', imgAttrs.width);
+    }
+    if (imgAttrs && imgAttrs.height) {
+      img.setAttribute('height', imgAttrs.height);
+    }
+
+    if (inline) {
+      img.className = 'diagram-inline';
+      if (!(imgAttrs && imgAttrs.width) && displayWidth > 0) {
+        img.style.width = `${displayWidth}px`;
+      }
+      if (sourceHash) {
+        img.dataset.sourceHash = sourceHash;
+        img.dataset.pluginType = pluginType;
+        img.dataset.pluginRendered = 'true';
+      }
+      return img;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'diagram-block';
+    // Alignment (centered by default, left with .diagram-layout-left) is
+    // controlled by container-level CSS classes, so no inline margin/text-align
+    // is set here.
+    wrapper.style.cssText = displayWidth > 0
+      ? `width: ${displayWidth}px; max-width: 100%;`
+      : '';
+    if (sourceHash) {
+      wrapper.dataset.sourceHash = sourceHash;
+      wrapper.dataset.pluginType = pluginType;
+      wrapper.dataset.pluginRendered = 'true';
+    }
+    wrapper.appendChild(img);
+    return wrapper;
+  }
+
+  return null;
+}
+
+/**
+ * Replace a failed diagram placeholder with a plain <img>.
+ *
+ * Degradation path for URL-based plugin content whose source could not be read
+ * (e.g. a local SVG image on a browser that refuses local file access): the
+ * browser can still load the file as an image, so the picture stays visible
+ * instead of turning into an error block. Authored width/height/alt come from
+ * the placeholder's data-* attributes (set by createPlaceholderElement) and the
+ * source hash is carried over so DOM diff matching keeps working.
+ *
+ * @param placeholder - Placeholder element still present in the DOM
+ * @param url - Image URL, already resolved for the document context
+ * @param options - Source hash / plugin type for the data attributes
+ * @returns True when the placeholder was replaced
+ */
+export function replacePlaceholderWithImageUrl(
+  placeholder: HTMLElement,
+  url: string,
+  options: { sourceHash?: string | null; pluginType?: string | null } = {}
+): boolean {
+  if (!url) {
+    return false;
+  }
+
+  const sourceHash = options.sourceHash || placeholder.dataset?.sourceHash;
+  const pluginType = options.pluginType || placeholder.dataset?.pluginType || 'image';
+
+  const img = document.createElement('img');
+  // Property assignment rather than HTML parsing, matching the other plugin
+  // result elements (see createPluginResultElement).
+  img.src = url;
+  img.alt = placeholder.dataset?.alt || '';
+  // Authored <img> attributes from the markdown source keep standard semantics.
+  if (placeholder.dataset?.width) {
+    img.setAttribute('width', placeholder.dataset.width);
+  }
+  if (placeholder.dataset?.height) {
+    img.setAttribute('height', placeholder.dataset.height);
+  }
+  if (sourceHash) {
+    img.dataset.sourceHash = sourceHash;
+    img.dataset.pluginType = pluginType;
+    img.dataset.pluginRendered = 'true';
+  }
+  // The degraded image keeps the block's source location, so an asset export
+  // can still name where this figure came from.
+  if (placeholder.dataset?.sourceLine) {
+    img.dataset.sourceLine = placeholder.dataset.sourceLine;
+  }
+
+  placeholder.replaceWith(img);
+  return true;
+}
+
+/**
  * Replace placeholder with rendered content in DOM
  * @param id - Placeholder element ID
  * @param result - Render result with base64, width, height, format
@@ -72,19 +225,33 @@ export function replacePlaceholderWithImage(id: string, result: PluginRenderResu
   if (placeholder) {
     // Preserve source hash from placeholder for DOM diff matching
     const sourceHash = (placeholder as HTMLElement).dataset?.sourceHash;
-    
+
     // Validate source hash match to prevent concurrent rendering race conditions
     if (sourceHash && expectedSourceHash !== sourceHash) {
+      // The placeholder belongs to an older render pass: dropping the result is
+      // correct, but it is also the moment a diagram can disappear from the page
+      // without a trace, so leave a line behind.
+      console.warn(
+        `[PluginTask] ${pluginType} result dropped for ${id}: source hash changed (rendered ${expectedSourceHash}, current ${sourceHash})`,
+      );
+      recordRenderDiagnostic({
+        level: 'warning',
+        kind: 'block-superseded',
+        type: pluginType,
+        line: Number(placeholder.dataset?.sourceLine) || null,
+        blockId: id,
+        message: 'a newer render superseded this block before the result arrived',
+      });
       return;
     }
-    
+
     // Convert result to unified format (always PNG)
-    const content: UnifiedRenderResult['content'] = { 
-      base64: result.base64, 
-      width: result.width, 
-      height: result.height 
+    const content: UnifiedRenderResult['content'] = {
+      base64: result.base64,
+      width: result.width,
+      height: result.height
     };
-    
+
     const renderResult: UnifiedRenderResult = {
       type: 'image',
       content: content,
@@ -93,7 +260,45 @@ export function replacePlaceholderWithImage(id: string, result: PluginRenderResu
         alignment: isInline ? 'left' : 'center'
       }
     };
-    placeholder.outerHTML = convertPluginResultToHTML(id, renderResult, pluginType, sourceHash);
+
+    // Authored <img> attributes (width/height/alt) were stored on the
+    // placeholder by createPlaceholderElement; re-apply them to the rendered
+    // image so standard <img> semantics survive the plugin takeover.
+    const element = createPluginResultElement(renderResult, pluginType, sourceHash, {
+      width: placeholder.dataset.width || null,
+      height: placeholder.dataset.height || null,
+      alt: placeholder.dataset.alt || null,
+    });
+    if (element) {
+      // Carry the source location from the placeholder onto the rendered
+      // element: diagnostics report failures by markdown line, and a host that
+      // walks the rendered document (documd's asset export) anchors each figure
+      // to the same line. The placeholder id travels along as the block's
+      // stable identity, so a rendered figure and a diagnostic about that block
+      // name the same thing.
+      const sourceLine = placeholder.dataset?.sourceLine;
+      if (sourceLine) {
+        element.setAttribute('data-source-line', sourceLine);
+      }
+      if (id) {
+        element.setAttribute('data-block-id', id);
+      }
+      placeholder.replaceWith(element);
+    } else {
+      // createPluginResultElement rejects results it cannot render (e.g. a missing
+      // base64 payload). Removing the placeholder then leaves a gap with no other
+      // trace, so report the block that was lost.
+      console.warn(`[PluginTask] ${pluginType} result could not be turned into an element for ${id} — the block will be missing`);
+      recordRenderDiagnostic({
+        level: 'error',
+        kind: 'block-missing',
+        type: pluginType,
+        line: Number(placeholder.dataset?.sourceLine) || null,
+        blockId: id,
+        message: 'the rendered result could not be turned into an element — the block will be missing',
+      });
+      placeholder.remove();
+    }
 
     // Register intermediate formats for diagram export (SVG, DrawIO)
     if (sourceHash && (result.svg || result.drawioXml)) {

@@ -11,10 +11,10 @@
 /* === Design System Variables === */
 :root {
   /* Primary Colors */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #eff6ff;
-  --color-primary-subtle: #dbeafe;
+  --color-primary: #2f5fd0;
+  --color-primary-hover: #234aa8;
+  --color-primary-light: #eef2fb;
+  --color-primary-subtle: #d9e2f6;
   --color-theme-accent: var(--md-accent, var(--color-primary));
   --color-theme-accent-hover: var(--md-accent-hover, var(--color-primary-hover));
   --color-theme-accent-bg: var(--md-accent-bg, var(--color-primary-light));
@@ -28,26 +28,35 @@
   --color-danger-border-hover: #f1b0b7;
   
   /* Neutral Colors */
-  --gray-50: #f9fafb;
-  --gray-100: #f3f4f6;
-  --gray-200: #e5e7eb;
-  --gray-300: #d1d5db;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
-  --gray-600: #4b5563;
-  --gray-700: #374151;
-  --gray-900: #0f172a;
+  --gray-50: #f6f3ec;
+  --gray-100: #efeadf;
+  --gray-200: #e7e1d5;
+  --gray-300: #d8d0c2;
+  --gray-400: #9c9488;
+  --gray-500: #80786e;
+  --gray-600: #6a6459;
+  --gray-700: #514b43;
+  --gray-900: #22201b;
   
   /* Semantic Colors */
-  --color-bg-body: #f5f5f5;
+  --color-bg-body: #fdfcf9;
+  /* Elevated / floating surfaces (popovers, menus, tooltips, drawers).
+     Pure white to match the popup's card style — elevation + shadow keep it
+     from clashing with the warm chrome beneath. */
   --color-bg-surface: #ffffff;
-  --color-bg-toc: #f8fafc;
+  /* Frame chrome — the warm tone shared by all side panels (TOC, remark,
+     GitBook), matching the popup's cream content surface (--color-bg-tertiary). */
+  --color-bg-chrome: #f6f3ec;
+  --color-bg-toc: var(--color-bg-chrome);
+  /* Top toolbar gradient — mirrors the popup header (white → cream) so the
+     bar lifts at the top and settles into the cream panels below. */
+  --gradient-header: linear-gradient(180deg, #ffffff 0%, #f6f3ec 100%);
   --color-text-primary: var(--gray-900);
   --color-text-secondary: #475569;
   --color-text-tertiary: #64748b;
   --color-text-on-primary: #ffffff;
-  --color-border: #e2e8f0;
-  --color-border-hover: #cbd5e1;
+  --color-border: #e7e1d5;
+  --color-border-hover: #d8d0c2;
   --color-nav-active-bg: var(--color-theme-accent-bg);
   --color-nav-active-text: var(--color-theme-accent);
   --color-nav-active-border: var(--color-theme-accent);
@@ -60,9 +69,9 @@
   --transition-slow: 0s;
   
   /* Shadows */
-  --shadow-toolbar: 0 2px 4px rgba(0, 0, 0, 0.06);
-  --shadow-popover: 0 2px 8px rgba(0, 0, 0, 0.12);
-  --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --shadow-toolbar: 0 2px 4px rgba(55, 45, 30, 0.06);
+  --shadow-popover: 0 2px 8px rgba(55, 45, 30, 0.12);
+  --shadow-floating: 0 4px 16px rgba(55, 45, 30, 0.15);
 }
 
 /* Dark frame palette — activated when a dark theme is selected.
@@ -73,7 +82,9 @@
 :root.dark {
   --color-bg-body: #1a1d21;
   --color-bg-surface: #24272c;
-  --color-bg-toc: #1f2227;
+  --color-bg-chrome: #1f2227;
+  --color-bg-toc: var(--color-bg-chrome);
+  --gradient-header: linear-gradient(180deg, #24272c 0%, #1f2227 100%);
   --color-text-primary: #e6e6e6;
   --color-text-secondary: #b4b9c2;
   --color-text-tertiary: #8b919b;
@@ -114,6 +125,22 @@
   --gray-600: #a9afb8;
   --gray-700: #c7ccd4;
   --gray-900: #e6e6e6;
+}
+
+/* The viewer paints every colour it shows, so the used color-scheme must
+   follow the THEME, not the OS. The takeover page preloads
+   `:root { color-scheme: light dark }` (so the boot canvas is dark in dark
+   mode), which hands UA-painted widgets to the OS: on a light theme in dark
+   mode the browser paints OS-dark native controls — e.g. a task-list checkbox
+   as a near-black square whose check mark is a barely lighter gray. `only`
+   also opts the content out of UA forced-darkening, since the theme is
+   already the source of truth for both schemes. */
+:root.light {
+  color-scheme: only light;
+}
+
+:root.dark {
+  color-scheme: only dark;
 }
 
 /* Dark scrollbars — WebKit/Chromium only. Falls back silently elsewhere. */
@@ -163,7 +190,7 @@ body {
   display: flex;
   height: 50px;
   flex-shrink: 0;
-  background: var(--color-bg-surface);
+  background: var(--gradient-header);
   border-bottom: 1px solid var(--color-border);
   box-shadow: var(--shadow-toolbar);
   z-index: 1001;
@@ -294,7 +321,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 6px;
-  background: var(--color-surface, #ffffff);
+  background: var(--color-bg-surface, #ffffff);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: var(--shadow-toolbar);
@@ -459,7 +486,7 @@ body.toc-position-right #table-of-contents.hidden {
   align-items: center;
   padding: 0 12px;
   border-left: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
+  background: transparent;
   order: 2;
 }
 
@@ -473,13 +500,21 @@ body.toc-position-right #table-of-contents.hidden {
   color: var(--color-text-primary);
 }
 
+/* Export whole-book button group (right-aligned in the SUMMARY panel header) */
+.gitbook-sidebar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* GitBook sidebar body — flex child in page-content row */
 #gitbook-sidebar-body {
   order: 3;
   width: 280px;
   min-width: 160px;
   max-width: 560px;
-  background: var(--color-bg-surface);
+  background: var(--color-bg-chrome);
   border-left: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
@@ -559,6 +594,23 @@ body.sidebar-resizing {
   margin: 0;
 }
 
+#gitbook-panel .gitbook-nav-heading {
+  margin-top: 10px;
+}
+
+#gitbook-panel .gitbook-nav-heading:first-child {
+  margin-top: 2px;
+}
+
+#gitbook-panel .gitbook-nav-heading-text {
+  color: var(--color-text-primary);
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 4px 8px;
+}
+
 #gitbook-panel a {
   color: var(--color-text-secondary);
   text-decoration: none;
@@ -592,7 +644,6 @@ body.sidebar-resizing {
   overflow-x: hidden;
   overscroll-behavior: contain;
   scroll-padding-top: 12px;
-  transition: margin-left 0.2s ease, margin-right 0.2s ease;
 }
 
 #markdown-wrapper:focus {
@@ -612,6 +663,17 @@ body.toc-position-right #markdown-wrapper {
 
 body.toc-position-right.toc-hidden #markdown-wrapper {
   margin-right: 0;
+}
+
+html[data-code-view] #markdown-wrapper,
+html[data-code-view] body.remark-panel-open #markdown-wrapper,
+html[data-code-view] body.remark-panel-open.toc-position-right #markdown-wrapper {
+  transition: none;
+}
+
+html[data-code-view] #table-of-contents,
+html[data-code-view] #remark-sidebar {
+  transition: none;
 }
 
 /* Remark sidebar: mirrors #table-of-contents pattern, but on the right by default */
@@ -653,7 +715,6 @@ body.toc-position-right #remark-sidebar.remark-sidebar-closed {
 /* Remark Mode: push content to make room for the annotation panel */
 body.remark-panel-open #markdown-wrapper {
   margin-right: 280px;
-  transition: margin-right 0.2s ease;
 }
 
 /* TOC on right + remark on left: remark panel uses margin-left */
@@ -663,17 +724,37 @@ body.remark-panel-open.toc-position-right #markdown-wrapper {
 }
 
 
+/* Page container carries the card chrome (background/shadow). The content
+   root itself stays pure content so Web / HTML / EPUB consume the exact same
+   content styles — the card is a page-level concept. max-width caps the line
+   length: at 820px minus the 48px gutters the text measure lands ~68–90 Latin
+   chars (CJK ~34–45) across the reading themes — Butterick's 45–90 range and
+   close to Tailwind prose's 65ch. The wide 48px gutter also keeps the hover
+   "#" heading anchor (offset left of each heading) inside the card instead of
+   clipped against the window edge.
+   The card background follows the theme's page color (--md-page-bg is set on
+   :root by the theme stylesheet whenever the theme defines a page
+   background): with a tinted theme the whole sheet — including the 20px
+   gutter between the content strip and the card edge — keeps the themed
+   background instead of showing the frame surface (pure white in light
+   mode). Themes without a page background fall back to the frame surface,
+   which matches the card of the default theme. Print and .mv-embed override
+   this rule (transparent) further down. */
 #markdown-page {
-  max-width: 1060px;
+  max-width: 820px;
   margin: 0 auto;
+  background: var(--md-page-bg, var(--color-bg-surface, #ffffff));
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  padding: 24px 48px;
+  box-sizing: border-box;
 }
 
 #markdown-content {
-  background: var(--color-bg-surface);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  margin: 0 auto;
-  padding: 40px;
-  box-sizing: border-box;
+  /* Pure content root: no page chrome here. Font metrics are pinned because
+     <markdown-viewer> inline mode renders inside a HOST page, whose own
+     element rules (e.g. p { font-size: 13px }) would otherwise leak into
+     the viewer typography. */
+  font-size: 16px;
 }
 
 #markdown-content:empty {
@@ -685,6 +766,85 @@ body.remark-panel-open.toc-position-right #markdown-wrapper {
   overflow: hidden;
 }
 
+#markdown-content p,
+.markdown-viewer-content p {
+  font-size: inherit;
+}
+
+/* ── Embedded container mode ─────────────────────────────────────────────
+   Shared by <markdown-viewer> elements, the iframe embed and editor panels
+   (VS Code / Obsidian / Mobile). The content fills the host container
+   edge-to-edge: no toolbar, no card, no 1060px centering. A TOC (if any)
+   docks inside the container; panels add .mv-panel to drop it entirely.
+   Platforms only add the class(es) + map their theme variables — no per-
+   platform style sheets. */
+.mv-embed #page-header,
+.mv-embed #toolbar {
+  display: none !important;
+}
+
+.mv-embed #page-shell {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  min-height: 0;
+}
+
+.mv-embed #page-content {
+  position: relative;
+  min-height: 0;
+}
+
+.mv-embed #markdown-wrapper {
+  height: 100%;
+  max-height: none;
+}
+
+/* TOC visible → content keeps the 280px offset; hidden → flush.
+   Matches both body.toc-hidden (iframe embed) and reader-root.toc-hidden
+   (<markdown-viewer> inline mode). */
+.mv-embed.toc-hidden #markdown-wrapper,
+.mv-embed .toc-hidden #markdown-wrapper {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.mv-embed #markdown-page {
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.mv-embed #markdown-content {
+  padding: 20px;
+}
+
+.mv-embed #table-of-contents {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+}
+
+.mv-embed #toc-overlay {
+  position: absolute;
+}
+
+/* Panel variant: no TOC at all, content always flush */
+.mv-embed.mv-panel #table-of-contents,
+.mv-embed.mv-panel #toc-overlay {
+  display: none !important;
+}
+
+.mv-embed.mv-panel #markdown-wrapper {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
 #markdown-content h1,
 #markdown-content h2,
 #markdown-content h3,
@@ -692,6 +852,61 @@ body.remark-panel-open.toc-position-right #markdown-wrapper {
 #markdown-content h5,
 #markdown-content h6 {
   scroll-margin-top: 12px;
+  position: relative;
+}
+
+/* Inline-mode host isolation: <markdown-viewer> renders inside a host page,
+   whose own element rules (e.g. h1 { margin: 0 }) would otherwise override
+   the viewer baselines. Pin the block typography here — values match the
+   UA defaults the web modes already rely on. */
+#markdown-content h1,
+.markdown-viewer-content h1,
+#markdown-content h2,
+.markdown-viewer-content h2,
+#markdown-content h3,
+.markdown-viewer-content h3,
+#markdown-content h4,
+.markdown-viewer-content h4,
+#markdown-content h5,
+.markdown-viewer-content h5,
+#markdown-content h6,
+.markdown-viewer-content h6 {
+  margin-top: 0.83em;
+  margin-bottom: 0.83em;
+}
+
+/* Hover-revealed "#" anchor link next to each heading (Laravel-docs style). */
+#markdown-content .heading-anchor {
+  position: absolute;
+  left: -0.85em;
+  top: 0;
+  width: 0.85em;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  user-select: none;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+#markdown-content .heading-anchor::before {
+  content: "#";
+}
+
+#markdown-content h1:hover > .heading-anchor,
+#markdown-content h2:hover > .heading-anchor,
+#markdown-content h3:hover > .heading-anchor,
+#markdown-content h4:hover > .heading-anchor,
+#markdown-content h5:hover > .heading-anchor,
+#markdown-content h6:hover > .heading-anchor,
+#markdown-content .heading-anchor:focus {
+  opacity: 1;
+}
+
+#markdown-content .heading-anchor:hover {
+  color: var(--color-primary);
+  text-decoration: none;
 }
 
 #markdown-content p {
@@ -716,11 +931,18 @@ body.remark-panel-open.toc-position-right #markdown-wrapper {
 #markdown-content pre {
   border-radius: 6px;
   padding: 13px;
-  overflow: auto;
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-all;
   position: relative;
+  /* No overflow:auto here. In EPUB readers a scroll container's overflowed
+     content is clipped at page breaks instead of flowing to the next page,
+     leaving the second page of a split code block empty. pre-wrap +
+     break-all already prevent horizontal overflow, so the block flows like
+     regular content in every environment. Pinned explicitly because host
+     pages hosting <markdown-viewer> inline mode often set overflow:auto on
+     pre themselves. */
+  overflow: visible;
 }
 
 #markdown-content pre code {
@@ -791,23 +1013,21 @@ html[data-code-view] #markdown-content {
 html[data-code-view] #markdown-content pre {
   margin: 0;
   border-radius: 0;
-  padding: 16px 16px 16px 60px;
+  padding: 16px;
   overflow: visible;
-  white-space: pre;
-  word-break: normal;
   position: relative;
 }
 html[data-code-view] #markdown-content pre code {
   display: block;
-  padding-right: 16px;
 }
-html[data-code-view] #markdown-content pre code::before {
-  content: attr(data-line-numbers);
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 44px;
-  padding: 16px 8px 16px 0;
+html[data-code-view] #markdown-content pre code .mv-code-line {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  column-gap: 16px;
+  align-items: start;
+}
+html[data-code-view] #markdown-content pre code .mv-code-line::before {
+  content: attr(data-line-number);
   text-align: right;
   white-space: pre;
   color: var(--color-text-tertiary, #6e7781);
@@ -816,6 +1036,17 @@ html[data-code-view] #markdown-content pre code::before {
   pointer-events: none;
   font: inherit;
   line-height: inherit;
+}
+html[data-code-view] #markdown-content pre code .mv-code-line-content {
+  min-width: 0;
+  padding-right: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+html[data-code-view] #markdown-content pre code .mv-code-line-content:empty::before {
+  content: ' ';
+  visibility: hidden;
 }
 
 #markdown-content blockquote {
@@ -836,7 +1067,16 @@ html[data-code-view] #markdown-content pre code::before {
 
 #markdown-content ul,
 #markdown-content ol {
-  padding-left: 20px;
+  /* Top-level marker gutter: ~1em holds the widest common marker ("1.", "10.")
+     while keeping the marker flush with the text start. Nested levels step
+     2em below (marker aligns with the parent item's text). */
+  padding-left: 1em;
+}
+
+#markdown-content li ul,
+#markdown-content li ol {
+  /* Nested levels keep the constant 2em step (GitHub convention). */
+  padding-left: 2em;
 }
 
 /* Ordered list style by level */
@@ -858,6 +1098,54 @@ html[data-code-view] #markdown-content pre code::before {
 #markdown-content img {
   max-width: 100%;
   height: auto;
+}
+
+#markdown-content svg {
+  max-width: 100%;
+}
+
+/* Standalone images are block-level in BOTH layout modes; only the centering
+   margin differs. Without an image-layout class they fall back to left.
+   Both content-root forms are covered (id root + .markdown-viewer-content
+   root used by <markdown-viewer> elements). */
+#markdown-content p > img:only-child,
+.markdown-viewer-content p > img:only-child,
+#markdown-content p > a:only-child > img:only-child,
+.markdown-viewer-content p > a:only-child > img:only-child {
+  display: block;
+}
+
+#markdown-content.image-layout-center p > img:only-child,
+#markdown-content.image-layout-center p > a:only-child > img:only-child,
+.markdown-viewer-content.image-layout-center p > img:only-child,
+.markdown-viewer-content.image-layout-center p > a:only-child > img:only-child {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#markdown-content.image-layout-left p > img:only-child,
+#markdown-content.image-layout-left p > a:only-child > img:only-child,
+.markdown-viewer-content.image-layout-left p > img:only-child,
+.markdown-viewer-content.image-layout-left p > a:only-child > img:only-child {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Diagram blocks (Mermaid, Vega, PlantUML, etc.): centered by default.
+   With .diagram-layout-left on the container, they become left-aligned. */
+#markdown-content .diagram-block,
+.markdown-viewer-content .diagram-block {
+  margin: 20px auto;
+  text-align: center;
+  max-width: 100%;
+}
+
+#markdown-content.diagram-layout-left .diagram-block,
+#markdown-content .markdown-viewer-content.diagram-layout-left .diagram-block,
+.markdown-viewer-content.diagram-layout-left .diagram-block {
+  margin-left: 0;
+  margin-right: auto;
+  text-align: left;
 }
 
 #markdown-content .diagram-block svg {
@@ -917,10 +1205,6 @@ html[data-code-view] #markdown-content pre code::before {
 }
 
 @media (max-width: 768px) {
-  #markdown-content {
-    padding: 20px;
-  }
-
   #toolbar {
     padding: 0 10px;
   }
@@ -1077,7 +1361,11 @@ html[data-code-view] #markdown-content pre code::before {
   #page-header,
   #toolbar,
   #table-of-contents,
-  #toc-overlay {
+  #toc-overlay,
+  #remark-sidebar,
+  #gitbook-sidebar-header,
+  #gitbook-sidebar-body,
+  #gitbook-resize-handle {
     display: none !important;
   }
 
@@ -1088,9 +1376,17 @@ html[data-code-view] #markdown-content pre code::before {
     margin-right: 0 !important;
   }
 
-  /* Optimize content area for printing */
+  /* Optimize content area for printing: the shared screen rule gives
+     #markdown-page a 40px card padding + shadow + surface background. In
+     print the @page margin already spaces the content, so strip the card
+     chrome — otherwise every PDF gets an extra 40px gutter and the printed
+     shadow/background (printBackground: true) looks like a box on the page. */
   #markdown-page {
     margin: 0 auto !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    max-width: none !important;
     overflow: visible !important;
   }
 
@@ -1114,6 +1410,14 @@ html[data-code-view] #markdown-content pre code::before {
   /* Hide processing indicators when printing */
   .processing-indicator,
   .async-placeholder {
+    display: none !important;
+  }
+
+  /* Interactive-only heading anchors (hover-revealed "#" links): never print them.
+     If print starts while the pointer rests on a heading (e.g. the export menu item
+     that covered it was just removed), the hover reveal would otherwise be captured
+     as a stray "#" in the PDF at that heading. */
+  #markdown-content .heading-anchor {
     display: none !important;
   }
 
@@ -1180,4 +1484,77 @@ html[data-code-view] #markdown-content pre code::before {
     width: auto !important;
     height: auto !important;
   }
+}
+
+/* === Local file access prompt (Firefox export) === */
+
+/* Shown when a local document's images cannot be read for an export and the
+   user has to hand the folder over. Sits above the viewer's own chrome
+   (#toc-overlay uses 999, the panels 1000-1002). */
+.mv-local-files-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.mv-local-files-card {
+  max-width: 460px;
+  padding: 20px 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-floating);
+  line-height: 1.5;
+}
+
+.mv-local-files-title {
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.mv-local-files-message {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  white-space: pre-line;
+}
+
+.mv-local-files-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.mv-local-files-button {
+  padding: 7px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-chrome);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mv-local-files-button:hover {
+  border-color: var(--color-border-hover);
+  background: var(--color-bg-body);
+}
+
+.mv-local-files-primary {
+  border-color: var(--color-theme-accent);
+  background: var(--color-theme-accent);
+  color: var(--color-text-on-primary);
+}
+
+.mv-local-files-primary:hover {
+  border-color: var(--color-theme-accent-hover);
+  background: var(--color-theme-accent-hover);
 }

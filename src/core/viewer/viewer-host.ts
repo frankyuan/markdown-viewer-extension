@@ -17,7 +17,10 @@
 import { createScrollSyncController, type ScrollSyncController } from '../line-based-scroll';
 import { getDocument, renderMarkdownDocument } from './viewer-controller';
 import { AsyncTaskManager } from '../markdown-processor';
+import { renderCodeViewBlock } from '../../utils/code-preview';
+import { toMarkdownFilename } from '../document-utils';
 import type { PluginRenderer, PlatformAPI } from '../../types/index';
+import { normalizeSetting, DEFAULT_SETTINGS } from '../../config/settings.generated';
 import type { FrontmatterDisplay } from './viewer-controller';
 import type { MountedViewer } from '../../integration/types';
 
@@ -136,6 +139,10 @@ export interface MountedViewerRenderOptions {
   forceRender?: boolean;
   targetLine?: number;
   zoomLevel?: number;
+  directCodeView?: {
+    content: string;
+    language: string;
+  };
 }
 
 export interface MountedViewerOptions {
@@ -146,6 +153,7 @@ export interface MountedViewerOptions {
   translate: TranslateFn;
   topOffset?: number;
   initialZoomLevel?: number;
+  onHeadingPresenceKnown?: (hasHeadings: boolean) => void;
   onHeadings?: (headings: Array<{ level: number; text: string; id: string }>) => void;
   onProgress?: (completed: number, total: number) => void;
   beforeProcessAll?: () => void;
@@ -154,6 +162,14 @@ export interface MountedViewerOptions {
   onScrollLineChange?: (line: number) => void;
   applyTheme?: (themeId: string) => Promise<void>;
   saveTheme?: (themeId: string) => Promise<void>;
+  /**
+   * External scroll sync controller (hosts with editor↔preview sync such as
+   * VS Code provide their own createViewerScrollSync instance). When omitted
+   * the mounted viewer creates an internal one.
+   */
+  scrollController?: ScrollSyncController | null;
+  /** Passed through to renderMarkdownFlow (first-screen responsiveness). */
+  deferAsyncRenderUntilFirstPaint?: boolean;
 }
 
 export interface MountedViewerController extends MountedViewer {
@@ -179,6 +195,7 @@ export function createMountedViewer(options: MountedViewerOptions): MountedViewe
     translate,
     topOffset,
     initialZoomLevel = 1,
+    onHeadingPresenceKnown,
     onHeadings,
     onProgress,
     beforeProcessAll,
@@ -187,13 +204,14 @@ export function createMountedViewer(options: MountedViewerOptions): MountedViewe
     onScrollLineChange,
     applyTheme,
     saveTheme,
+    deferAsyncRenderUntilFirstPaint = false,
   } = options;
 
   const currentTaskManagerRef: { current: AsyncTaskManager | null } = { current: null };
   let currentMarkdown = '';
   let zoomLevel = initialZoomLevel;
 
-  const scrollController = createScrollSyncController({
+  const scrollController = options.scrollController ?? createScrollSyncController({
     container,
     scrollContainer,
     getLineMapper: getDocument,
@@ -205,12 +223,28 @@ export function createMountedViewer(options: MountedViewerOptions): MountedViewe
     },
     topOffset,
   });
-  scrollController.start();
+  if (!options.scrollController) {
+    scrollController.start();
+  }
 
   const render = async (markdown: string, renderOptions?: MountedViewerRenderOptions): Promise<void> => {
     currentMarkdown = markdown;
     if (renderOptions?.zoomLevel !== undefined) {
       zoomLevel = renderOptions.zoomLevel;
+    }
+
+    if (renderOptions?.directCodeView) {
+      if (currentTaskManagerRef.current) {
+        currentTaskManagerRef.current.abort();
+        currentTaskManagerRef.current = null;
+      }
+
+      renderCodeViewBlock(
+        container,
+        renderOptions.directCodeView.content,
+        renderOptions.directCodeView.language,
+      );
+      return;
     }
 
     await renderMarkdownFlow({
@@ -225,6 +259,8 @@ export function createMountedViewer(options: MountedViewerOptions): MountedViewe
       platform,
       currentTaskManagerRef,
       targetLine: renderOptions?.targetLine,
+      deferAsyncRenderUntilFirstPaint,
+      onHeadingPresenceKnown,
       onHeadings,
       onProgress,
       beforeProcessAll,
@@ -299,8 +335,12 @@ export function scrollToAnchor(
   if (scrollContainer) {
     const containerRect = scrollContainer.getBoundingClientRect();
     const targetRect = target.getBoundingClientRect();
-    const top = targetRect.top - containerRect.top + scrollContainer.scrollTop;
-    scrollContainer.scrollTo({ top: Math.max(0, top), behavior });
+    const targetTop = targetRect.top - containerRect.top + scrollContainer.scrollTop;
+
+    scrollContainer.scrollTo({
+      top: Math.max(0, targetTop),
+      behavior,
+    });
     return true;
   }
 
@@ -350,13 +390,13 @@ export function createPluginRenderer(platform: PlatformAPI): PluginRenderer {
  * Get the frontmatter display setting.
  * Uses platform.settings service exclusively.
  *
- * @returns 'hide' | 'show' | 'fold'
+ * @returns 'hide' | 'table' | 'raw' (default: 'hide')
  */
 export async function getFrontmatterDisplay(platform: PlatformAPI): Promise<FrontmatterDisplay> {
   try {
     return await platform.settings.get('frontmatterDisplay');
   } catch {
-    return 'hide';
+    return DEFAULT_SETTINGS.frontmatterDisplay;
   }
 }
 
@@ -370,7 +410,7 @@ export async function getTableMergeEmpty(platform: PlatformAPI): Promise<boolean
   try {
     return await platform.settings.get('tableMergeEmpty');
   } catch {
-    return true;
+    return DEFAULT_SETTINGS.tableMergeEmpty;
   }
 }
 
@@ -382,10 +422,37 @@ export async function getTableMergeEmpty(platform: PlatformAPI): Promise<boolean
  */
 export async function getTableLayout(platform: PlatformAPI): Promise<'left' | 'center' | 'center-full-width'> {
   try {
-    const layout = await platform.settings.get('tableLayout');
-    return layout === 'left' || layout === 'center-full-width' ? layout : 'center';
+    return normalizeSetting('tableLayout', await platform.settings.get('tableLayout'));
   } catch {
-    return 'center';
+    return DEFAULT_SETTINGS.tableLayout;
+  }
+}
+
+/**
+ * Get the standalone image layout setting.
+ * Uses platform.settings service exclusively.
+ *
+ * @returns 'left' | 'center' (default: 'center')
+ */
+export async function getImageLayout(platform: PlatformAPI): Promise<'left' | 'center'> {
+  try {
+    return normalizeSetting('imageLayout', await platform.settings.get('imageLayout'));
+  } catch {
+    return DEFAULT_SETTINGS.imageLayout;
+  }
+}
+
+/**
+ * Get the diagram/chart layout setting.
+ * Uses platform.settings service exclusively.
+ *
+ * @returns 'left' | 'center' (default: 'center')
+ */
+export async function getDiagramLayout(platform: PlatformAPI): Promise<'left' | 'center'> {
+  try {
+    return normalizeSetting('diagramLayout', await platform.settings.get('diagramLayout'));
+  } catch {
+    return DEFAULT_SETTINGS.diagramLayout;
   }
 }
 
@@ -538,6 +605,11 @@ export interface RenderMarkdownFlowOptions {
   targetLine?: number;
   
   /**
+    * Callback once before rendering starts, based on block splitting, to predict TOC presence.
+    */
+    onHeadingPresenceKnown?: (hasHeadings: boolean) => void;
+
+    /**
    * Callback when headings are extracted during render.
    * - Chrome: Update TOC progressively
    * - VSCode/Mobile: Send to host
@@ -639,6 +711,7 @@ export async function renderMarkdownFlow(options: RenderMarkdownFlowOptions): Pr
     platform,
     currentTaskManagerRef,
     targetLine,
+    onHeadingPresenceKnown,
     onHeadings,
     onProgress,
     beforeProcessAll,
@@ -705,34 +778,45 @@ export async function renderMarkdownFlow(options: RenderMarkdownFlowOptions): Pr
       applyZoomToElement(container, zoomLevel);
     }
 
-    // Get frontmatter display setting
-    const frontmatterDisplay = await getFrontmatterDisplay(platform);
-
-    // Get table merge empty setting
-    const tableMergeEmpty = await getTableMergeEmpty(platform);
-
-    // Get table layout setting
-    const tableLayout = await getTableLayout(platform);
-
-    // Apply table layout class to both the render container and the outer
-    // #markdown-content wrapper. Some hosts render into a child element inside
-    // #markdown-content, while theme CSS targets the wrapper itself.
-    const outerContent = container.closest('#markdown-content') as HTMLElement | null;
-    container.classList.remove('table-layout-left', 'table-layout-center', 'table-layout-center-full-width');
-    container.classList.add(`table-layout-${tableLayout}`);
-    if (outerContent && outerContent !== container) {
-      outerContent.classList.remove('table-layout-left', 'table-layout-center', 'table-layout-center-full-width');
-      outerContent.classList.add(`table-layout-${tableLayout}`);
+    // Get frontmatter/table/image/diagram settings in ONE read. Each
+    // settings.get() on Chrome is a chrome.runtime.sendMessage round trip to
+    // the background service worker (slow on a cold worker), and the render
+    // hot path previously paid five of them sequentially before the first
+    // block could stream in. getAll() collapses that to a single round trip;
+    // the layout keys are normalized exactly like the individual getters.
+    let settingsSnapshot: Record<string, unknown>;
+    try {
+      settingsSnapshot = await platform.settings.getAll() as unknown as Record<string, unknown>;
+    } catch {
+      settingsSnapshot = {};
     }
+    const frontmatterDisplay = (settingsSnapshot.frontmatterDisplay ?? DEFAULT_SETTINGS.frontmatterDisplay) as FrontmatterDisplay;
+    const tableMergeEmpty = Boolean(settingsSnapshot.tableMergeEmpty ?? DEFAULT_SETTINGS.tableMergeEmpty);
+    const tableLayout = normalizeSetting('tableLayout', settingsSnapshot.tableLayout ?? DEFAULT_SETTINGS.tableLayout);
+    const imageLayout = normalizeSetting('imageLayout', settingsSnapshot.imageLayout ?? DEFAULT_SETTINGS.imageLayout);
+    const diagramLayout = normalizeSetting('diagramLayout', settingsSnapshot.diagramLayout ?? DEFAULT_SETTINGS.diagramLayout);
+
+    // Apply table/image/diagram layout classes to the RENDER TARGET only.
+    // Hosts either render directly into #markdown-content or into a child
+    // .markdown-viewer-content (content-script takeover, embed, custom
+    // elements); the shared layout rules are dual-root, so a single layer of
+    // classes hits every host (see layout-rules-dual-root change card).
+    container.classList.remove(
+      'table-layout-left', 'table-layout-center', 'table-layout-center-full-width',
+      'image-layout-left', 'image-layout-center',
+      'diagram-layout-left', 'diagram-layout-center'
+    );
+    container.classList.add(`table-layout-${tableLayout}`, `image-layout-${imageLayout}`, `diagram-layout-${diagramLayout}`);
 
     // Render markdown
-    const renderResult = await renderMarkdownDocument({
+    const { taskManager: renderedTaskManager } = await renderMarkdownDocument({
       markdown,
       container,
       renderer,
       translate,
       taskManager,
       clearContainer: false, // Already cleared above if needed
+      onHeadingPresenceKnown,
       frontmatterDisplay,
       tableMergeEmpty,
       tableLayout,
@@ -753,10 +837,6 @@ export async function renderMarkdownFlow(options: RenderMarkdownFlowOptions): Pr
         scrollController?.onStreamingComplete();
       },
     });
-
-    if (taskManager.isAborted()) {
-      return;
-    }
 
     // Platform-specific: called after streaming, before async tasks
     // Chrome uses this to update TOC active state
@@ -796,7 +876,7 @@ export async function renderMarkdownFlow(options: RenderMarkdownFlowOptions): Pr
 
     beforeProcessAll?.();
     try {
-      await renderResult.taskManager.processAll((completed, total) => {
+      await renderedTaskManager.processAll((completed, total) => {
         if (!taskManager.isAborted()) {
           onProgress?.(completed, total);
           tryScrollToTarget();
@@ -1065,6 +1145,81 @@ export interface HtmlExportFlowOptions {
   onError?: (error: string) => void;
 }
 
+// ============================================================================
+// EPUB Export Flow
+// ============================================================================
+
+export interface EpubExportFlowOptions {
+  /** Rendered container to serialize (typically #markdown-page). */
+  container: HTMLElement;
+  /** Original filename (will be converted to .epub). */
+  filename: string;
+  /** Optional EPUB title/chapter title. */
+  title?: string;
+  /** Optional platform override (defaults to global platform). */
+  platform?: PlatformAPI;
+  /** Progress callback during export. */
+  onProgress?: (completed: number, total: number, phase?: 'processing' | 'saving') => void;
+  /** Success callback with generated filename. */
+  onSuccess?: (filename: string) => void;
+  /** Error callback with error message. */
+  onError?: (error: string) => void;
+}
+
+export async function exportEpubFlow(options: EpubExportFlowOptions): Promise<void> {
+  const {
+    container,
+    filename,
+    title,
+    platform,
+    onProgress,
+    onSuccess,
+    onError,
+  } = options;
+
+  try {
+    onProgress?.(0, 100, 'processing');
+
+    const effectivePlatform = platform || (globalThis.platform as PlatformAPI | undefined);
+    if (!effectivePlatform?.file) {
+      throw new Error('File service is not available');
+    }
+
+    const EpubExporterModule = await import('../../exporters/epub-exporter');
+    const epubTitle = title || filename || document.title || 'Markdown Viewer';
+    const result = await EpubExporterModule.exportToEpub({
+      container,
+      title: epubTitle,
+      filename,
+      documentService: effectivePlatform.document,
+      onProgress: (phase, done, total) => {
+        let percent = 0;
+        if (phase === 'render') {
+          percent = total > 0 ? Math.round((done / total) * 50) : 0;
+        } else if (phase === 'convert') {
+          percent = total > 0 ? 50 + Math.round((done / total) * 35) : 50;
+        } else if (phase === 'pack') {
+          percent = total > 0 ? 85 + Math.round((done / total) * 15) : 85;
+        }
+        onProgress?.(Math.max(0, Math.min(100, percent)), 100, phase === 'pack' ? 'saving' : 'processing');
+      },
+    });
+
+    if (!result.success || !result.filename) {
+      throw new Error(result.error || 'Export failed');
+    }
+
+    onProgress?.(100, 100, 'saving');
+    onSuccess?.(result.filename);
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg === 'Download cancelled by user') return;
+    // eslint-disable-next-line no-console
+    console.error('[ViewerHost] EPUB export failed:', errMsg);
+    onError?.(errMsg);
+  }
+}
+
 /**
  * Unified HTML single-file export flow.
  */
@@ -1140,4 +1295,156 @@ export async function exportHtmlFlow(options: HtmlExportFlowOptions): Promise<vo
     console.error('[ViewerHost] HTML export failed:', errMsg);
     onError?.(errMsg);
   }
+}
+
+// ============================================================================
+// Unified programmatic export command (docx | epub | html | pdf | save)
+// ============================================================================
+
+/**
+ * Export format for the unified programmatic export command. Mirrors the
+ * standalone preview toolbar's export menu:
+ * - 'docx' — Export to DOCX
+ * - 'epub' — Export to EPUB
+ * - 'html' — Export to HTML (single self-contained file)
+ * - 'pdf'  — Print to PDF (browser print dialog → Save as PDF)
+ * - 'save' — Save the raw markdown file
+ */
+export type ViewerExportFormat = 'docx' | 'epub' | 'html' | 'pdf' | 'save';
+
+export interface ViewerExportOptions {
+  /** Target export format (see ViewerExportFormat). */
+  format: ViewerExportFormat;
+  /** Raw markdown content (used by 'docx' and 'save'). */
+  markdown: string;
+  /** Base filename; the extension is normalized per format. */
+  filename: string;
+  /** Optional document title (used by 'html', 'epub' and 'pdf'). */
+  title?: string;
+  /** Rendered content root to serialize (required by 'epub', 'html' and 'pdf'). */
+  container?: HTMLElement | null;
+  /** Plugin renderer for diagram rendering ('docx'). */
+  renderer: PluginRenderer;
+  /** Platform override (defaults to globalThis.platform). */
+  platform?: PlatformAPI;
+}
+
+function stripDocumentExtension(filename: string): string {
+  const base = (filename || 'document').replace(/\.(md|markdown|docx|epub|html?)$/i, '');
+  return base || 'document';
+}
+
+function anchorDownload(blob: Blob, filename: string): void {
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(objectUrl);
+  }, 100);
+}
+
+/**
+ * Unified programmatic export command shared by the <markdown-viewer> element
+ * (inline mode) and the embedded viewer iframe (iframe mode). Behaves exactly
+ * like the standalone preview toolbar's export menu: DOCX / EPUB / HTML / PDF
+ * (print) / save raw file.
+ *
+ * @returns The final exported filename.
+ * @throws If the export fails, the rendered container is missing, or the
+ *         format is unsupported.
+ */
+export async function exportViewerDocument(options: ViewerExportOptions): Promise<string> {
+  const {
+    format,
+    markdown,
+    filename,
+    title,
+    container,
+    renderer,
+    platform,
+  } = options;
+  const effectivePlatform = platform || (globalThis.platform as PlatformAPI | undefined);
+  const baseName = stripDocumentExtension(filename);
+  let exportedFilename = '';
+  let exportError: string | null = null;
+
+  const onSuccess = (name: string): void => {
+    exportedFilename = name;
+  };
+  const onError = (error: string): void => {
+    exportError = error;
+  };
+
+  if (format === 'docx') {
+    await exportDocxFlow({
+      markdown,
+      filename,
+      renderer,
+      onSuccess,
+      onError,
+    });
+    exportedFilename = exportedFilename || toDocxFilename(filename);
+  } else if (format === 'epub') {
+    if (!container) {
+      throw new Error('Rendered content is not available');
+    }
+    await exportEpubFlow({
+      container,
+      filename: baseName,
+      title: title || filename,
+      platform: effectivePlatform,
+      onSuccess,
+      onError,
+    });
+  } else if (format === 'html') {
+    if (!container) {
+      throw new Error('Rendered content is not available');
+    }
+    await exportHtmlFlow({
+      container,
+      filename: baseName,
+      title: title || filename,
+      platform: effectivePlatform,
+      onSuccess,
+      onError,
+    });
+  } else if (format === 'pdf') {
+    if (!container) {
+      throw new Error('Rendered content is not available');
+    }
+    const { printElement } = await import('../../ui/print-utils');
+    await printElement(container, title || filename || document.title);
+    exportedFilename = title || filename;
+  } else if (format === 'save') {
+    exportedFilename = toMarkdownFilename(filename);
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    // Local-file pages lose ephemeral upload sessions in the extension
+    // background, so prefer a direct anchor download (same strategy as the
+    // DOCX/HTML fallback paths). Everywhere else use the platform file
+    // service (chrome.downloads etc.), falling back to the anchor download.
+    if (
+      typeof window !== 'undefined'
+      && window.location?.protocol === 'file:'
+      && effectivePlatform?.platform !== 'mobile'
+    ) {
+      anchorDownload(blob, exportedFilename);
+    } else if (effectivePlatform?.file?.download) {
+      await effectivePlatform.file.download(blob, exportedFilename, { mimeType: 'text/markdown' });
+    } else {
+      anchorDownload(blob, exportedFilename);
+    }
+  } else {
+    throw new Error(`Unsupported export format: ${String(format)}`);
+  }
+
+  if (exportError) {
+    throw new Error(exportError);
+  }
+
+  return exportedFilename;
 }

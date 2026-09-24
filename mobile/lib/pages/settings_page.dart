@@ -1,12 +1,13 @@
 import 'dart:io' show Platform;
+import '../ant_icons.dart';
 import 'package:flutter/material.dart';
-import 'package:getwidget/getwidget.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../services/cache_storage.dart';
 import '../services/localization_service.dart';
 import '../services/settings_service.dart';
 import '../services/theme_registry_service.dart';
 import '../widgets/theme_picker.dart';
+import '../widgets/ui_kit.dart';
 
 /// Settings page for the app
 class SettingsPage extends StatefulWidget {
@@ -74,98 +75,30 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           // Interface section
           _SectionHeader(title: localization.t('settings_interface_title')),
-          GFListTile(
-            avatar: GFAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Icon(
-                Icons.palette_outlined,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
-            titleText: localization.t('theme'),
-            subTitleText: _getCurrentThemeDisplayName(),
-            icon: const Icon(Icons.chevron_right),
+          ListTile(
+            leading: const LeadingIcon(AntIcons.bg_colors),
+            title: Text(localization.t('theme')),
+            subtitle: Text(_getCurrentThemeDisplayName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
             onTap: _pickTheme,
           ),
-          GFListTile(
-            avatar: GFAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Icon(
-                Icons.language_outlined,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
-            titleText: localization.t('language'),
-            subTitleText: _getCurrentLanguageDisplayName(),
-            icon: const Icon(Icons.chevron_right),
+          ListTile(
+            leading: const LeadingIcon(AntIcons.global),
+            title: Text(localization.t('language')),
+            subtitle: Text(_getCurrentLanguageDisplayName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
             onTap: _pickLanguage,
           ),
           const Divider(),
 
           // Display section
           _SectionHeader(title: localization.t('settings_general_title')),
-          GFListTile(
-            avatar: GFAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Icon(
-                Icons.article_outlined,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
-            titleText: localization.t('settings_frontmatter_display'),
-            subTitleText: _getFrontmatterDisplayName(),
-            icon: const Icon(Icons.chevron_right),
-            onTap: _pickFrontmatterDisplay,
-          ),
-          GFListTile(
-            avatar: GFAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Icon(
-                Icons.emoji_emotions_outlined,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
-            titleText: localization.t('settings_docx_emoji_style'),
-            subTitleText: _getEmojiStyleDisplayName(),
-            icon: const Icon(Icons.chevron_right),
-            onTap: _pickEmojiStyle,
-          ),
-          _SwitchTile(
-            title: localization.t('settings_table_merge_empty'),
-            subtitle: localization.t('settings_table_merge_empty_note'),
-            value: settingsService.tableMergeEmpty,
-            onChanged: (value) {
-              setState(() {
-                settingsService.tableMergeEmpty = value;
-              });
-              _notifySettingChanged();
-            },
-          ),
-          GFListTile(
-            avatar: GFAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Icon(
-                Icons.table_chart_outlined,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
-            titleText: localization.t('settings_table_layout'),
-            subTitleText: _getTableLayoutName(),
-            icon: const Icon(Icons.chevron_right),
-            onTap: _pickTableLayout,
-          ),
-          GFListTile(
-            avatar: GFAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Icon(
-                Icons.horizontal_rule_outlined,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
-            titleText: localization.t('settings_docx_hr_display'),
-            subTitleText: _getHrDisplayName(),
-            icon: const Icon(Icons.chevron_right),
-            onTap: _pickHrDisplay,
+          ListTile(
+            leading: const LeadingIcon(AntIcons.align_left),
+            title: Text(localization.t('settings_first_line_indent')),
+            subtitle: Text(_getFirstLineIndentName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
+            onTap: _pickFirstLineIndent,
           ),
           _FontSizeTile(
             fontSize: settingsService.fontSize,
@@ -176,21 +109,75 @@ class _SettingsPageState extends State<SettingsPage> {
               _applyFontSize(size);
             },
           ),
+          ListTile(
+            leading: const LeadingIcon(AntIcons.table),
+            title: Text(localization.t('settings_table_layout')),
+            subtitle: Text(_getTableLayoutName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
+            onTap: _pickTableLayout,
+          ),
+          ListTile(
+            leading: const LeadingIcon(AntIcons.picture),
+            title: Text(localization.t('settings_image_layout')),
+            subtitle: Text(_getImageLayoutName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
+            onTap: _pickImageLayout,
+          ),
+          ListTile(
+            leading: const LeadingIcon(AntIcons.bar_chart),
+            title: Text(localization.t('settings_diagram_layout')),
+            subtitle: Text(_getDiagramLayoutName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
+            onTap: _pickDiagramLayout,
+          ),
+          _SwitchTile(
+            iconData: AntIcons.border_horizontal,
+            title: localization.t('settings_table_merge_empty'),
+            subtitle: localization.t('settings_table_merge_empty_note'),
+            value: settingsService.tableMergeEmpty,
+            onChanged: (value) {
+              setState(() {
+                settingsService.tableMergeEmpty = value;
+              });
+              _notifySettingChanged();
+            },
+          ),
+          ListTile(
+            leading: const LeadingIcon(AntIcons.file_text_outline),
+            title: Text(localization.t('settings_frontmatter_display')),
+            subtitle: Text(_getFrontmatterDisplayName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
+            onTap: _pickFrontmatterDisplay,
+          ),
+          ListTile(
+            leading: const LeadingIcon(AntIcons.smile_outline),
+            title: Text(localization.t('settings_docx_emoji_style')),
+            subtitle: Text(_getEmojiStyleDisplayName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
+            onTap: _pickEmojiStyle,
+          ),
+          ListTile(
+            leading: const LeadingIcon(AntIcons.minus_outline),
+            title: Text(localization.t('settings_docx_hr_display')),
+            subtitle: Text(_getHrDisplayName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
+            onTap: _pickHrDisplay,
+          ),
           const Divider(),
-          GFListTile(
-            avatar: GFAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Icon(
-                Icons.cleaning_services_outlined,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
-            titleText: localization.t('cache_clear'),
-            subTitleText: '${localization.t('cache_stat_size_label')}: ${_loadingStats ? '…' : (_cacheSize.isEmpty ? '…' : _cacheSize)}\n'
+          ListTile(
+            leading: const LeadingIcon(AntIcons.delete_outline),
+            title: Text(localization.t('cache_clear')),
+            subtitle: Text(
+              '${localization.t('cache_stat_size_label')}: ${_loadingStats ? '…' : (_cacheSize.isEmpty ? '…' : _cacheSize)}\n'
               '${localization.t('cache_stat_item_label')}: $_cacheCount',
-            icon: _clearingCache
-                ? const GFLoader(type: GFLoaderType.circle, size: GFSize.SMALL)
-                : const Icon(Icons.chevron_right),
+            ),
+            trailing: _clearingCache
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(AntIcons.right_outline, size: 16),
             onTap: _clearingCache ? null : _clearCache,
           ),
         ],
@@ -287,7 +274,7 @@ class _SettingsPageState extends State<SettingsPage> {
         // Send themeId only - WebView loads theme data itself
         final escapedTheme = selectedTheme.replaceAll('\\', '\\\\').replaceAll("'", "\\'");
         await controller.runJavaScript(
-          "if(window.setTheme){window.setTheme('$escapedTheme');}",
+          "if(window.syncHostUi){window.syncHostUi({themeId:'$escapedTheme'});}else{console.error('syncHostUi not defined');}",
         );
       } catch (e) {
         debugPrint('[Settings] Failed to apply theme: $e');
@@ -313,9 +300,6 @@ class _SettingsPageState extends State<SettingsPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.6,
         minChildSize: 0.4,
@@ -333,7 +317,7 @@ class _SettingsPageState extends State<SettingsPage> {
               if (controller != null) {
                 final localeToSend = locale ?? localization.currentLocale;
                 controller.runJavaScript(
-                  "if(window.setLocale){window.setLocale('$localeToSend');}",
+                  "if(window.syncHostUi){window.syncHostUi({locale:'$localeToSend'});}else{console.error('syncHostUi not defined');}",
                 );
               }
               // Close settings page
@@ -366,11 +350,25 @@ class _SettingsPageState extends State<SettingsPage> {
     switch (layout) {
       case 'center':
         return localization.t('settings_table_layout_center');
+      case 'center-full-width':
+        return localization.t('settings_table_layout_full_width');
       case 'left':
         return localization.t('settings_table_layout_left');
       default:
         return localization.t('settings_table_layout_left');
     }
+  }
+
+  String _getImageLayoutName() {
+    return settingsService.imageLayout == 'center'
+        ? localization.t('settings_image_layout_center')
+        : localization.t('settings_image_layout_left');
+  }
+
+  String _getDiagramLayoutName() {
+    return settingsService.diagramLayout == 'left'
+        ? localization.t('settings_diagram_layout_left')
+        : localization.t('settings_diagram_layout_center');
   }
 
   String _getHrDisplayName() {
@@ -387,154 +385,182 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  void _pickHrDisplay() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildHrDisplayOption('hide'),
-              _buildHrDisplayOption('line'),
-              _buildHrDisplayOption('pageBreak'),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildHrDisplayOption(String display) {
-    final isSelected = settingsService.hrDisplay == display;
-    String displayName;
-    switch (display) {
-      case 'pageBreak':
-        displayName = localization.t('settings_docx_hr_display_page_break');
-        break;
-      case 'line':
-        displayName = localization.t('settings_docx_hr_display_line');
-        break;
-      case 'hide':
-        displayName = localization.t('settings_docx_hr_display_hide');
-        break;
+  String _getFirstLineIndentName() {
+    final indent = settingsService.firstLineIndent;
+    switch (indent) {
+      case 0:
+        return localization.t('settings_first_line_indent_off');
+      case 1:
+        return localization.t('settings_first_line_indent_1');
+      case 2:
+        return localization.t('settings_first_line_indent_2');
+      case 3:
+        return localization.t('settings_first_line_indent_3');
+      case 4:
+        return localization.t('settings_first_line_indent_4');
       default:
-        displayName = display;
+        return localization.t('settings_first_line_indent_2');
     }
-
-    return ListTile(
-      title: Text(displayName),
-      trailing: isSelected ? const Icon(Icons.check, color: Colors.blue) : null,
-      onTap: () {
-        setState(() {
-          settingsService.hrDisplay = display;
-        });
-        Navigator.pop(context);
-      },
-    );
   }
 
-  void _pickTableLayout() {
-    showModalBottomSheet(
+  Future<void> _pickFirstLineIndent() async {
+    final selected = await showSingleChoiceSheet<int>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildTableLayoutOption('left'),
-              _buildTableLayoutOption('center'),
-            ],
-          ),
-        );
-      },
+      title: localization.t('settings_first_line_indent'),
+      icon: AntIcons.align_left,
+      selected: settingsService.firstLineIndent,
+      options: [
+        ChoiceOption(
+            value: 0,
+            label: localization.t('settings_first_line_indent_off')),
+        ChoiceOption(
+            value: 1,
+            label: localization.t('settings_first_line_indent_1')),
+        ChoiceOption(
+            value: 2,
+            label: localization.t('settings_first_line_indent_2')),
+        ChoiceOption(
+            value: 3,
+            label: localization.t('settings_first_line_indent_3')),
+        ChoiceOption(
+            value: 4,
+            label: localization.t('settings_first_line_indent_4')),
+      ],
     );
-  }
-
-  Widget _buildTableLayoutOption(String layout) {
-    final isSelected = settingsService.tableLayout == layout;
-    String displayName;
-    switch (layout) {
-      case 'center':
-        displayName = localization.t('settings_table_layout_center');
-        break;
-      case 'left':
-        displayName = localization.t('settings_table_layout_left');
-        break;
-      default:
-        displayName = layout;
+    if (selected == null || !mounted) return;
+    setState(() {
+      settingsService.firstLineIndent = selected;
+    });
+    // firstLineIndent is baked into theme CSS, so reload theme + re-render
+    final controller = widget.webViewController;
+    if (controller != null) {
+      controller.runJavaScript(
+        "if(window.reloadThemeAndRerender){window.reloadThemeAndRerender();}",
+      );
     }
-
-    return ListTile(
-      title: Text(displayName),
-      trailing: isSelected ? const Icon(Icons.check, color: Colors.blue) : null,
-      onTap: () {
-        setState(() {
-          settingsService.tableLayout = layout;
-        });
-        Navigator.pop(context);
-        _notifySettingChanged();
-      },
-    );
+    if (mounted) Navigator.pop(context);
   }
 
-  void _pickEmojiStyle() {
-    showModalBottomSheet(
+  Future<void> _pickHrDisplay() async {
+    final selected = await showSingleChoiceSheet<String>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildEmojiStyleOption('system'),
-              _buildEmojiStyleOption('windows'),
-              _buildEmojiStyleOption('apple'),
-            ],
-          ),
-        );
-      },
+      title: localization.t('settings_docx_hr_display'),
+      icon: AntIcons.minus_outline,
+      selected: settingsService.hrDisplay,
+      options: [
+        ChoiceOption(
+            value: 'hide',
+            label: localization.t('settings_docx_hr_display_hide')),
+        ChoiceOption(
+            value: 'line',
+            label: localization.t('settings_docx_hr_display_line')),
+        ChoiceOption(
+            value: 'pageBreak',
+            label: localization.t('settings_docx_hr_display_page_break')),
+      ],
     );
+    if (selected == null || !mounted) return;
+    setState(() {
+      settingsService.hrDisplay = selected;
+    });
+    if (mounted) Navigator.pop(context);
   }
 
-  Widget _buildEmojiStyleOption(String style) {
-    final isSelected = settingsService.emojiStyle == style;
-    String displayName;
-    switch (style) {
-      case 'apple':
-        displayName = localization.t('settings_docx_emoji_style_apple');
-        break;
-      case 'windows':
-        displayName = localization.t('settings_docx_emoji_style_windows');
-        break;
-      case 'system':
-        displayName = localization.t('settings_docx_emoji_style_system');
-        break;
-      default:
-        displayName = style;
-    }
-
-    return ListTile(
-      title: Text(displayName),
-      trailing: isSelected ? const Icon(Icons.check, color: Colors.blue) : null,
-      onTap: () {
-        setState(() {
-          settingsService.emojiStyle = style;
-        });
-        Navigator.pop(context);
-      },
+  Future<void> _pickTableLayout() async {
+    final selected = await showSingleChoiceSheet<String>(
+      context: context,
+      title: localization.t('settings_table_layout'),
+      icon: AntIcons.table,
+      selected: settingsService.tableLayout,
+      options: [
+        ChoiceOption(
+            value: 'left',
+            label: localization.t('settings_table_layout_left')),
+        ChoiceOption(
+            value: 'center',
+            label: localization.t('settings_table_layout_center')),
+        ChoiceOption(
+            value: 'center-full-width',
+            label: localization.t('settings_table_layout_full_width')),
+      ],
     );
+    if (selected == null || !mounted) return;
+    setState(() {
+      settingsService.tableLayout = selected;
+    });
+    _notifySettingChanged();
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _pickImageLayout() async {
+    final selected = await showSingleChoiceSheet<String>(
+      context: context,
+      title: localization.t('settings_image_layout'),
+      icon: AntIcons.picture,
+      selected: settingsService.imageLayout,
+      options: [
+        ChoiceOption(
+            value: 'left',
+            label: localization.t('settings_image_layout_left')),
+        ChoiceOption(
+            value: 'center',
+            label: localization.t('settings_image_layout_center')),
+      ],
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      settingsService.imageLayout = selected;
+    });
+    _notifySettingChanged();
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _pickDiagramLayout() async {
+    final selected = await showSingleChoiceSheet<String>(
+      context: context,
+      title: localization.t('settings_diagram_layout'),
+      icon: AntIcons.bar_chart,
+      selected: settingsService.diagramLayout,
+      options: [
+        ChoiceOption(
+            value: 'left',
+            label: localization.t('settings_diagram_layout_left')),
+        ChoiceOption(
+            value: 'center',
+            label: localization.t('settings_diagram_layout_center')),
+      ],
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      settingsService.diagramLayout = selected;
+    });
+    _notifySettingChanged();
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _pickEmojiStyle() async {
+    final selected = await showSingleChoiceSheet<String>(
+      context: context,
+      title: localization.t('settings_docx_emoji_style'),
+      icon: AntIcons.smile_outline,
+      selected: settingsService.emojiStyle,
+      options: [
+        ChoiceOption(
+            value: 'system',
+            label: localization.t('settings_docx_emoji_style_system')),
+        ChoiceOption(
+            value: 'windows',
+            label: localization.t('settings_docx_emoji_style_windows')),
+        ChoiceOption(
+            value: 'apple',
+            label: localization.t('settings_docx_emoji_style_apple')),
+      ],
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      settingsService.emojiStyle = selected;
+    });
+    if (mounted) Navigator.pop(context);
   }
 
   String _getFrontmatterDisplayName() {
@@ -551,66 +577,38 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  void _pickFrontmatterDisplay() {
-    showModalBottomSheet(
+  Future<void> _pickFrontmatterDisplay() async {
+    final selected = await showSingleChoiceSheet<String>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildFrontmatterDisplayOption('hide'),
-              _buildFrontmatterDisplayOption('table'),
-              _buildFrontmatterDisplayOption('raw'),
-            ],
-          ),
-        );
-      },
+      title: localization.t('settings_frontmatter_display'),
+      icon: AntIcons.file_text_outline,
+      selected: settingsService.frontmatterDisplay,
+      options: [
+        ChoiceOption(
+            value: 'hide', label: localization.t('settings_frontmatter_hide')),
+        ChoiceOption(
+            value: 'table',
+            label: localization.t('settings_frontmatter_table')),
+        ChoiceOption(
+            value: 'raw', label: localization.t('settings_frontmatter_raw')),
+      ],
     );
-  }
-
-  Widget _buildFrontmatterDisplayOption(String display) {
-    final isSelected = settingsService.frontmatterDisplay == display;
-    String displayName;
-    switch (display) {
-      case 'hide':
-        displayName = localization.t('settings_frontmatter_hide');
-        break;
-      case 'table':
-        displayName = localization.t('settings_frontmatter_table');
-        break;
-      case 'raw':
-        displayName = localization.t('settings_frontmatter_raw');
-        break;
-      default:
-        displayName = display;
+    if (selected == null || !mounted) return;
+    setState(() {
+      settingsService.frontmatterDisplay = selected;
+    });
+    // Re-render to apply new frontmatter display setting
+    final controller = widget.webViewController;
+    if (controller != null) {
+      controller.runJavaScript(
+        "if(window.rerender){window.rerender();}",
+      );
     }
-
-    return ListTile(
-      title: Text(displayName),
-      trailing: isSelected ? const Icon(Icons.check, color: Colors.blue) : null,
-      onTap: () {
-        setState(() {
-          settingsService.frontmatterDisplay = display;
-        });
-        Navigator.pop(context);
-        // Re-render to apply new frontmatter display setting
-        final controller = widget.webViewController;
-        if (controller != null) {
-          controller.runJavaScript(
-            "if(window.rerender){window.rerender();}",
-          );
-        }
-      },
-    );
+    if (mounted) Navigator.pop(context);
   }
 }
 
-/// Language picker bottom sheet with GetWidget style
+/// Language picker bottom sheet.
 class _LanguagePickerSheet extends StatelessWidget {
   final ScrollController scrollController;
   final void Function(String?) onLocaleSelected;
@@ -623,34 +621,15 @@ class _LanguagePickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentLocale = localization.userSelectedLocale;
-    
+
     return Column(
       children: [
-        // Header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: Theme.of(context).dividerColor),
-            ),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.language_outlined),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  localization.t('language'),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
+        const SheetGrabber(),
+        SheetHeader(
+          title: localization.t('language'),
+          icon: AntIcons.global,
         ),
+        const Divider(height: 1),
         // Language list
         Expanded(
           child: ListView(
@@ -679,7 +658,7 @@ class _LanguagePickerSheet extends StatelessWidget {
   }
 }
 
-/// Single language item with GetWidget style
+/// Single language row.
 class _LanguageItem extends StatelessWidget {
   final String title;
   final bool isSelected;
@@ -693,13 +672,20 @@ class _LanguageItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GFListTile(
-      avatar: isSelected
-          ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary, size: 20)
+    return ListTile(
+      leading: isSelected
+          ? Icon(AntIcons.check_outline,
+              color: Theme.of(context).colorScheme.primary, size: 20)
           : const SizedBox(width: 20),
-      titleText: title,
-      onTap: onTap,
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          color: isSelected ? Theme.of(context).colorScheme.primary : null,
+        ),
+      ),
       selected: isSelected,
+      onTap: onTap,
     );
   }
 }
@@ -736,24 +722,18 @@ class _FontSizeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GFListTile(
-      avatar: GFAvatar(
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        child: Icon(
-          Icons.format_size,
-          color: Theme.of(context).colorScheme.onPrimaryContainer,
-        ),
-      ),
-      titleText: localization.t('zoom'),
-      subTitleText: '$fontSize pt',
-      icon: Row(
+    return ListTile(
+      leading: const LeadingIcon(AntIcons.font_size),
+      title: Text(localization.t('zoom')),
+      subtitle: Text('$fontSize pt'),
+      trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            icon: Icon(Icons.remove_circle_outline, 
+            icon: Icon(AntIcons.minus_circle,
               color: fontSize > 12 ? Theme.of(context).colorScheme.primary : Theme.of(context).disabledColor,
             ),
-            iconSize: 28,
+            iconSize: 26,
             onPressed: fontSize > 12 ? () => onChanged(fontSize - 1) : null,
           ),
           SizedBox(
@@ -769,10 +749,10 @@ class _FontSizeTile extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.add_circle_outline,
+            icon: Icon(AntIcons.plus_circle,
               color: fontSize < 24 ? Theme.of(context).colorScheme.primary : Theme.of(context).disabledColor,
             ),
-            iconSize: 28,
+            iconSize: 26,
             onPressed: fontSize < 24 ? () => onChanged(fontSize + 1) : null,
           ),
         ],
@@ -793,28 +773,20 @@ class _SwitchTile extends StatelessWidget {
     this.subtitle,
     required this.value,
     required this.onChanged,
-    this.iconData = Icons.insert_page_break_outlined,
+    this.iconData = AntIcons.border_horizontal,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GFListTile(
-      avatar: GFAvatar(
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        child: Icon(
-          iconData,
-          color: Theme.of(context).colorScheme.onPrimaryContainer,
-        ),
-      ),
-      titleText: title,
-      subTitleText: subtitle,
-      icon: GFToggle(
-        onChanged: (val) => onChanged(val ?? false),
+    return ListTile(
+      leading: LeadingIcon(iconData),
+      title: Text(title),
+      subtitle: subtitle != null ? Text(subtitle!) : null,
+      trailing: Switch(
         value: value,
-        type: GFToggleType.ios,
-        enabledThumbColor: Theme.of(context).colorScheme.primary,
-        enabledTrackColor: Theme.of(context).colorScheme.primaryContainer,
+        onChanged: onChanged,
       ),
+      onTap: () => onChanged(!value),
     );
   }
 }

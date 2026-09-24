@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/settings_defaults.g.dart';
 
 /// Service for persisting user settings
 class SettingsService {
@@ -16,6 +17,9 @@ class SettingsService {
   static const String _keySupportInfographic = 'supportInfographic';
   static const String _keyTableMergeEmpty = 'tableMergeEmpty';
   static const String _keyTableLayout = 'tableLayout';
+  static const String _keyImageLayout = 'imageLayout';
+  static const String _keyDiagramLayout = 'diagramLayout';
+  static const String _keyFirstLineIndent = 'firstLineIndent';
   static const String _keyScrollPositions = 'scrollPositions';
   static const int _maxScrollPositions = 100; // Limit stored positions
 
@@ -27,7 +31,7 @@ class SettingsService {
   }
 
   // Theme
-  String get theme => _prefs?.getString(_keyTheme) ?? 'default';
+  String get theme => _prefs?.getString(_keyTheme) ?? kThemeDefault;
   set theme(String value) => _prefs?.setString(_keyTheme, value);
 
   // Font size
@@ -35,19 +39,19 @@ class SettingsService {
   set fontSize(int value) => _prefs?.setInt(_keyFontSize, value);
 
   // HR display mode in DOCX export: 'pageBreak', 'line', or 'hide'
-  String get hrDisplay => _prefs?.getString(_keyHrDisplay) ?? 'hide';
+  String get hrDisplay => _prefs?.getString(_keyHrDisplay) ?? kHrDisplayDefault;
   set hrDisplay(String value) => _prefs?.setString(_keyHrDisplay, value);
 
   // Emoji style in DOCX export: 'apple', 'windows', or 'system'
-  String get emojiStyle => _prefs?.getString(_keyEmojiStyle) ?? 'system';
+  String get emojiStyle => _prefs?.getString(_keyEmojiStyle) ?? kEmojiStyleDefault;
   set emojiStyle(String value) => _prefs?.setString(_keyEmojiStyle, value);
 
   // Frontmatter display mode: 'hide', 'table', or 'raw'
-  String get frontmatterDisplay => _prefs?.getString(_keyFrontmatterDisplay) ?? 'hide';
+  String get frontmatterDisplay => _prefs?.getString(_keyFrontmatterDisplay) ?? kFrontmatterDisplayDefault;
   set frontmatterDisplay(String value) => _prefs?.setString(_keyFrontmatterDisplay, value);
 
   // Locale
-  String get locale => _prefs?.getString(_keyLocale) ?? 'system';
+  String get locale => _prefs?.getString(_keyLocale) ?? kLocaleDefault;
   set locale(String value) => _prefs?.setString(_keyLocale, value);
 
   // Supported file extensions
@@ -67,12 +71,24 @@ class SettingsService {
   set supportInfographic(bool value) => _prefs?.setBool(_keySupportInfographic, value);
 
   // Table merge empty cells
-  bool get tableMergeEmpty => _prefs?.getBool(_keyTableMergeEmpty) ?? true;
+  bool get tableMergeEmpty => _prefs?.getBool(_keyTableMergeEmpty) ?? kTableMergeEmptyDefault;
   set tableMergeEmpty(bool value) => _prefs?.setBool(_keyTableMergeEmpty, value);
 
-  // Table layout: 'left' or 'center'
-  String get tableLayout => _prefs?.getString(_keyTableLayout) ?? 'center';
+  // Table layout: 'left', 'center', or 'center-full-width'
+  String get tableLayout => _prefs?.getString(_keyTableLayout) ?? kTableLayoutDefault;
   set tableLayout(String value) => _prefs?.setString(_keyTableLayout, value);
+
+  // Image layout: 'left' or 'center'
+  String get imageLayout => _prefs?.getString(_keyImageLayout) ?? kImageLayoutDefault;
+  set imageLayout(String value) => _prefs?.setString(_keyImageLayout, value);
+
+  // Diagram layout: 'left' or 'center'
+  String get diagramLayout => _prefs?.getString(_keyDiagramLayout) ?? kDiagramLayoutDefault;
+  set diagramLayout(String value) => _prefs?.setString(_keyDiagramLayout, value);
+
+  // First-line indent: 0 = off, 1-4 = characters
+  int get firstLineIndent => _prefs?.getInt(_keyFirstLineIndent) ?? kFirstLineIndentDefault;
+  set firstLineIndent(int value) => _prefs?.setInt(_keyFirstLineIndent, value);
 
   /// Get list of allowed file extensions based on settings
   List<String> get allowedExtensions {
@@ -104,6 +120,9 @@ class SettingsService {
       'supportInfographic': supportInfographic,
       'tableMergeEmpty': tableMergeEmpty,
       'tableLayout': tableLayout,
+      'imageLayout': imageLayout,
+      'diagramLayout': diagramLayout,
+      'firstLineIndent': firstLineIndent,
     };
   }
 

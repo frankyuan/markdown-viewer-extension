@@ -36,6 +36,56 @@ const BLOCKQUOTE_STYLES = {
   leftBorderSize: 18,
 };
 
+// Alert type colors — matches GitHub's canonical palette in theme-to-css.ts
+const ALERT_COLORS: Record<string, string> = {
+  note: '0969da',
+  tip: '1a7f37',
+  important: '8250df',
+  warning: '9a6700',
+  caution: 'cf222e',
+};
+
+/** Extract alert type (e.g. "note", "warning") from blockquote node's hProperties, or null */
+function getAlertType(node: DOCXBlockquoteNode): string | null {
+  const data = (node as unknown as Record<string, unknown>).data as Record<string, unknown> | undefined;
+  const hProperties = data?.hProperties as Record<string, unknown> | undefined;
+  const className = hProperties?.className;
+  if (!className) return null;
+  const classes: string[] = Array.isArray(className) ? className : [String(className)];
+  for (const cls of classes) {
+    const match = /^markdown-alert-(\w+)$/.exec(cls);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+/** Check whether a child paragraph carries the markdown-alert-title class */
+function isAlertTitle(child: DOCXASTNode): boolean {
+  const data = (child as unknown as Record<string, unknown>).data as Record<string, unknown> | undefined;
+  const hProperties = data?.hProperties as Record<string, unknown> | undefined;
+  const className = hProperties?.className;
+  if (!className) return false;
+  const classes: string[] = Array.isArray(className) ? className : [String(className)];
+  return classes.includes('markdown-alert-title');
+}
+
+/**
+ * Blend alert color with page background (10 % alert + 90 % page).
+ * Replicates the CSS color-mix(in srgb, COLOR 10%, PAGE_BG) in theme-to-css.ts.
+ */
+function blendAlertBackground(alertColor: string, pageBg: string): string {
+  const r1 = parseInt(alertColor.slice(0, 2), 16);
+  const g1 = parseInt(alertColor.slice(2, 4), 16);
+  const b1 = parseInt(alertColor.slice(4, 6), 16);
+  const r2 = parseInt(pageBg.slice(0, 2), 16);
+  const g2 = parseInt(pageBg.slice(2, 4), 16);
+  const b2 = parseInt(pageBg.slice(4, 6), 16);
+  const r = Math.round(r1 * 0.1 + r2 * 0.9);
+  const g = Math.round(g1 * 0.1 + g2 * 0.9);
+  const b = Math.round(b1 * 0.1 + b2 * 0.9);
+  return [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+}
+
 /**
  * Create a blockquote converter using table-based approach
  * This allows true nesting and supports any content type inside blockquotes
@@ -43,19 +93,18 @@ const BLOCKQUOTE_STYLES = {
  * @returns Blockquote converter
  */
 export function createBlockquoteConverter({ themeStyles, convertInlineNodes, convertChildNode: initialConvertChildNode }: BlockquoteConverterOptions): BlockquoteConverter {
-  const defaultSpacing = themeStyles.default?.paragraph?.spacing || { before: 0, line: 276 };
-  const defaultLineSpacing = defaultSpacing.line ?? 276;
   const blockquoteSpacing = themeStyles.blockSpacing?.blockquote;
-  
-  // Calculate cell padding to compensate for line height bottom spacing
-  // Word's line height adds extra space BELOW text (not evenly distributed)
-  // So we need to add equivalent top padding to balance the visual appearance
-  const lineSpacingExtra = defaultLineSpacing - 240; // Extra spacing from line height (240 = single line)
+
+  // Symmetric cell padding for the blockquote container. The global body
+  // baseline is an EXACT line height (derived from fontSize × lineHeight), so
+  // lines carry no auto "extra leading" and there is no half-line
+  // compensation to absorb at the container bottom: top and bottom whitespace
+  // are both just the theme's paddingVertical.
   const basePadding = blockquoteSpacing?.paddingVertical ?? 80;
   const horizontalPadding = blockquoteSpacing?.paddingHorizontal ?? 200;
   const cellPadding = {
-    top: basePadding + lineSpacingExtra, // Compensate for full bottom spacing from line height
-    bottom: 0,
+    top: basePadding,
+    bottom: basePadding,
     left: horizontalPadding,
     right: Math.round(horizontalPadding / 2),
   };
@@ -71,17 +120,24 @@ export function createBlockquoteConverter({ themeStyles, convertInlineNodes, con
   }
 
   /**
-   * Convert a paragraph node inside blockquote
+   * Convert a paragraph node inside blockquote.
+   * When the blockquote is an alert, the title paragraph gets the alert colour.
    */
-  async function convertBlockquoteParagraph(child: DOCXASTNode, isFirst: boolean): Promise<Paragraph> {
-    const children = await convertInlineNodes(child.children as InlineNode[]);
-    
+  async function convertBlockquoteParagraph(child: DOCXASTNode, alertColor?: string): Promise<Paragraph> {
+    const isTitle = isAlertTitle(child);
+    const inlineColor = (alertColor && isTitle) ? alertColor : undefined;
+    const children = await convertInlineNodes(child.children as InlineNode[], inlineColor ? { color: inlineColor } : undefined);
+
+    // BlockquoteText inherits the document-wide EXACT baseline (no own line
+    // rule) and keeps only its spacing before/after, so inner paragraphs are
+    // already on the same rhythm as body text. The container's top/bottom
+    // whitespace comes entirely from the symmetric cell padding — no
+    // half-line-leading spacing tweaks are needed with an exact baseline.
     const paragraphConfig: IParagraphOptions = {
       children: children as ParagraphChild[],
       style: 'BlockquoteText',
-      spacing: isFirst ? { before: 0 } : undefined,
     };
-    
+
     return new Paragraph(paragraphConfig);
   }
 
@@ -93,18 +149,24 @@ export function createBlockquoteConverter({ themeStyles, convertInlineNodes, con
    * @returns DOCX Table representing the blockquote
    */
   async function convertBlockquote(node: DOCXBlockquoteNode, listLevel = 0, nestLevel = 0): Promise<Table> {
+    // Detect alert type from node metadata (set by remark-github-alerts plugin)
+    const alertType = getAlertType(node);
+    const alertColor = alertType ? ALERT_COLORS[alertType] : undefined;
+    // Alert-specific background = 10% alert color mixed with page background
+    const alertBackground = (alertColor && themeStyles.pageBackground)
+      ? blendAlertBackground(alertColor, themeStyles.pageBackground)
+      : undefined;
+
     const cellChildren: FileChild[] = [];
 
-    let isFirst = true;
-    for (const child of node.children) {
+    for (let i = 0; i < node.children.length; i++) {
+      const child = node.children[i];
       if (child.type === 'paragraph') {
-        cellChildren.push(await convertBlockquoteParagraph(child, isFirst));
-        isFirst = false;
+        cellChildren.push(await convertBlockquoteParagraph(child, alertColor));
       } else if (child.type === 'blockquote') {
         // Nested blockquote: recursively create another table (keep same listLevel, increment nestLevel)
         const nestedTable = await convertBlockquote(child as DOCXBlockquoteNode, listLevel, nestLevel + 1);
         cellChildren.push(nestedTable);
-        isFirst = false;
       } else if (convertChildNode) {
         // Use generic converter for other node types (code, table, etc.)
         // Pass blockquote nest level + 1 for proper right margin compensation
@@ -116,7 +178,6 @@ export function createBlockquoteConverter({ themeStyles, convertInlineNodes, con
             cellChildren.push(converted);
           }
         }
-        isFirst = false;
       }
     }
 
@@ -125,14 +186,16 @@ export function createBlockquoteConverter({ themeStyles, convertInlineNodes, con
       cellChildren.push(new Paragraph({ text: '' }));
     }
 
-    // Hidden-border color: prefer blockquote bg, then page bg, fallback white.
-    // Using the background color makes Word's in-editor dotted outline blend in
-    // with the surrounding fill in dark themes (instead of showing white lines).
-    const hiddenBorderColor = themeStyles.blockquoteBackground
+    // Alert-specific colours take precedence; fall back to generic blockquote theme colours
+    const borderColor = alertColor ?? themeStyles.blockquoteColor;
+    const backgroundColor = alertBackground ?? themeStyles.blockquoteBackground;
+
+    // Hidden-border color: prefer actual background, then page bg, fallback white.
+    const hiddenBorderColor = backgroundColor
       || themeStyles.pageBackground
       || 'FFFFFF';
 
-    // Create the table cell with blockquote styling
+    // Create the table cell with blockquote / alert styling
     const cell = new TableCell({
       children: cellChildren,
       margins: cellPadding,
@@ -143,11 +206,11 @@ export function createBlockquoteConverter({ themeStyles, convertInlineNodes, con
         left: {
           style: BorderStyle.SINGLE,
           size: BLOCKQUOTE_STYLES.leftBorderSize,
-          color: themeStyles.blockquoteColor
+          color: borderColor,
         },
       },
-      ...(themeStyles.blockquoteBackground
-        ? { shading: { fill: themeStyles.blockquoteBackground } }
+      ...(backgroundColor
+        ? { shading: { fill: backgroundColor } }
         : {}),
     });
 

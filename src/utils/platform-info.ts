@@ -59,8 +59,19 @@ type RuntimeMessageListener = (
   sendResponse: (response?: unknown) => void
 ) => void | boolean | Promise<unknown>;
 
+type StorageChangeLike = {
+  oldValue?: unknown;
+  newValue?: unknown;
+};
+
+type StorageOnChangedListener = (
+  changes: Record<string, StorageChangeLike>,
+  areaName: string
+) => void;
+
 type WebExtensionApiLike = {
   runtime: {
+    id?: string;
     sendMessage: (message: unknown) => Promise<unknown>;
     getURL: (path: string) => string;
     onMessage: {
@@ -72,6 +83,10 @@ type WebExtensionApiLike = {
     local: {
       get: (keys: string[] | string | Record<string, unknown>) => Promise<Record<string, unknown>>;
     };
+    onChanged?: {
+      addListener: (listener: StorageOnChangedListener) => void;
+      removeListener?: (listener: StorageOnChangedListener) => void;
+    };
   };
   i18n?: {
     getUILanguage: () => string;
@@ -79,9 +94,22 @@ type WebExtensionApiLike = {
   };
   permissions?: {
     contains: (permissions: { permissions: string[] }) => Promise<boolean>;
+    /**
+     * Prompt for host permissions. Firefox 153+ accepts `file:///*` here (the
+     * "Access local files on your computer" permission); Chrome refuses file://
+     * origins and requires the switch on chrome://extensions instead.
+     */
+    request?: (permissions: { permissions?: string[]; origins?: string[] }) => Promise<boolean>;
   };
   downloads?: {
     download: (options: { url: string; filename?: string; saveAs?: boolean }) => Promise<number | string | undefined>;
+  };
+  extension?: {
+    /** Firefox 153+/Chrome: true when file:// access is granted to this extension. */
+    isAllowedFileSchemeAccess?: () => Promise<boolean>;
+  };
+  tabs?: {
+    create: (options: { url: string }) => Promise<unknown>;
   };
 };
 

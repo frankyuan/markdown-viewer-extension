@@ -2,51 +2,20 @@
  * Settings Type Definitions
  * 
  * Unified types for settings management across all platforms.
+ *
+ * SettingKey / SettingTypes / DEFAULT_SETTINGS are AUTO-GENERATED from
+ * `settings-schema.json` (via scripts/sync-settings.js) — do not edit them
+ * by hand. This file keeps the hand-written service interfaces.
  */
 
-/**
- * All available setting keys
- */
-export type SettingKey = 
-  | 'themeId'
-  | 'tableMergeEmpty'
-  | 'tableLayout'
-  | 'swapPanelSide'
-  | 'readerSidebarWidth'
-  | 'frontmatterDisplay'
-  | 'preferredLocale'
-  | 'docxHrDisplay'
-  | 'docxEmojiStyle';
+import type { SettingKey, SettingTypes } from '../config/settings.generated';
 
-/**
- * Setting value types mapped by key
- */
-export interface SettingTypes {
-  themeId: string;
-  tableMergeEmpty: boolean;
-  tableLayout: 'left' | 'center' | 'center-full-width';
-  swapPanelSide: boolean;
-  readerSidebarWidth: number;
-  frontmatterDisplay: 'hide' | 'table' | 'raw';
-  preferredLocale: string;
-  docxHrDisplay: 'pageBreak' | 'line' | 'hide';
-  docxEmojiStyle: 'apple' | 'windows' | 'system';
-}
-
-/**
- * Default values for all settings
- */
-export const DEFAULT_SETTINGS: SettingTypes = {
-  themeId: 'default',
-  tableMergeEmpty: true,
-  tableLayout: 'center',
-  swapPanelSide: false,
-  readerSidebarWidth: 280,
-  frontmatterDisplay: 'hide',
-  preferredLocale: 'auto',
-  docxHrDisplay: 'hide',
-  docxEmojiStyle: 'system',
-};
+export {
+  DEFAULT_SETTINGS,
+  DEFAULT_RENDER_SETTINGS,
+  normalizeSetting,
+} from '../config/settings.generated';
+export type { SettingKey, SettingTypes } from '../config/settings.generated';
 
 /**
  * Options for setting a value

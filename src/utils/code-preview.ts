@@ -3,22 +3,9 @@
  * Used by both workspace mode and standalone file browsing.
  */
 
-const CODE_PREVIEW_EXTENSIONS: readonly string[] = [
-  '.txt', '.log', '.mdx',
-  '.js', '.mjs', '.cjs', '.jsx',
-  '.ts', '.mts', '.cts', '.tsx', '.d.ts',
-  '.py', '.rb', '.go', '.rs',
-  '.java', '.kt', '.swift', '.dart',
-  '.c', '.cpp', '.h', '.hpp', '.cs',
-  '.php', '.lua', '.r', '.scala', '.zig', '.pl', '.perl',
-  '.vue', '.svelte',
-  '.css', '.scss', '.sass', '.less',
-  '.xml', '.xsl', '.xslt',
-  '.json', '.jsonc', '.json5',
-  '.yaml', '.yml', '.toml', '.ini', '.env', '.properties',
-  '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd',
-  '.csv', '.tsv', '.sql', '.tex', '.bib',
-].sort((a, b) => b.length - a.length);
+import hljs from 'highlight.js/lib/common';
+import { renderMarkdownCodeBlockHtml } from '../core/markdown-processor';
+import { EXT_LANG_MAP, CODE_PREVIEW_EXTENSIONS } from './extension-categories';
 
 export function getCodePreviewMatchedExtension(path: string): string | null {
   const lowerPath = path.toLowerCase();
@@ -31,25 +18,11 @@ export function getCodePreviewMatchedExtension(path: string): string | null {
 }
 
 export function toCodeFenceLanguage(extWithDot: string): string {
-  switch (extWithDot) {
-    case '.d.ts':
-    case '.cts':
-    case '.mts':
-      return 'ts';
-    case '.cjs':
-    case '.mjs':
-      return 'js';
-    case '.ps1':
-      return 'powershell';
-    case '.cmd':
-      return 'bat';
-    case '.yml':
-      return 'yaml';
-    case '.tex':
-      return 'latex';
-    default:
-      return extWithDot.replace(/^\./, '');
+  const key = extWithDot.replace(/^\./, '');
+  if (key in EXT_LANG_MAP) {
+    return EXT_LANG_MAP[key];
   }
+  return key;
 }
 
 export function getCodeFenceLanguageForPath(path: string): string | null {
@@ -99,13 +72,21 @@ export function applyCodeViewPresentation(enabled: boolean): void {
 
   document.documentElement.dataset.codeView = '1';
 
+  const findCodeViewTarget = (): HTMLElement | null => {
+    const block = document.querySelector<HTMLElement>('#markdown-content [data-block-id="mv-code-view"]');
+    if (!block) {
+      return null;
+    }
+
+    return block.querySelector<HTMLElement>('pre code')
+      ?? block.querySelector<HTMLElement>('pre');
+  };
+
   const applyLineNumbers = (): boolean => {
-    const code = document.querySelector('#markdown-content pre code');
-    if (!code) return false;
-    const text = code.textContent || '';
-    const lines = text.replace(/\n+$/, '').split('\n');
-    const nums = lines.map((_, i) => i + 1).join('\n');
-    (code as HTMLElement).dataset.lineNumbers = nums;
+    const codeViewTarget = findCodeViewTarget();
+    if (!codeViewTarget) return false;
+
+    decorateCodeViewLines(codeViewTarget);
     return true;
   };
 
@@ -119,4 +100,137 @@ export function applyCodeViewPresentation(enabled: boolean): void {
     observer.disconnect();
   });
   observer.observe(document.body, { childList: true, subtree: true });
+}
+
+export function renderCodeViewBlock(container: HTMLElement, content: string, language: string): HTMLElement {
+  const block = document.createElement('div');
+  block.className = 'md-block';
+  block.dataset.blockId = 'mv-code-view';
+  block.dataset.line = '1';
+
+  let pre: HTMLElement | null = null;
+
+  if (language === 'markdown') {
+    const markdownCodeHtml = renderMarkdownCodeBlockHtml(content);
+    if (markdownCodeHtml) {
+      const temp = document.createElement('div');
+      temp.innerHTML = markdownCodeHtml;
+      pre = temp.querySelector('pre');
+    }
+  }
+
+  if (!pre) {
+    pre = document.createElement('pre');
+    const code = document.createElement('code');
+    code.className = `hljs language-${language}`;
+
+    let highlightedHtml = '';
+    try {
+      if (language && hljs.getLanguage(language)) {
+        highlightedHtml = hljs.highlight(content, {
+          language,
+          ignoreIllegals: true,
+        }).value;
+      }
+    } catch {
+      highlightedHtml = '';
+    }
+
+    if (highlightedHtml) {
+      code.innerHTML = highlightedHtml;
+    } else {
+      code.textContent = content;
+    }
+
+    pre.appendChild(code);
+  }
+
+  block.appendChild(pre);
+
+  container.replaceChildren(block);
+  return block;
+}
+
+function decorateCodeViewLines(code: HTMLElement): void {
+  if (code.dataset.codeViewDecorated === '1') {
+    return;
+  }
+
+  const rawText = code.textContent || '';
+  const normalizedText = rawText.replace(/\n+$/, '');
+  const sourceNodes = Array.from(code.childNodes);
+  const lineElements: HTMLElement[] = [];
+
+  let currentLine = createCodeViewLine(1);
+  lineElements.push(currentLine);
+
+  const appendTextSegment = (text: string, ancestors: HTMLElement[]): void => {
+    if (!text) {
+      return;
+    }
+
+    let target: Node = currentLine.querySelector('.mv-code-line-content') as HTMLElement;
+    for (const ancestor of ancestors) {
+      const clone = ancestor.cloneNode(false) as HTMLElement;
+      target.appendChild(clone);
+      target = clone;
+    }
+    target.appendChild(document.createTextNode(text));
+  };
+
+  const startNewLine = (): void => {
+    currentLine = createCodeViewLine(lineElements.length + 1);
+    lineElements.push(currentLine);
+  };
+
+  const walkNode = (node: ChildNode, ancestors: HTMLElement[]): void => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const parts = (node.textContent || '').split('\n');
+      parts.forEach((part, index) => {
+        appendTextSegment(part, ancestors);
+        if (index < parts.length - 1) {
+          startNewLine();
+        }
+      });
+      return;
+    }
+
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+
+    const nextAncestors = [...ancestors, node];
+    Array.from(node.childNodes).forEach((child) => {
+      walkNode(child, nextAncestors);
+    });
+  };
+
+  sourceNodes.forEach((node) => {
+    walkNode(node, []);
+  });
+
+  while (lineElements.length > 1) {
+    const lastLine = lineElements[lineElements.length - 1];
+    const content = lastLine.querySelector('.mv-code-line-content');
+    if ((content?.textContent || '') !== '') {
+      break;
+    }
+    lineElements.pop();
+  }
+
+  code.replaceChildren(...lineElements);
+  code.dataset.codeViewDecorated = '1';
+  code.dataset.rawCodeText = normalizedText;
+}
+
+function createCodeViewLine(lineNumber: number): HTMLSpanElement {
+  const line = document.createElement('span');
+  line.className = 'mv-code-line';
+  line.dataset.lineNumber = String(lineNumber);
+
+  const content = document.createElement('span');
+  content.className = 'mv-code-line-content';
+  line.appendChild(content);
+
+  return line;
 }

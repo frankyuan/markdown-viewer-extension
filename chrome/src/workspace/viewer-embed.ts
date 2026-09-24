@@ -2,338 +2,117 @@
 // Receives file content via postMessage, then runs the full viewer pipeline
 
 import { platform } from '../webview/index';
-import { startViewer } from '../webview/viewer-main';
+import { getViewerMainRuntime, startViewer } from '../webview/viewer-main';
 import { initializeViewerBase } from '../../../src/core/viewer/viewer-bootstrap';
 import { loadAndApplyTheme } from '../../../src/utils/theme-to-css';
+import Localization from '../../../src/utils/localization';
 import { applyCodeViewPresentation } from '../../../src/utils/code-preview';
-import { createTocPanel } from '../../../src/ui/toc-panel';
-import type { TocPanel } from '../../../src/ui/toc-panel';
-import { extractHeadings } from '../../../src/core/markdown-utils';
+import { createWorkspaceEmbedBridge } from './workspace-embed-bridge';
+import { arrowLeft, arrowRight } from './file-icons';
+import {
+  createWorkspaceEmbedHostUiController,
+  TOC_NAVIGATION_SCROLL_BEHAVIOR,
+} from './workspace-embed-host-ui';
+import { createWorkspaceEmbedParentBridge } from './workspace-embed-parent-bridge';
+import type {
+  ViewerIframeMessage,
+  ViewerOpenDocumentMessage,
+  ViewerUpdateContentMessage,
+  ViewerExportRequestMessage,
+} from '../../../src/integration/iframe-viewer-host';
+import type { ViewerExportFormat } from '../../../src/core/viewer/viewer-host';
 
-interface RenderFileMessage {
-  type: 'RENDER_FILE';
-  content?: string;
-  filename?: string;
-  fileDir?: string;
-  workspaceName?: string;
-  workspaceFilePath?: string;
-  codeView?: boolean;
-  targetLine?: number;
+type DocumentMessage = ViewerOpenDocumentMessage | ViewerUpdateContentMessage;
+
+interface WorkspaceHistoryUiMessage {
+  type: 'SYNC_WORKSPACE_HISTORY_UI';
+  visible?: boolean;
+  canGoBack?: boolean;
+  canGoForward?: boolean;
 }
-
-interface SetEmbedUiMessage {
-  type: 'SET_EMBED_UI';
-  toc?: 'none' | 'sidebar' | 'floating';
-  tocDepth?: number;
-}
-
-interface ScrollAnchorMessage {
-  type: 'SCROLL_TO_ANCHOR';
-  anchor?: string;
-}
-
-interface SetThemeMessage {
-  type: 'SET_THEME';
-  themeId?: string;
-}
-
-interface WorkspaceLayoutChangedMessage {
-  type: 'WORKSPACE_LAYOUT_CHANGED';
-}
-
-type ViewerEmbedMessage = RenderFileMessage | SetEmbedUiMessage | ScrollAnchorMessage | SetThemeMessage | WorkspaceLayoutChangedMessage;
 
 let initialized = false;
-let latestFileDir = '';
-let latestEmbedUi: SetEmbedUiMessage = {
-  type: 'SET_EMBED_UI',
-};
 const EMBED_MODE = new URLSearchParams(window.location.search).get('embed') === '1';
+let pendingWorkspaceHistoryUi: WorkspaceHistoryUiMessage | null = null;
 
-// Floating TOC panel (for toc='floating' mode)
-let floatingTocPanel: TocPanel | null = null;
-let floatingScrollListener: (() => void) | null = null;
-let floatingContentObserver: MutationObserver | null = null;
-let floatingUpdateTimer: ReturnType<typeof setTimeout> | null = null;
-let resizeWheelFallbackArmed = false;
-let wrapperInteractionFixesAttached = false;
-let handlingManualWheelScroll = false;
-let wheelFallbackHandler: ((event: WheelEvent) => void) | null = null;
-let wheelFallbackTimeout: ReturnType<typeof setTimeout> | null = null;
-const TOC_NAVIGATION_SCROLL_BEHAVIOR: ScrollBehavior = 'auto';
+const workspaceEmbedBridge = createWorkspaceEmbedBridge({
+  documentService: platform.document as import('../webview/api-impl').ChromeDocumentService,
+  postToParent: (message) => {
+    window.parent.postMessage(message, '*');
+  },
+});
+
+const parentBridge = createWorkspaceEmbedParentBridge({
+  getRuntime: () => getViewerMainRuntime(),
+  postToParent: (message) => {
+    window.parent.postMessage(message, '*');
+  },
+  ensureWorkspaceResolvers: () => {
+    workspaceEmbedBridge.ensureConnected();
+  },
+  scrollToAnchor,
+});
+
+const hostUiController = createWorkspaceEmbedHostUiController({
+  scrollToAnchor,
+  applyTheme: (themeId) => {
+    const runtime = getViewerMainRuntime();
+    if (runtime) {
+      return runtime.setTheme(themeId);
+    }
+    return loadAndApplyTheme(themeId);
+  },
+});
+
+async function waitForViewerMainRuntime(): Promise<NonNullable<ReturnType<typeof getViewerMainRuntime>>> {
+  const runtime = getViewerMainRuntime();
+  if (runtime) {
+    return runtime;
+  }
+
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 25);
+    });
+    const nextRuntime = getViewerMainRuntime();
+    if (nextRuntime) {
+      return nextRuntime;
+    }
+  }
+
+  throw new Error('[viewer-embed] viewer runtime not initialized');
+}
 
 // Inject embed-mode CSS when loaded with ?embed=1 (from element.ts custom element iframe).
-// This hides the toolbar and shifts the TOC panel up so it fills the full iframe height.
-// In workspace-preview context (no ?embed=1 param) nothing is injected and the native
-// toolbar + TOC layout is preserved.
+// In embed mode (from element.ts custom element iframe) the layout is the
+// shared .mv-embed embedded mode: no toolbar, no card, TOC docked in the
+// container. The classes below opt in; all the actual rules live in the
+// shared stylesheet so every embed/panel looks the same.
 if (EMBED_MODE) {
   // Mark body so that internal TOC manager skips its saved-state restoration.
   document.body.dataset.mvEmbed = '1';
-
-  const style = document.createElement('style');
-  style.id = 'embed-mode-styles';
-  style.textContent = [
-    '#page-header { display: none !important; }',
-    '#table-of-contents { top: 0 !important; height: 100vh !important; }',
-    'body.toc-hidden #markdown-wrapper { margin-left: 0 !important; margin-right: 0 !important; }',
-    'body:not(.toc-hidden) #markdown-wrapper { margin-left: 280px !important; margin-right: 0 !important; }',
-    'body.toc-position-right:not(.toc-hidden) #markdown-wrapper { margin-left: 0 !important; margin-right: 280px !important; }',
-  ].join('\n');
-  (document.head || document.documentElement).appendChild(style);
+  document.body.classList.add('mv-embed');
 }
 
-// ─── Floating TOC panel helpers ─────────────────────────────────────────────
-
-function scrollToHeadingById(headingId: string): void {
-  const wrapper = document.getElementById('markdown-wrapper') as HTMLElement | null;
-  const target = document.getElementById(headingId) as HTMLElement | null;
-  if (!wrapper || !target) return;
-  const wrapperRect = wrapper.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
-  wrapper.scrollTo({ top: Math.max(0, targetRect.top - wrapperRect.top + wrapper.scrollTop), behavior: TOC_NAVIGATION_SCROLL_BEHAVIOR });
-}
-
-function updateFloatingTocActiveHeading(): void {
-  if (!floatingTocPanel) return;
-  const contentDiv = document.getElementById('markdown-content');
-  const wrapper = document.getElementById('markdown-wrapper');
-  if (!contentDiv || !wrapper) { floatingTocPanel.setActiveHeading(null); return; }
-
-  const headings = contentDiv.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6');
-  if (headings.length === 0) { floatingTocPanel.setActiveHeading(null); return; }
-
-  const scrollTop = wrapper.scrollTop;
-  const wrapperRect = wrapper.getBoundingClientRect();
-  let activeId: string | null = null;
-  for (const heading of headings) {
-    const top = heading.getBoundingClientRect().top - wrapperRect.top + scrollTop;
-    if (top <= scrollTop + 10) activeId = heading.id || null;
-    else break;
-  }
-  if (!activeId && headings[0]) activeId = headings[0].id || null;
-  floatingTocPanel.setActiveHeading(activeId);
-}
-
-function updateFloatingTocHeadings(): void {
-  if (!floatingTocPanel) return;
-  const contentDiv = document.getElementById('markdown-content');
-  if (!contentDiv) return;
-  const maxDepth = typeof latestEmbedUi.tocDepth === 'number' && Number.isFinite(latestEmbedUi.tocDepth)
-    ? Math.max(1, Math.min(6, Math.floor(latestEmbedUi.tocDepth)))
-    : 6;
-  const all = extractHeadings(contentDiv);
-  floatingTocPanel.setHeadings(all.filter(h => h.level <= maxDepth));
-  updateFloatingTocActiveHeading();
-}
-
-function scheduleFloatingTocHeadingsUpdate(): void {
-  if (!floatingTocPanel) return;
-  if (floatingUpdateTimer !== null) clearTimeout(floatingUpdateTimer);
-  floatingUpdateTimer = setTimeout(() => {
-    floatingUpdateTimer = null;
-    updateFloatingTocHeadings();
-  }, 150);
-}
-
-function ensureFloatingTocPanel(): TocPanel {
-  if (floatingTocPanel && !floatingTocPanel.getElement().isConnected) {
-    floatingTocPanel.dispose();
-    floatingTocPanel = null;
-    floatingContentObserver = null;
-    floatingScrollListener = null;
-  }
-
-  if (!floatingTocPanel) {
-    floatingTocPanel = createTocPanel({ onSelectHeading: scrollToHeadingById });
-    document.body.appendChild(floatingTocPanel.getElement());
-  }
-
-  const wrapper = document.getElementById('markdown-wrapper');
-  if (wrapper && !floatingScrollListener) {
-    floatingScrollListener = () => updateFloatingTocActiveHeading();
-    wrapper.addEventListener('scroll', floatingScrollListener);
-  }
-
-  // Watch content for heading changes (progressive render).
-  // Keep this resilient: panel may be created before #markdown-content exists.
-  const contentDiv = document.getElementById('markdown-content');
-  if (contentDiv && !floatingContentObserver) {
-    floatingContentObserver = new MutationObserver(() => scheduleFloatingTocHeadingsUpdate());
-    floatingContentObserver.observe(contentDiv, { childList: true, subtree: true });
-  }
-  return floatingTocPanel;
-}
-
-function destroyFloatingTocPanel(): void {
-  if (floatingUpdateTimer !== null) { clearTimeout(floatingUpdateTimer); floatingUpdateTimer = null; }
-  if (floatingContentObserver) { floatingContentObserver.disconnect(); floatingContentObserver = null; }
-  if (floatingScrollListener) {
-    document.getElementById('markdown-wrapper')?.removeEventListener('scroll', floatingScrollListener);
-    floatingScrollListener = null;
-  }
-  if (floatingTocPanel) { floatingTocPanel.dispose(); floatingTocPanel = null; }
-}
-
-function normalizeWheelDelta(event: WheelEvent, wrapper: HTMLElement): number {
-  if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
-    return event.deltaY * 16;
-  }
-  if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
-    return event.deltaY * wrapper.clientHeight;
-  }
-  return event.deltaY;
-}
-
-function clearWheelFallbackTimeout(): void {
-  if (wheelFallbackTimeout !== null) {
-    clearTimeout(wheelFallbackTimeout);
-    wheelFallbackTimeout = null;
-  }
-}
-
-function disarmResizeWheelFallback(): void {
-  resizeWheelFallbackArmed = false;
-  clearWheelFallbackTimeout();
-
-  const wrapper = document.getElementById('markdown-wrapper') as HTMLElement | null;
-  if (!wrapper || !wheelFallbackHandler) {
-    return;
-  }
-
-  wrapper.removeEventListener('wheel', wheelFallbackHandler as EventListener);
-  wheelFallbackHandler = null;
-}
-
-function armResizeWheelFallback(): void {
-  const wrapper = document.getElementById('markdown-wrapper') as HTMLElement | null;
-  if (!wrapper) {
-    return;
-  }
-
-  resizeWheelFallbackArmed = true;
-
-  if (!wheelFallbackHandler) {
-    wheelFallbackHandler = (event: WheelEvent) => {
-      if (!resizeWheelFallbackArmed) {
-        return;
-      }
-
-      if (event.defaultPrevented || event.ctrlKey || event.metaKey) {
-        return;
-      }
-
-      const maxScrollTop = Math.max(0, wrapper.scrollHeight - wrapper.clientHeight);
-      if (maxScrollTop <= 0) {
-        return;
-      }
-
-      const beforeScrollTop = wrapper.scrollTop;
-      const nextScrollTop = Math.max(
-        0,
-        Math.min(maxScrollTop, beforeScrollTop + normalizeWheelDelta(event, wrapper))
-      );
-
-      if (Math.abs(nextScrollTop - beforeScrollTop) < 0.5) {
-        return;
-      }
-
-      event.preventDefault();
-      handlingManualWheelScroll = true;
-      wrapper.scrollTop = nextScrollTop;
-    };
-
-    wrapper.addEventListener('wheel', wheelFallbackHandler, { passive: false });
-  }
-
-  clearWheelFallbackTimeout();
-  wheelFallbackTimeout = setTimeout(() => {
-    disarmResizeWheelFallback();
-  }, 1500);
-}
-
-function focusWrapperAfterLayoutChange(): void {
-  const wrapper = document.getElementById('markdown-wrapper') as HTMLElement | null;
-  if (!wrapper) {
-    return;
-  }
-
-  if (!wrapper.hasAttribute('tabindex')) {
-    wrapper.tabIndex = -1;
-  }
-
-  window.focus();
-  wrapper.focus({ preventScroll: true });
-}
-
-function attachWrapperInteractionFixes(): void {
-  const install = () => {
-    const wrapper = document.getElementById('markdown-wrapper') as HTMLElement | null;
-    if (!wrapper || wrapperInteractionFixesAttached) {
-      return;
+// ── Restore pending content after Slidev→normal file switch reload ──────
+// When switching away from a .slides.md file the viewer page is reloaded
+// because renderSlidevContent destroyed the normal viewer DOM. Before the
+// reload we stash the incoming OPEN_DOCUMENT message in sessionStorage;
+// here we replay it through the normal message handler so initializeViewerMain
+// picks up the content and renders it with a fresh DOM.
+(function restorePendingOpenDocument() {
+  try {
+    const raw = sessionStorage.getItem('mv:pendingOpen');
+    if (!raw) return;
+    sessionStorage.removeItem('mv:pendingOpen');
+    const message = JSON.parse(raw) as ViewerOpenDocumentMessage;
+    if (message && typeof message.content === 'string') {
+      // Replay through the normal handler — it will call ensureViewerInitialized
+      // which triggers startViewer → initializeViewerMain.
+      void handleDocumentMessage(message, 'open');
     }
-
-    wrapperInteractionFixesAttached = true;
-
-    wrapper.addEventListener('scroll', () => {
-      if (handlingManualWheelScroll) {
-        handlingManualWheelScroll = false;
-        return;
-      }
-
-      disarmResizeWheelFallback();
-    }, { passive: true });
-  };
-
-  requestAnimationFrame(install);
-  window.setTimeout(install, 150);
-}
-
-// ─── Apply embed UI ─────────────────────────────────────────────────────────
-
-function applyEmbedUi(message: SetEmbedUiMessage): void {
-  latestEmbedUi = {
-    ...latestEmbedUi,
-    ...message,
-    type: 'SET_EMBED_UI',
-  };
-
-  const tocDiv = document.getElementById('table-of-contents') as HTMLElement | null;
-  const overlayDiv = document.getElementById('toc-overlay') as HTMLElement | null;
-  const tocMode = latestEmbedUi.toc;
-
-  if (tocMode === 'floating') {
-    // Hide sidebar TOC; use full-width layout (toc-hidden = no sidebar margin)
-    if (tocDiv) { tocDiv.classList.add('hidden'); tocDiv.style.display = 'none'; }
-    document.body.classList.add('toc-hidden');
-    if (overlayDiv) overlayDiv.classList.add('hidden');
-    // Mount floating FAB panel and seed headings
-    ensureFloatingTocPanel();
-    updateFloatingTocHeadings();
-  } else if (tocMode === 'sidebar') {
-    // Remove floating panel, restore sidebar
-    destroyFloatingTocPanel();
-    if (tocDiv) {
-      tocDiv.classList.remove('hidden');
-      tocDiv.style.display = '';
-    }
-    document.body.classList.remove('toc-hidden');
-    if (overlayDiv) overlayDiv.classList.add('hidden');
-    // Apply depth filter to existing sidebar items
-    if (tocDiv && typeof latestEmbedUi.tocDepth === 'number' && Number.isFinite(latestEmbedUi.tocDepth)) {
-      const maxDepth = Math.max(1, Math.min(6, Math.floor(latestEmbedUi.tocDepth)));
-      tocDiv.querySelectorAll('li').forEach((item) => {
-        const marginLeft = Number.parseInt((item as HTMLElement).style.marginLeft || '0', 10);
-        const level = Math.floor(marginLeft / 20) + 1;
-        (item as HTMLElement).style.display = level > maxDepth ? 'none' : '';
-      });
-    }
-  } else {
-    // none — hide everything
-    destroyFloatingTocPanel();
-    if (tocDiv) { tocDiv.classList.add('hidden'); tocDiv.style.display = 'none'; }
-    document.body.classList.add('toc-hidden');
-  }
-}
+  } catch { /* malformed JSON or storage blocked — ignore */ }
+})();
 
 function scrollToAnchor(anchor: string): void {
   const normalized = decodeURIComponent(anchor || '').replace(/^#/, '').trim();
@@ -353,30 +132,20 @@ function scrollToAnchor(anchor: string): void {
   wrapper.scrollTo({ top: Math.max(0, top), behavior: TOC_NAVIGATION_SCROLL_BEHAVIOR });
 }
 
-async function renderFile(message: RenderFileMessage): Promise<void> {
-  const content = String(message.content || '');
+function normalizeTargetLine(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return undefined;
+  }
+
+  return Math.max(1, Math.floor(value));
+}
+
+function applyOpenDocumentMetadata(message: ViewerOpenDocumentMessage): void {
   const filename = String(message.filename || 'inline.md');
-  const fileDir = String(message.fileDir || '');
   const workspaceName = String(message.workspaceName || '');
   const workspaceFilePath = String(message.workspaceFilePath || '');
   const codeView = Boolean(message.codeView);
-  const targetLine = typeof message.targetLine === 'number' && Number.isFinite(message.targetLine)
-    ? Math.max(1, Math.floor(message.targetLine))
-    : undefined;
-  latestFileDir = fileDir;
 
-  // Note: #markdown-viewer-preload style is now injected statically in
-  // viewer-embed.html so the body stays hidden from first paint (before JS
-  // even runs). viewer-main will remove it after the theme is applied.
-
-  // Simulate how Chrome opens a plain text file:
-  // body contains raw text inside a <pre> element
-  if (!initialized) {
-    document.body.textContent = content;
-  }
-
-  // Override location-based URL detection by setting a data attribute
-  // so the viewer can determine file type from filename
   document.documentElement.dataset.viewerFilename = filename;
   if (workspaceName && workspaceFilePath) {
     document.documentElement.dataset.viewerWorkspaceName = workspaceName;
@@ -386,206 +155,325 @@ async function renderFile(message: RenderFileMessage): Promise<void> {
     delete document.documentElement.dataset.viewerWorkspaceFilePath;
   }
 
+  // Only enable TOC for plain .md / .markdown files (exclude .slides.md,
+  // .drawio, .mermaid, and image previews whose filename is e.g. image.png.md).
+  const IMAGE_PREVIEW_EXTS = /\.(svg|png|jpe?g|gif|webp|bmp|ico|tiff?|avif)\.(md|markdown)$/i;
+  const tocEnabled = /\.(md|markdown)$/i.test(filename)
+    && !/\.slides\.md$/i.test(filename)
+    && !IMAGE_PREVIEW_EXTS.test(filename);
+  if (tocEnabled) {
+    delete document.documentElement.dataset.tocDisabled;
+    // When switching back to .md from a non-.md file, the TOC panel may still be
+    // hidden from the previous applyOpenDocumentMetadata call. Restore it so the
+    // render pipeline's applyPredictedTocLayout can correctly manage visibility.
+    const tocDiv = document.getElementById('table-of-contents');
+    const overlayDiv = document.getElementById('toc-overlay');
+    if (tocDiv) {
+      tocDiv.style.display = '';
+      tocDiv.classList.remove('hidden');
+    }
+    if (overlayDiv) {
+      overlayDiv.classList.remove('hidden');
+    }
+    document.body.classList.remove('toc-hidden');
+  } else {
+    document.documentElement.dataset.tocDisabled = '1';
+    // Immediately close the TOC panel so stale content from the previous file
+    // is not visible while the render pipeline runs asynchronously.
+    const tocDiv = document.getElementById('table-of-contents');
+    const overlayDiv = document.getElementById('toc-overlay');
+    if (tocDiv) {
+      tocDiv.style.display = 'none';
+      tocDiv.classList.add('hidden');
+    }
+    if (overlayDiv) {
+      overlayDiv.classList.add('hidden');
+    }
+    document.body.classList.add('toc-hidden');
+  }
+
   applyCodeViewPresentation(codeView);
 
-  try {
-    if (!initialized) {
-      await initializeViewerBase(platform).then((pluginRenderer) => {
-        startViewer({
-          platform,
-          pluginRenderer,
-          themeConfigRenderer: platform.renderer,
-        });
-        initialized = true;
-        attachWrapperInteractionFixes();
-      }).catch((error) => {
-        console.error('[viewer-embed] viewer base init failed', error);
+  const fileNameSpan = document.getElementById('file-name');
+  if (fileNameSpan) {
+    fileNameSpan.textContent = filename;
+  }
+  document.title = filename;
+}
+
+function ensureWorkspaceHistoryInline(): {
+  wrapper: HTMLSpanElement;
+  backButton: HTMLButtonElement;
+  forwardButton: HTMLButtonElement;
+} | null {
+  const fileNameSpan = document.getElementById('file-name');
+  if (!fileNameSpan?.parentElement) {
+    return null;
+  }
+
+  let wrapper = document.getElementById('workspace-history-inline') as HTMLSpanElement | null;
+  if (!wrapper) {
+    wrapper = document.createElement('span');
+    wrapper.id = 'workspace-history-inline';
+    wrapper.style.display = 'none';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.gap = '4px';
+    wrapper.style.marginRight = '8px';
+
+    const createButton = (id: string, title: string, icon: string, delta: -1 | 1): HTMLButtonElement => {
+      const button = document.createElement('button');
+      button.id = id;
+      button.type = 'button';
+      button.className = 'toolbar-btn';
+      button.title = title;
+      button.setAttribute('aria-label', title);
+      button.style.width = '30px';
+      button.style.height = '30px';
+      button.style.padding = '0';
+      button.innerHTML = icon;
+      const svg = button.querySelector('svg');
+      if (svg) {
+        svg.setAttribute('width', '18');
+        svg.setAttribute('height', '18');
+        svg.setAttribute('aria-hidden', 'true');
+      }
+      button.addEventListener('click', () => {
+        if (button.disabled) {
+          return;
+        }
+        window.parent.postMessage({ type: 'WORKSPACE_HISTORY_NAVIGATE', delta }, '*');
       });
-    } else {
-      const viewer = document.querySelector('markdown-viewer') as { render?: (markdown: string) => Promise<void> } | null;
-      if (viewer?.render) {
-        await viewer.render(content);
-      }
-    }
+      return button;
+    };
 
-    if (targetLine !== undefined) {
-      const tryScrollToLine = (): boolean => {
-        const viewer = document.querySelector('markdown-viewer') as { scrollLine?: number } | null;
-        if (!viewer) {
-          return false;
-        }
-        viewer.scrollLine = targetLine;
-        return true;
-      };
+    const backTitle = Localization.translate('workspace_history_back') || 'Back';
+    const forwardTitle = Localization.translate('workspace_history_forward') || 'Forward';
+    const backButton = createButton('workspace-history-back', backTitle, arrowLeft, -1);
+    const forwardButton = createButton('workspace-history-forward', forwardTitle, arrowRight, 1);
+    wrapper.append(backButton, forwardButton);
+    fileNameSpan.insertAdjacentElement('beforebegin', wrapper);
+  }
 
-      if (!tryScrollToLine()) {
-        // Initial viewer boot path is async; retry briefly until markdown-viewer is mounted.
-        for (let attempt = 0; attempt < 12; attempt++) {
-          await new Promise<void>((resolve) => {
-            setTimeout(resolve, 50);
-          });
-          if (tryScrollToLine()) {
-            break;
-          }
-        }
-      }
-    }
+  const backButton = document.getElementById('workspace-history-back') as HTMLButtonElement | null;
+  const forwardButton = document.getElementById('workspace-history-forward') as HTMLButtonElement | null;
+  if (!backButton || !forwardButton) {
+    return null;
+  }
 
-    // Resolve relative images via parent workspace
-    if (fileDir !== undefined) {
-      resolveWorkspaceImages(fileDir);
-      setupWorkspaceFileReader();
-    }
+  return { wrapper, backButton, forwardButton };
+}
 
-    // The initial bootstrap path may reset document.body content.
-    // Re-apply embed UI so floating TOC/FAB state stays consistent after render.
-    applyEmbedUi(latestEmbedUi);
+function applyWorkspaceHistoryUi(message: WorkspaceHistoryUiMessage): void {
+  pendingWorkspaceHistoryUi = message;
+  const controls = ensureWorkspaceHistoryInline();
+  if (!controls) {
+    return;
+  }
 
-    if (latestEmbedUi.toc === 'floating') {
-      let attempts = 0;
-      const retryApplyFloating = (): void => {
-        attempts += 1;
-        applyEmbedUi(latestEmbedUi);
+  const { wrapper, backButton, forwardButton } = controls;
+  wrapper.style.display = message.visible ? 'inline-flex' : 'none';
+  backButton.disabled = !message.canGoBack;
+  forwardButton.disabled = !message.canGoForward;
+}
 
-        const contentDiv = document.getElementById('markdown-content');
-        const panelConnected = Boolean(floatingTocPanel?.getElement().isConnected);
-        if (contentDiv && panelConnected) {
-          return;
-        }
+async function ensureViewerInitialized(initialContent: string): Promise<{
+  runtime: NonNullable<ReturnType<typeof getViewerMainRuntime>>;
+  wasInitialized: boolean;
+}> {
+  const wasInitialized = initialized;
 
-        if (attempts >= 10) {
-          return;
-        }
+  if (!initialized) {
+    document.body.textContent = initialContent;
+    await initializeViewerBase(platform).then((pluginRenderer) => startViewer({
+      platform,
+      pluginRenderer,
+      themeConfigRenderer: platform.renderer,
+    })).then(() => {
+      initialized = true;
+      hostUiController.attachWrapperInteractionFixes();
+    }).catch((error) => {
+      console.error('[viewer-embed] viewer base init failed', error);
+    });
+  }
 
-        setTimeout(retryApplyFloating, 80);
-      };
+  const runtime = await waitForViewerMainRuntime();
+  if (pendingWorkspaceHistoryUi) {
+    applyWorkspaceHistoryUi(pendingWorkspaceHistoryUi);
+  }
 
-      setTimeout(retryApplyFloating, 0);
-    }
+  return {
+    runtime,
+    wasInitialized,
+  };
+}
 
-    window.parent.postMessage({ type: 'VIEWER_RENDERED' }, '*');
-  } catch (error) {
-    throw error;
+function applyTargetLine(runtime: NonNullable<ReturnType<typeof getViewerMainRuntime>>, targetLine: number | undefined): void {
+  if (targetLine !== undefined) {
+    runtime.setScrollLine(targetLine);
   }
 }
 
-// Wait for commands from parent host.
+async function handleDocumentMessage(message: DocumentMessage, mode: 'open' | 'update'): Promise<void> {
+  const content = String(message.content || '');
+  const targetLine = normalizeTargetLine(message.targetLine);
+
+  if (mode === 'open') {
+    applyOpenDocumentMetadata(message as ViewerOpenDocumentMessage);
+
+    // Keep the latest open-document message in sessionStorage so that any
+    // later reload of this embed page (e.g. a popup locale change, which
+    // viewer-main answers with window.location.reload()) can restore the
+    // current document via restorePendingOpenDocument. Content reaches this
+    // page only through postMessage, so a bare reload would otherwise leave
+    // the preview blank.
+    try {
+      sessionStorage.setItem('mv:pendingOpen', JSON.stringify(message));
+    } catch { /* storage blocked — reload restore unavailable */ }
+  }
+
+  const { runtime, wasInitialized } = await ensureViewerInitialized(content);
+
+  if (mode === 'open') {
+    const filename = (message as ViewerOpenDocumentMessage).filename || '';
+    const isSlides = /\.slides\.md$/i.test(filename);
+    const cameFromSlidev = document.documentElement.dataset.slidevActive === '1';
+
+    if (isSlides) {
+      // The first open of a slidev deck is rendered by the implicit init hand-off
+      // (same as before); later ones go through the slidev entry point.
+      if (wasInitialized) {
+        await runtime.renderSlidev(content);
+      }
+    } else if (cameFromSlidev) {
+      // Switching away from Slidev — the normal viewer DOM was destroyed.
+      // Save the pending open-document message to sessionStorage, reload the
+      // page, and restore it on the next load so initializeViewerMain can
+      // pick it up with a fresh DOM.
+      try {
+        sessionStorage.setItem('mv:pendingOpen', JSON.stringify(message));
+      } catch { /* storage blocked */ }
+      window.location.reload();
+      return; // never reached after reload
+    } else {
+      // Always render the document explicitly, including the very first open.
+      // That first open used to rely on the viewer's own DOM hand-off (the
+      // embed page puts the markdown into body text and initializeViewerMain
+      // picks it up), and on a slow/contended boot that hand-off left the page
+      // with an existing but empty content root: no block, no error, and a
+      // fixture that never renders (the intermittent embed stall on CI). Every
+      // later open already goes through this call, so the first one now behaves
+      // the same as the rest.
+      await runtime.openDocument(content, { scrollLine: targetLine });
+    }
+  } else {
+    await runtime.updateContent(content, targetLine);
+  }
+
+  applyTargetLine(runtime, targetLine);
+  parentBridge.prepareWorkspaceResolvers();
+  hostUiController.applyAfterRender();
+  parentBridge.notifyViewerRendered();
+}
+
+const EXPORT_FORMATS: readonly ViewerExportFormat[] = ['docx', 'epub', 'html', 'pdf', 'save'];
+
+async function handleExportRequest(message: ViewerExportRequestMessage): Promise<void> {
+  const { requestId, format, filename, title } = message;
+  const postResult = (ok: boolean, error?: string): void => {
+    window.parent.postMessage({
+      type: 'EXPORT_RESULT',
+      requestId,
+      ok,
+      error,
+    }, '*');
+  };
+
+  const normalizedFormat = typeof format === 'string'
+    ? (format.toLowerCase() === 'docs' ? 'docx' : format.toLowerCase())
+    : '';
+  if (!EXPORT_FORMATS.includes(normalizedFormat as ViewerExportFormat)) {
+    postResult(false, `Unsupported export format: ${String(format)}`);
+    return;
+  }
+
+  try {
+    const runtime = await waitForViewerMainRuntime();
+    await runtime.exportDocument(normalizedFormat as ViewerExportFormat, { filename, title });
+    postResult(true);
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    postResult(false, errMsg);
+  }
+}
+
+function handleViewerMessage(data: ViewerIframeMessage): void {
+  switch (data.type) {
+    case 'OPEN_DOCUMENT':
+      void handleDocumentMessage(data, 'open');
+      return;
+    case 'UPDATE_CONTENT':
+      void handleDocumentMessage(data, 'update');
+      return;
+    case 'SYNC_HOST_UI':
+      hostUiController.syncHostUi(data);
+      return;
+    case 'SYNC_HOST_NAVIGATION':
+      parentBridge.syncHostNavigation(data);
+      return;
+    case 'EXPORT_REQUEST':
+      void handleExportRequest(data);
+      return;
+    default:
+      return;
+  }
+}
+
+parentBridge.bindViewerMessages(handleViewerMessage);
+
 window.addEventListener('message', (event: MessageEvent) => {
-  const data = event.data as ViewerEmbedMessage | undefined;
-  if (!data || typeof data !== 'object' || !('type' in data)) {
+  const data = event.data as WorkspaceHistoryUiMessage | undefined;
+  if (!data || data.type !== 'SYNC_WORKSPACE_HISTORY_UI') {
     return;
   }
 
-  if (data.type === 'RENDER_FILE') {
-    void renderFile(data);
-    return;
-  }
-
-  if (data.type === 'SET_EMBED_UI') {
-    applyEmbedUi(data);
-    return;
-  }
-
-  if (data.type === 'SCROLL_TO_ANCHOR') {
-    if (data.anchor) {
-      scrollToAnchor(data.anchor);
-    }
-    return;
-  }
-
-  if (data.type === 'SET_THEME') {
-    if (data.themeId) {
-      void loadAndApplyTheme(data.themeId);
-    }
-    return;
-  }
-
-  if (data.type === 'WORKSPACE_LAYOUT_CHANGED') {
-    armResizeWheelFallback();
-    requestAnimationFrame(() => {
-      focusWrapperAfterLayoutChange();
-    });
-  }
+  applyWorkspaceHistoryUi(data);
 });
 
-// ─── Resolve relative images via parent workspace ───
-function isRelativeSrc(src: string): boolean {
-  return !!src && !src.startsWith('http://') && !src.startsWith('https://') &&
-    !src.startsWith('data:') && !src.startsWith('blob:') && !src.startsWith('file:') &&
-    !src.includes('://');
-}
+// Intercept clicks on relative file links and delegate to the workspace parent.
+// Without this, the browser navigates the iframe to a non-existent chrome-extension:// URL.
+document.addEventListener('click', (event) => {
+  const anchor = (event.target as HTMLElement).closest?.('a');
+  if (!anchor) return;
 
-function resolveWorkspaceImages(fileDir: string) {
-  let idCounter = 0;
-  const pending = new Map<number, HTMLImageElement>();
+  const href = anchor.getAttribute('href');
+  if (!href) return;
 
-  // Listen for resolved blob URLs from parent
-  window.addEventListener('message', (e: MessageEvent) => {
-    if (e.data?.type !== 'IMAGE_RESOLVED') return;
-    const img = pending.get(e.data.id);
-    if (img) {
-      img.src = e.data.url;
-      pending.delete(e.data.id);
-    }
-  });
+  // Anchor-only links (#heading) are handled by the viewer's hashchange logic
+  if (href.startsWith('#')) return;
 
-  function requestImage(img: HTMLImageElement) {
-    const src = img.getAttribute('src');
-    if (!src || !isRelativeSrc(src)) return;
-    const id = ++idCounter;
-    pending.set(id, img);
-    window.parent.postMessage({ type: 'RESOLVE_IMAGE', src, id }, '*');
+  // All non-anchor links must preventDefault to avoid navigating the iframe away
+  // from the viewer page (which would destroy the viewer runtime).
+  event.preventDefault();
+
+  // Absolute URLs (http:, mailto:, tel:, etc.) open via window.open
+  if (/^[a-z][a-z0-9+\-.]*:/i.test(href)) {
+    window.open(href, '_blank');
+    return;
   }
 
-  // Watch for img elements added by the rendering pipeline
-  const observer = new MutationObserver((mutations) => {
-    for (const m of mutations) {
-      for (const node of m.addedNodes) {
-        if (node instanceof HTMLImageElement) {
-          requestImage(node);
-        } else if (node instanceof HTMLElement) {
-          for (const img of node.querySelectorAll<HTMLImageElement>('img')) {
-            requestImage(img);
-          }
-        }
-      }
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+  // Relative path — delegate to workspace parent to open via File System Access API
+  window.parent.postMessage({ type: 'WORKSPACE_NAVIGATE', path: href }, '*');
+});
 
-  // Also handle images already in the DOM
-  for (const img of document.querySelectorAll<HTMLImageElement>('img')) {
-    requestImage(img);
-  }
-}
+// Set up workspace file/image resolvers before notifying the parent that the
+// viewer is ready. This ensures the workspace file reader (used by the SVG
+// plugin to resolve relative image paths) is available before the first render,
+// avoiding a race where `new URL(relativePath, _baseUrl)` fails because
+// `_baseUrl` is an empty file:// URL in workspace mode.
+workspaceEmbedBridge.ensureConnected();
 
-// ─── Workspace file reader (for readRelativeFile in workspace mode) ───
-function setupWorkspaceFileReader() {
-  const documentService = platform.document as import('../webview/api-impl').ChromeDocumentService;
-  let idCounter = 0;
-  const pending = new Map<number, { resolve: (v: string) => void; reject: (e: Error) => void }>();
-
-  window.addEventListener('message', (e: MessageEvent) => {
-    if (e.data?.type !== 'FILE_RESOLVED') return;
-    const entry = pending.get(e.data.id);
-    if (entry) {
-      pending.delete(e.data.id);
-      if (e.data.error) {
-        entry.reject(new Error(e.data.error));
-      } else {
-        entry.resolve(e.data.content);
-      }
-    }
-  });
-
-  documentService.setWorkspaceFileReader((relativePath: string, binary: boolean) => {
-    return new Promise((resolve, reject) => {
-      const id = ++idCounter;
-      pending.set(id, { resolve, reject });
-      window.parent.postMessage({ type: 'RESOLVE_FILE', path: relativePath, id, binary }, '*');
-    });
-  });
-}
-
-// Notify parent that the viewer frame is ready to receive content
-window.parent.postMessage({ type: 'VIEWER_READY' }, '*');
+// Expose a deterministic readiness signal for hosts and automated browser
+// tests. VIEWER_READY is still sent to the parent for workspace coordination;
+// this attribute also lets same-page callers wait without guessing a delay.
+document.documentElement.dataset.viewerEmbedReady = '1';
+parentBridge.notifyViewerReady();

@@ -19,6 +19,30 @@
     "message": "Unbekannter Fehler",
     "description": "Fallback-Text bei fehlenden Details"
   },
+  "book_export_docx": {
+    "message": "Buch als DOCX exportieren",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_epub": {
+    "message": "Buch als EPUB exportieren",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
+  "book_export_failed": {
+    "message": "Buch-Export fehlgeschlagen: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Buch als PDF exportieren",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} Seite(n) übersprungen",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Buch exportieren",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Cache leeren",
     "description": "Knopf zum Leeren"
@@ -175,6 +199,10 @@
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
   },
+  "copy_table": {
+    "message": "Tabelle kopieren",
+    "description": "Context menu item for copying a rendered table as spreadsheet cells"
+  },
   "delete": {
     "message": "Löschen",
     "description": "Delete button text"
@@ -203,6 +231,10 @@
     "message": "Als DOCX exportieren",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_epub": {
+    "message": "Als EPUB exportieren",
+    "description": "Export menu item for exporting the current document to EPUB"
+  },
   "export_menu_export_html": {
     "message": "Als HTML exportieren",
     "description": "Export menu item for exporting to HTML"
@@ -220,11 +252,11 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown in perfektes Word — Mermaid, PlantUML, Vega, drawio, Infografik, Graphviz, LaTeX, Code-Hervorhebung, lokale Verarbeitung.",
+    "message": "Markdown lokal anzeigen und formatierte Word-Dokumente mit Diagrammen, Formeln und Code-Hervorhebung exportieren.",
     "description": "Beschreibung der Erweiterung im Chrome Web Store"
   },
   "extensionName": {
-    "message": "Markdown-Viewer",
+    "message": "docu.md Markdown-Viewer",
     "description": "Name der Erweiterung"
   },
   "failed_to_open_file": {
@@ -251,6 +283,14 @@
     "message": "und aktivieren Sie 'Zugriff auf Datei-URLs erlauben'",
     "description": "Suffix for file access warning"
   },
+  "file_access_disabled_suffix_firefox": {
+    "message": "und aktiviere „Zugriff auf lokale Dateien auf Ihrem Computer“ unter Berechtigungen und Daten",
+    "description": "Suffix for the Firefox file access warning"
+  },
+  "file_access_enable_button": {
+    "message": "Zugriff auf lokale Dateien erlauben",
+    "description": "Button that requests local file access"
+  },
   "file_access_settings_link": {
     "message": "Erweiterungseinstellungsseite",
     "description": "Link text to extension settings"
@@ -271,13 +311,9 @@
     "message": "URL kopiert. Zum Öffnen in die Adressleiste einfügen.",
     "description": "Message shown when file URL is copied to clipboard in Firefox"
   },
-  "heading_h2_format": {
-    "message": "Kapitel {0}",
-    "description": "Format for h2 headings. {0} is the chapter number."
-  },
-  "heading_h2_numerals": {
-    "message": "arabic",
-    "description": "Numeral system for h2: chinese, arabic, roman"
+  "heading_anchor_title": {
+    "message": "Link zu diesem Abschnitt",
+    "description": "Tooltip for the hover anchor icon shown next to a heading"
   },
   "history_clear": {
     "message": "Verlauf löschen",
@@ -339,6 +375,26 @@
     "message": "Verkleinern",
     "description": "Tooltip for zooming out in the diagram lightbox"
   },
+  "local_file_access_message": {
+    "message": "Firefox erlaubt dieser Erweiterung nicht, lokale Dateien zu lesen, deshalb können die Bilder im Ordner {0} nicht eingebettet werden. Wähle den Ordner aus, der sie enthält – die ausgewählten Dateien bleiben auf deinem Computer und werden nur für dieses Dokument gelesen.",
+    "description": "Prompt shown when the folder name is known"
+  },
+  "local_file_access_message_generic": {
+    "message": "Firefox erlaubt dieser Erweiterung nicht, lokale Dateien zu lesen, deshalb können lokale Bilder in diesem Dokument nicht eingebettet werden. Wähle den Ordner aus, der sie enthält – die ausgewählten Dateien bleiben auf deinem Computer und werden nur für dieses Dokument gelesen.",
+    "description": "Prompt shown without a folder name"
+  },
+  "local_file_access_pick": {
+    "message": "Ordner auswählen",
+    "description": "Button that opens the folder picker"
+  },
+  "local_file_access_skip": {
+    "message": "Diesmal ohne Bilder exportieren",
+    "description": "Button that exports without embedding local images"
+  },
+  "local_file_access_title": {
+    "message": "Lokale Bilder können nicht gelesen werden",
+    "description": "Title of the local file access prompt"
+  },
   "more": {
     "message": "Mehr",
     "description": "More menu tooltip"
@@ -387,13 +443,45 @@
     "message": "Anmerkung hinzufügen…",
     "description": "Placeholder for the note input in the annotation popup and sidebar"
   },
-  "remark_all_cleared": {
-    "message": "Alle Anmerkungen wurden gelöscht",
-    "description": "Temporary success state after clearing all remarks"
+  "remark_cfg_auto_delete": {
+    "message": "Leere Anmerkungen automatisch löschen",
+    "description": "Config: auto-delete annotations with no note"
   },
-  "remark_cancel": {
-    "message": "Abbrechen und entfernen",
-    "description": "Cancel button in the annotation popup"
+  "remark_cfg_close_after_copy": {
+    "message": "Tab nach dem Kopieren schließen",
+    "description": "Config: close the file tab after copying remarks"
+  },
+  "remark_cfg_default_color": {
+    "message": "Standardfarbe",
+    "description": "Config: default annotation color"
+  },
+  "remark_cfg_font_size": {
+    "message": "Schriftgröße",
+    "description": "Config: sidebar font size"
+  },
+  "remark_cfg_highlight_style": {
+    "message": "Hervorhebungsstil",
+    "description": "Config: how text is visually marked"
+  },
+  "remark_cfg_style_bg": {
+    "message": "Hintergrund",
+    "description": "Highlight style: colored background"
+  },
+  "remark_cfg_style_border": {
+    "message": "Rahmen",
+    "description": "Highlight style: bottom border"
+  },
+  "remark_cfg_style_underline": {
+    "message": "Unterstrichen",
+    "description": "Highlight style: solid underline"
+  },
+  "remark_cfg_style_wavy": {
+    "message": "Wellig",
+    "description": "Highlight style: wavy underline"
+  },
+  "remark_cfg_title": {
+    "message": "Anmerkungsmodus",
+    "description": "Title for remark mode settings card"
   },
   "remark_clear_all": {
     "message": "Alle Anmerkungen löschen",
@@ -415,18 +503,6 @@
     "message": "Vorschlag",
     "description": "Label for the yellow annotation color"
   },
-  "remark_copied": {
-    "message": "Kopiert!",
-    "description": "Feedback shown after remarks are successfully copied"
-  },
-  "remark_copy_btn": {
-    "message": "Anmerkungen kopieren",
-    "description": "Button label to copy all remarks to clipboard and exit Remark Mode"
-  },
-  "remark_copy_failed": {
-    "message": "Kopieren fehlgeschlagen",
-    "description": "Feedback shown when copying remarks fails"
-  },
   "remark_copy_tooltip": {
     "message": "Alle Anmerkungen in die Zwischenablage kopieren",
     "description": "Tooltip for the Copy remarks button"
@@ -439,9 +515,9 @@
     "message": "Gelöscht",
     "description": "Status label shown after a remark is deleted"
   },
-  "remark_edit_note": {
-    "message": "Klicken zum Bearbeiten",
-    "description": "Tooltip on a remark note in the sidebar indicating it is editable"
+  "remark_download_tooltip": {
+    "message": "Anmerkungen als Datei herunterladen",
+    "description": "Tooltip for the button that downloads all remarks as a portable file"
   },
   "remark_empty_hint": {
     "message": "Text auswählen, um Anmerkungen hinzuzufügen",
@@ -459,6 +535,10 @@
     "message": "Hinweis",
     "description": "Label preceding the note text in exported remarks"
   },
+  "remark_import_tooltip": {
+    "message": "Anmerkungen aus Datei importieren und zusammenführen",
+    "description": "Tooltip for the button that imports remarks from a file and merges them"
+  },
   "remark_mode": {
     "message": "Anmerkungsmodus",
     "description": "Toolbar button tooltip to enter Remark Mode"
@@ -475,10 +555,6 @@
     "message": "Aus Liste entfernen",
     "description": "Menu item to remove file from recent list"
   },
-  "reset": {
-    "message": "Zurücksetzen",
-    "description": "Reset button"
-  },
   "save_as_drawio": {
     "message": "Als DrawIO speichern",
     "description": "Context menu item for saving a PlantUML diagram as DrawIO"
@@ -494,6 +570,10 @@
   "save_image_as": {
     "message": "Bild speichern unter…",
     "description": "Context menu item for saving an image"
+  },
+  "save_table_as_xlsx": {
+    "message": "Als Excel speichern (.xlsx)",
+    "description": "Context menu item for saving a rendered table as an Excel (.xlsx) file"
   },
   "search_case_sensitive": {
     "message": "Groß-/Kleinschreibung",
@@ -520,7 +600,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Aktualisierungsintervall:",
+    "message": "Aktualisierungsintervall",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -534,6 +614,18 @@
   "settings_cache_title": {
     "message": "Cache",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Diagrammausrichtung",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Mittig",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Links",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Emoji-Stil",
@@ -556,11 +648,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Trennlinien-Behandlung",
+    "message": "Trennlinien-Behandlung",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Ausblenden (leere Zeile)",
+    "message": "Ausblenden",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -575,8 +667,32 @@
     "message": "Seitenumbruch",
     "description": "Option to export horizontal rules as page breaks in DOCX"
   },
+  "settings_first_line_indent": {
+    "message": "Erstzeileneinzug",
+    "description": "Label for first-line indent selector"
+  },
+  "settings_first_line_indent_1": {
+    "message": "1 Zeichen",
+    "description": "Option: 1 character first-line indent"
+  },
+  "settings_first_line_indent_2": {
+    "message": "2 Zeichen",
+    "description": "Option: 2 characters first-line indent"
+  },
+  "settings_first_line_indent_3": {
+    "message": "3 Zeichen",
+    "description": "Option: 3 characters first-line indent"
+  },
+  "settings_first_line_indent_4": {
+    "message": "4 Zeichen",
+    "description": "Option: 4 characters first-line indent"
+  },
+  "settings_first_line_indent_off": {
+    "message": "Kein Einzug",
+    "description": "Option to disable first-line indent"
+  },
   "settings_frontmatter_display": {
-    "message": "Frontmatter-Anzeige:",
+    "message": "Frontmatter-Anzeige",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -599,6 +715,18 @@
     "message": "Erweiterungseinstellungen",
     "description": "Überschrift des Einstellungsabschnitts"
   },
+  "settings_image_layout": {
+    "message": "Bildausrichtung",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Mittig",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Links",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Oberflächeneinstellungen",
     "description": "Heading for interface settings section"
@@ -616,7 +744,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Maximale Cache-Einträge:",
+    "message": "Maximale Cache-Einträge",
     "description": "Beschriftung für Cache-Feld"
   },
   "settings_reset_btn": {
@@ -680,7 +808,7 @@
     "description": "Meldung bei Theme-Änderung"
   },
   "settings_theme_label": {
-    "message": "Theme auswählen:",
+    "message": "Theme auswählen",
     "description": "Beschriftung für Theme-Auswahl"
   },
   "share": {
@@ -724,7 +852,7 @@
     "description": "Tooltip für normales Layout"
   },
   "toolbar_print_disabled_title": {
-    "message": "Drucken ist nur für lokale Dateien verfügbar",
+    "message": "Drucken wird durch die Sicherheitsrichtlinie der Seite (Sandbox) blockiert",
     "description": "Tooltip wenn Drucken-Button für Remote-Dateien deaktiviert ist"
   },
   "toolbar_print_title": {
@@ -762,6 +890,14 @@
   "workspace_desc": {
     "message": "Öffnen Sie ein lokales Verzeichnis zum Durchsuchen und Vorschauen unterstützter Dateien.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Zurück",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Vor",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Arbeitsbereich öffnen",

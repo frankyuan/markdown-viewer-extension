@@ -19,6 +19,30 @@
     "message": "Lỗi không xác định",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Xuất sách sang DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_epub": {
+    "message": "Xuất sách sang EPUB",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
+  "book_export_failed": {
+    "message": "Xuất sách thất bại: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Xuất sách sang PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "Đã bỏ qua {0} trang",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Xuất sách",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Xóa bộ nhớ đệm",
     "description": "Clear cache button"
@@ -175,6 +199,10 @@
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
   },
+  "copy_table": {
+    "message": "Sao chép bảng",
+    "description": "Context menu item for copying a rendered table as spreadsheet cells"
+  },
   "delete": {
     "message": "Delete",
     "description": "Delete button text"
@@ -203,6 +231,10 @@
     "message": "Xuất sang DOCX",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_epub": {
+    "message": "Xuất sang EPUB",
+    "description": "Export menu item for exporting the current document to EPUB"
+  },
   "export_menu_export_html": {
     "message": "Xuất sang HTML",
     "description": "Export menu item for exporting to HTML"
@@ -220,7 +252,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown sang Word hoàn hảo — Mermaid, PlantUML, Vega, drawio, infographic, Graphviz, LaTeX, tô sáng mã, xử lý cục bộ.",
+    "message": "Xem trước Markdown cục bộ và xuất tài liệu Word chỉn chu với sơ đồ, công thức chỉnh sửa được và tô sáng mã.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {
@@ -251,6 +283,14 @@
     "message": "và bật 'Cho phép truy cập URL tệp'",
     "description": "Suffix for file access warning"
   },
+  "file_access_disabled_suffix_firefox": {
+    "message": "và bật “Truy cập tệp cục bộ trên máy tính của bạn” trong Quyền và dữ liệu",
+    "description": "Suffix for the Firefox file access warning"
+  },
+  "file_access_enable_button": {
+    "message": "Bật truy cập tệp cục bộ",
+    "description": "Button that requests local file access"
+  },
   "file_access_settings_link": {
     "message": "trang cài đặt tiện ích",
     "description": "Link text to extension settings"
@@ -271,13 +311,9 @@
     "message": "Đã sao chép URL. Dán vào thanh địa chỉ để mở.",
     "description": "Message shown when file URL is copied to clipboard in Firefox"
   },
-  "heading_h2_format": {
-    "message": "Chương {0}",
-    "description": "Format for h2 headings. {0} is the chapter number."
-  },
-  "heading_h2_numerals": {
-    "message": "arabic",
-    "description": "Numeral system for h2: chinese, arabic, roman"
+  "heading_anchor_title": {
+    "message": "Liên kết đến phần này",
+    "description": "Tooltip for the hover anchor icon shown next to a heading"
   },
   "history_clear": {
     "message": "Xóa lịch sử",
@@ -339,6 +375,26 @@
     "message": "Thu nhỏ",
     "description": "Tooltip for zooming out in the diagram lightbox"
   },
+  "local_file_access_message": {
+    "message": "Firefox không cho phép tiện ích này đọc tệp cục bộ, vì vậy không thể nhúng ảnh trong thư mục {0}. Hãy chọn thư mục chứa chúng - các tệp đã chọn vẫn ở trên máy của bạn và chỉ được đọc cho tài liệu này.",
+    "description": "Prompt shown when the folder name is known"
+  },
+  "local_file_access_message_generic": {
+    "message": "Firefox không cho phép tiện ích này đọc tệp cục bộ, vì vậy không thể nhúng ảnh cục bộ trong tài liệu này. Hãy chọn thư mục chứa chúng - các tệp đã chọn vẫn ở trên máy của bạn và chỉ được đọc cho tài liệu này.",
+    "description": "Prompt shown without a folder name"
+  },
+  "local_file_access_pick": {
+    "message": "Chọn thư mục",
+    "description": "Button that opens the folder picker"
+  },
+  "local_file_access_skip": {
+    "message": "Lần này xuất không kèm ảnh",
+    "description": "Button that exports without embedding local images"
+  },
+  "local_file_access_title": {
+    "message": "Không thể đọc ảnh cục bộ",
+    "description": "Title of the local file access prompt"
+  },
   "more": {
     "message": "More",
     "description": "More menu tooltip"
@@ -387,13 +443,45 @@
     "message": "Thêm ghi chú…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
-  "remark_all_cleared": {
-    "message": "Đã xóa tất cả ghi chú",
-    "description": "Temporary success state after clearing all remarks"
+  "remark_cfg_auto_delete": {
+    "message": "Tự động xóa ghi chú trống",
+    "description": "Config: auto-delete annotations with no note"
   },
-  "remark_cancel": {
-    "message": "Hủy và xóa",
-    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  "remark_cfg_close_after_copy": {
+    "message": "Đóng tab sau khi sao chép",
+    "description": "Config: close the file tab after copying remarks"
+  },
+  "remark_cfg_default_color": {
+    "message": "Màu mặc định",
+    "description": "Config: default annotation color"
+  },
+  "remark_cfg_font_size": {
+    "message": "Cỡ chữ",
+    "description": "Config: sidebar font size"
+  },
+  "remark_cfg_highlight_style": {
+    "message": "Kiểu đánh dấu",
+    "description": "Config: how text is visually marked"
+  },
+  "remark_cfg_style_bg": {
+    "message": "Nền",
+    "description": "Highlight style: colored background"
+  },
+  "remark_cfg_style_border": {
+    "message": "Viền",
+    "description": "Highlight style: bottom border"
+  },
+  "remark_cfg_style_underline": {
+    "message": "Gạch chân",
+    "description": "Highlight style: solid underline"
+  },
+  "remark_cfg_style_wavy": {
+    "message": "Lượn sóng",
+    "description": "Highlight style: wavy underline"
+  },
+  "remark_cfg_title": {
+    "message": "Chế độ chú thích",
+    "description": "Title for remark mode settings card"
   },
   "remark_clear_all": {
     "message": "Xóa tất cả ghi chú",
@@ -415,18 +503,6 @@
     "message": "Gợi ý",
     "description": "Label for the yellow remark category"
   },
-  "remark_copied": {
-    "message": "Đã sao chép!",
-    "description": "Temporary success state after copying remarks"
-  },
-  "remark_copy_btn": {
-    "message": "Sao chép ghi chú",
-    "description": "Button text for copying all remarks"
-  },
-  "remark_copy_failed": {
-    "message": "Sao chép thất bại",
-    "description": "Temporary error state when copying remarks fails"
-  },
   "remark_copy_tooltip": {
     "message": "Sao chép tất cả ghi chú vào bảng tạm",
     "description": "Tooltip for copying all remarks"
@@ -439,9 +515,9 @@
     "message": "Đã xóa",
     "description": "Status label shown after a remark is deleted"
   },
-  "remark_edit_note": {
-    "message": "Nhấp để chỉnh sửa",
-    "description": "Tooltip for editing an existing remark note"
+  "remark_download_tooltip": {
+    "message": "Tải chú thích xuống dưới dạng tệp",
+    "description": "Tooltip for the button that downloads all remarks as a portable file"
   },
   "remark_empty_hint": {
     "message": "Chọn văn bản để thêm ghi chú",
@@ -459,6 +535,10 @@
     "message": "Ghi chú",
     "description": "Label preceding the note text in exported remarks"
   },
+  "remark_import_tooltip": {
+    "message": "Nhập và hợp nhất chú thích từ tệp",
+    "description": "Tooltip for the button that imports remarks from a file and merges them"
+  },
   "remark_mode": {
     "message": "Chế độ ghi chú",
     "description": "Toolbar button title for entering remark mode"
@@ -475,10 +555,6 @@
     "message": "Remove from list",
     "description": "Menu item to remove file from recent list"
   },
-  "reset": {
-    "message": "Đặt lại",
-    "description": "Reset button"
-  },
   "save_as_drawio": {
     "message": "Lưu dưới dạng DrawIO",
     "description": "Context menu item for saving a PlantUML diagram as DrawIO"
@@ -494,6 +570,10 @@
   "save_image_as": {
     "message": "Lưu hình ảnh dưới dạng…",
     "description": "Context menu item for saving an image"
+  },
+  "save_table_as_xlsx": {
+    "message": "Lưu dưới dạng Excel (.xlsx)",
+    "description": "Context menu item for saving a rendered table as an Excel (.xlsx) file"
   },
   "search_case_sensitive": {
     "message": "Phân biệt chữ hoa/thường",
@@ -520,7 +600,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Khoảng thời gian làm mới:",
+    "message": "Khoảng thời gian làm mới",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -534,6 +614,18 @@
   "settings_cache_title": {
     "message": "Bộ nhớ đệm",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Bố cục sơ đồ",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Giữa",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Trái",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Kiểu emoji",
@@ -556,11 +648,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Xử lý đường kẻ ngang",
+    "message": "Xử lý đường kẻ ngang",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Ẩn (dòng trống)",
+    "message": "Ẩn",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -575,8 +667,32 @@
     "message": "Ngắt trang",
     "description": "Option to export horizontal rules as page breaks in DOCX"
   },
+  "settings_first_line_indent": {
+    "message": "Thụt lề dòng đầu",
+    "description": "Label for first-line indent selector"
+  },
+  "settings_first_line_indent_1": {
+    "message": "1 ký tự",
+    "description": "Option: 1 character first-line indent"
+  },
+  "settings_first_line_indent_2": {
+    "message": "2 ký tự",
+    "description": "Option: 2 characters first-line indent"
+  },
+  "settings_first_line_indent_3": {
+    "message": "3 ký tự",
+    "description": "Option: 3 characters first-line indent"
+  },
+  "settings_first_line_indent_4": {
+    "message": "4 ký tự",
+    "description": "Option: 4 characters first-line indent"
+  },
+  "settings_first_line_indent_off": {
+    "message": "Không thụt lề",
+    "description": "Option to disable first-line indent"
+  },
   "settings_frontmatter_display": {
-    "message": "Hiển thị Frontmatter:",
+    "message": "Hiển thị Frontmatter",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -599,6 +715,18 @@
     "message": "Cài đặt tiện ích mở rộng",
     "description": "Tiêu đề phần cài đặt"
   },
+  "settings_image_layout": {
+    "message": "Bố cục hình ảnh",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Giữa",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Trái",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Cài đặt giao diện",
     "description": "Heading for interface settings section"
@@ -616,7 +744,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Số mục tối đa trong bộ nhớ đệm:",
+    "message": "Số mục tối đa trong bộ nhớ đệm",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -680,7 +808,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "Chọn Giao diện:",
+    "message": "Chọn Giao diện",
     "description": "Label for theme selector"
   },
   "share": {
@@ -724,8 +852,8 @@
     "description": "Toolbar layout toggle tooltip for normal mode"
   },
   "toolbar_print_disabled_title": {
-    "message": "Chỉ có thể in cho tệp cục bộ",
-    "description": "Tooltip when print button is disabled for remote files"
+    "message": "In bị chặn bởi chính sách bảo mật của trang (sandbox)",
+    "description": "Tooltip when print button is disabled due to sandbox restriction"
   },
   "toolbar_print_title": {
     "message": "In",
@@ -762,6 +890,14 @@
   "workspace_desc": {
     "message": "Mở thư mục cục bộ để duyệt và xem trước các tệp được hỗ trợ.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Quay lại",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Tiếp theo",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Mở không gian làm việc",

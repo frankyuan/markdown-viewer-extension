@@ -19,6 +19,30 @@
     "message": "Ralat tidak diketahui",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Eksport buku ke DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_epub": {
+    "message": "Eksport buku ke EPUB",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
+  "book_export_failed": {
+    "message": "Gagal mengeksport buku: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Eksport buku ke PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} halaman dilangkau",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Eksport buku",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Kosongkan cache",
     "description": "Clear cache button"
@@ -175,6 +199,10 @@
     "message": "Copy as PNG",
     "description": "Context menu item for copying a diagram as PNG"
   },
+  "copy_table": {
+    "message": "Salin jadual",
+    "description": "Context menu item for copying a rendered table as spreadsheet cells"
+  },
   "delete": {
     "message": "Padam",
     "description": "Delete button text"
@@ -203,6 +231,10 @@
     "message": "Eksport ke DOCX",
     "description": "Export menu item for exporting to DOCX"
   },
+  "export_menu_export_epub": {
+    "message": "Eksport ke EPUB",
+    "description": "Export menu item for exporting the current document to EPUB"
+  },
   "export_menu_export_html": {
     "message": "Eksport ke HTML",
     "description": "Export menu item for exporting to HTML"
@@ -220,7 +252,7 @@
     "description": "Fallback message when DOCX export fails"
   },
   "extensionDescription": {
-    "message": "Markdown ke Word sempurna — Mermaid, PlantUML, Vega, drawio, infografik, Graphviz, LaTeX, penyerlahan kod, pemprosesan tempatan.",
+    "message": "Pratonton Markdown secara setempat dan eksport dokumen Word kemas dengan rajah, formula dan serlahan kod.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {
@@ -251,6 +283,14 @@
     "message": "dan dayakan 'Benarkan akses ke URL fail'",
     "description": "Suffix for file access warning"
   },
+  "file_access_disabled_suffix_firefox": {
+    "message": "dan hidupkan “Akses fail setempat pada komputer anda” dalam Kebenaran dan data",
+    "description": "Suffix for the Firefox file access warning"
+  },
+  "file_access_enable_button": {
+    "message": "Benarkan akses fail setempat",
+    "description": "Button that requests local file access"
+  },
   "file_access_settings_link": {
     "message": "halaman tetapan sambungan",
     "description": "Link text to extension settings"
@@ -271,13 +311,9 @@
     "message": "URL disalin. Tampal dalam bar alamat untuk membuka.",
     "description": "Message shown when file URL is copied to clipboard in Firefox"
   },
-  "heading_h2_format": {
-    "message": "Bab {0}",
-    "description": "Format for h2 headings. {0} is the chapter number."
-  },
-  "heading_h2_numerals": {
-    "message": "arabic",
-    "description": "Numeral system for h2: chinese, arabic, roman"
+  "heading_anchor_title": {
+    "message": "Pautan ke bahagian ini",
+    "description": "Tooltip for the hover anchor icon shown next to a heading"
   },
   "history_clear": {
     "message": "Kosongkan sejarah",
@@ -339,6 +375,26 @@
     "message": "Zum keluar",
     "description": "Tooltip for zooming out in the diagram lightbox"
   },
+  "local_file_access_message": {
+    "message": "Firefox tidak membenarkan sambungan ini membaca fail setempat, jadi imej dalam folder {0} tidak boleh dibenamkan. Pilih folder yang mengandunginya - fail yang dipilih kekal pada komputer anda dan hanya dibaca untuk dokumen ini.",
+    "description": "Prompt shown when the folder name is known"
+  },
+  "local_file_access_message_generic": {
+    "message": "Firefox tidak membenarkan sambungan ini membaca fail setempat, jadi imej setempat dalam dokumen ini tidak boleh dibenamkan. Pilih folder yang mengandunginya - fail yang dipilih kekal pada komputer anda dan hanya dibaca untuk dokumen ini.",
+    "description": "Prompt shown without a folder name"
+  },
+  "local_file_access_pick": {
+    "message": "Pilih folder",
+    "description": "Button that opens the folder picker"
+  },
+  "local_file_access_skip": {
+    "message": "Eksport tanpa imej kali ini",
+    "description": "Button that exports without embedding local images"
+  },
+  "local_file_access_title": {
+    "message": "Imej setempat tidak boleh dibaca",
+    "description": "Title of the local file access prompt"
+  },
   "more": {
     "message": "Lagi",
     "description": "More options menu"
@@ -387,13 +443,45 @@
     "message": "Tambah catatan…",
     "description": "Placeholder and tooltip for adding a remark note"
   },
-  "remark_all_cleared": {
-    "message": "Semua catatan telah dikosongkan",
-    "description": "Temporary success state after clearing all remarks"
+  "remark_cfg_auto_delete": {
+    "message": "Padam nota kosong secara automatik",
+    "description": "Config: auto-delete annotations with no note"
   },
-  "remark_cancel": {
-    "message": "Batal dan buang",
-    "description": "Button text for cancelling a new remark and removing the temporary mark"
+  "remark_cfg_close_after_copy": {
+    "message": "Tutup tab selepas menyalin",
+    "description": "Config: close the file tab after copying remarks"
+  },
+  "remark_cfg_default_color": {
+    "message": "Warna lalai",
+    "description": "Config: default annotation color"
+  },
+  "remark_cfg_font_size": {
+    "message": "Saiz fon",
+    "description": "Config: sidebar font size"
+  },
+  "remark_cfg_highlight_style": {
+    "message": "Gaya serlahan",
+    "description": "Config: how text is visually marked"
+  },
+  "remark_cfg_style_bg": {
+    "message": "Latar belakang",
+    "description": "Highlight style: colored background"
+  },
+  "remark_cfg_style_border": {
+    "message": "Bingkai",
+    "description": "Highlight style: bottom border"
+  },
+  "remark_cfg_style_underline": {
+    "message": "Garis bawah",
+    "description": "Highlight style: solid underline"
+  },
+  "remark_cfg_style_wavy": {
+    "message": "Berombak",
+    "description": "Highlight style: wavy underline"
+  },
+  "remark_cfg_title": {
+    "message": "Mod anotasi",
+    "description": "Title for remark mode settings card"
   },
   "remark_clear_all": {
     "message": "Kosongkan semua catatan",
@@ -415,18 +503,6 @@
     "message": "Cadangan",
     "description": "Label for the yellow remark category"
   },
-  "remark_copied": {
-    "message": "Disalin!",
-    "description": "Temporary success state after copying remarks"
-  },
-  "remark_copy_btn": {
-    "message": "Salin catatan",
-    "description": "Button text for copying all remarks"
-  },
-  "remark_copy_failed": {
-    "message": "Gagal menyalin",
-    "description": "Temporary error state when copying remarks fails"
-  },
   "remark_copy_tooltip": {
     "message": "Salin semua catatan ke papan klip",
     "description": "Tooltip for copying all remarks"
@@ -439,9 +515,9 @@
     "message": "Dipadam",
     "description": "Status label shown after a remark is deleted"
   },
-  "remark_edit_note": {
-    "message": "Klik untuk mengedit",
-    "description": "Tooltip for editing an existing remark note"
+  "remark_download_tooltip": {
+    "message": "Muat turun catatan sebagai fail",
+    "description": "Tooltip for the button that downloads all remarks as a portable file"
   },
   "remark_empty_hint": {
     "message": "Pilih teks untuk menambah catatan",
@@ -459,6 +535,10 @@
     "message": "Nota",
     "description": "Label preceding the note text in exported remarks"
   },
+  "remark_import_tooltip": {
+    "message": "Import & gabungkan catatan daripada fail",
+    "description": "Tooltip for the button that imports remarks from a file and merges them"
+  },
   "remark_mode": {
     "message": "Mod catatan",
     "description": "Toolbar button title for entering remark mode"
@@ -475,10 +555,6 @@
     "message": "Alih keluar dari senarai",
     "description": "Menu item to remove file from recent list"
   },
-  "reset": {
-    "message": "Tetapkan semula",
-    "description": "Reset button"
-  },
   "save_as_drawio": {
     "message": "Simpan sebagai DrawIO",
     "description": "Context menu item for saving a PlantUML diagram as DrawIO"
@@ -494,6 +570,10 @@
   "save_image_as": {
     "message": "Simpan imej sebagai…",
     "description": "Context menu item for saving an image"
+  },
+  "save_table_as_xlsx": {
+    "message": "Simpan sebagai Excel (.xlsx)",
+    "description": "Context menu item for saving a rendered table as an Excel (.xlsx) file"
   },
   "search_case_sensitive": {
     "message": "Padanan huruf",
@@ -520,7 +600,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Selang muat semula:",
+    "message": "Selang muat semula",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -534,6 +614,18 @@
   "settings_cache_title": {
     "message": "Cache",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Susun atur rajah",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Tengah",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Kiri",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Gaya Emoji",
@@ -556,11 +648,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Pengendalian garisan mendatar",
+    "message": "Pengendalian garisan mendatar",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Sembunyikan (baris kosong)",
+    "message": "Sembunyikan",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -575,8 +667,32 @@
     "message": "Pemisah halaman",
     "description": "Option to export horizontal rules as page breaks in DOCX"
   },
+  "settings_first_line_indent": {
+    "message": "Inden baris pertama",
+    "description": "Label for first-line indent selector"
+  },
+  "settings_first_line_indent_1": {
+    "message": "1 aksara",
+    "description": "Option: 1 character first-line indent"
+  },
+  "settings_first_line_indent_2": {
+    "message": "2 aksara",
+    "description": "Option: 2 characters first-line indent"
+  },
+  "settings_first_line_indent_3": {
+    "message": "3 aksara",
+    "description": "Option: 3 characters first-line indent"
+  },
+  "settings_first_line_indent_4": {
+    "message": "4 aksara",
+    "description": "Option: 4 characters first-line indent"
+  },
+  "settings_first_line_indent_off": {
+    "message": "Tiada inden",
+    "description": "Option to disable first-line indent"
+  },
   "settings_frontmatter_display": {
-    "message": "Paparan Frontmatter:",
+    "message": "Paparan Frontmatter",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -599,6 +715,18 @@
     "message": "Tetapan sambungan",
     "description": "Heading for settings section"
   },
+  "settings_image_layout": {
+    "message": "Susun atur imej",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Tengah",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Kiri",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Tetapan antara muka",
     "description": "Heading for interface settings section"
@@ -616,7 +744,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Item maksimum dalam cache:",
+    "message": "Item maksimum dalam cache",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -680,7 +808,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "Pilih Tema:",
+    "message": "Pilih Tema",
     "description": "Label for theme selector"
   },
   "share": {
@@ -724,8 +852,8 @@
     "description": "Toolbar layout toggle tooltip for normal mode"
   },
   "toolbar_print_disabled_title": {
-    "message": "Cetak hanya tersedia untuk fail tempatan",
-    "description": "Tooltip when print button is disabled for remote files"
+    "message": "Cetak disekat oleh dasar keselamatan halaman (sandbox)",
+    "description": "Tooltip when print button is disabled due to sandbox restriction"
   },
   "toolbar_print_title": {
     "message": "Cetak",
@@ -762,6 +890,14 @@
   "workspace_desc": {
     "message": "Buka direktori tempatan untuk menyemak imbas dan pratonton fail yang disokong.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Kembali",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Maju",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Buka ruang kerja",

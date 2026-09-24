@@ -29,6 +29,36 @@ let offscreenReadyPromise: Promise<void> | null = null;
 let offscreenReadyResolve: (() => void) | null = null;
 let globalCacheStorage: CacheStorage | null = null;
 
+/**
+ * Offscreen state is shared by every concurrent render request, so it is reset in
+ * exactly one place. A ready promise that never settles is not a harmless leak:
+ * `ensureOffscreenDocument()` awaits it for every later request, so a single
+ * missed handshake used to hang renders until the caller gave up (observed as the
+ * intermittent `diagram-center` fixture stall in CI, where the next diagram then
+ * rendered in under 2s).
+ */
+function resetOffscreenState(): void {
+  offscreenCreated = false;
+  offscreenReady = false;
+  offscreenReadyPromise = null;
+  offscreenReadyResolve = null;
+}
+
+/** Mark the offscreen document usable and release everything waiting on it. */
+function markOffscreenReady(): void {
+  offscreenCreated = true;
+  offscreenReady = true;
+  releaseOffscreenWaiters();
+}
+
+/** Release waiters without marking the document ready (creation failed). */
+function releaseOffscreenWaiters(): void {
+  const resolve = offscreenReadyResolve;
+  offscreenReadyResolve = null;
+  offscreenReadyPromise = null;
+  if (resolve) resolve();
+}
+
 // Envelope helpers (kept local to avoid a hard dependency from background on src/messaging runtime).
 let requestCounter = 0;
 function createRequestId(): string {
@@ -659,10 +689,7 @@ chrome.runtime.onConnect.addListener((port) => {
   if (port.name === 'offscreen') {
     port.onDisconnect.addListener(() => {
       // Reset state when offscreen document disconnects
-      offscreenCreated = false;
-      offscreenReady = false;
-      offscreenReadyPromise = null;
-      offscreenReadyResolve = null;
+      resetOffscreenState();
     });
   }
 });
@@ -670,12 +697,7 @@ chrome.runtime.onConnect.addListener((port) => {
 // Handle messages from content script
 chrome.runtime.onMessage.addListener((message: BackgroundMessage, sender, sendResponse) => {
   if (isRequestEnvelope(message) && message.type === 'OFFSCREEN_READY') {
-    offscreenCreated = true;
-    offscreenReady = true;
-    if (offscreenReadyResolve) {
-      offscreenReadyResolve();
-      offscreenReadyResolve = null;
-    }
+    markOffscreenReady();
     return;
   }
 
@@ -810,31 +832,52 @@ chrome.runtime.onMessage.addListener((message: BackgroundMessage, sender, sendRe
   return false;
 });
 
-async function sendToOffscreen(request: { id: string; type: string; payload: unknown }): Promise<unknown> {
-  // Ensure offscreen document exists and is ready
-  await ensureOffscreenDocument();
+/**
+ * A silent offscreen document (dead renderer, missed handshake) would otherwise
+ * hold a render request until the caller's own 60s budget expires.
+ */
+const OFFSCREEN_REQUEST_TIMEOUT_MS = 20000;
 
+function sendOffscreenMessage(request: { id: string; type: string; payload: unknown }): Promise<unknown> {
   const offscreenRequest = {
     ...request,
     __target: 'offscreen'
   };
 
   return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Offscreen request timed out after ${OFFSCREEN_REQUEST_TIMEOUT_MS}ms`));
+    }, OFFSCREEN_REQUEST_TIMEOUT_MS);
+
     chrome.runtime.sendMessage(offscreenRequest, (response) => {
+      clearTimeout(timer);
       if (chrome.runtime.lastError) {
-        // Reset all offscreen state on communication failure
-        if (chrome.runtime.lastError.message?.includes('receiving end does not exist')) {
-          offscreenCreated = false;
-          offscreenReady = false;
-          offscreenReadyPromise = null;
-          offscreenReadyResolve = null;
-        }
         reject(new Error(`Offscreen communication failed: ${chrome.runtime.lastError.message}`));
         return;
       }
       resolve(response);
     });
   });
+}
+
+/**
+ * Forward a request to the offscreen document, retrying once against a freshly
+ * created document when the first attempt fails. The retry is what turns "the
+ * offscreen document stopped answering" back into a normal render; both attempts
+ * together still fit inside the renderer's own timeout.
+ */
+async function sendToOffscreen(request: { id: string; type: string; payload: unknown }): Promise<unknown> {
+  // Ensure offscreen document exists and is ready
+  await ensureOffscreenDocument();
+
+  try {
+    return await sendOffscreenMessage(request);
+  } catch (error) {
+    // The document is in an unknown state — drop it so the retry recreates it.
+    resetOffscreenState();
+    await ensureOffscreenDocument();
+    return await sendOffscreenMessage(request);
+  }
 }
 
 async function handleRenderEnvelopeRequest(
@@ -950,36 +993,29 @@ async function ensureOffscreenDocument(): Promise<void> {
         await new Promise(resolve => setTimeout(resolve, 100));
         // If still not ready after waiting, assume it's ready
         if (!offscreenReady) {
-          offscreenReady = true;
-          if (offscreenReadyResolve) {
-            offscreenReadyResolve();
-            offscreenReadyResolve = null;
-          }
+          markOffscreenReady();
         }
       }
       return;
     }
 
-    // For other errors, clean up and throw
-    offscreenReadyPromise = null;
-    offscreenReadyResolve = null;
+    // For other errors, clean up and throw. Waiters are released first: they then
+    // fail with a real communication error instead of hanging on this promise.
+    releaseOffscreenWaiters();
     throw new Error(`Failed to create offscreen document: ${errorMessage}`);
   }
 
-  // Wait for the offscreen document to signal it's ready (max 5 seconds)
-  const timeoutPromise = new Promise<void>((_, reject) => {
-    setTimeout(() => {
-      if (!offscreenReady) {
-        reject(new Error('Offscreen document initialization timeout'));
-      }
-    }, 5000);
-  });
-
-  try {
-    await Promise.race([offscreenReadyPromise, timeoutPromise]);
-  } catch (error) {
-    // On timeout, assume it's ready anyway (the message might have been missed)
-    offscreenReady = true;
+  // Wait for the offscreen document to signal it's ready (max 5 seconds). The
+  // document normally posts OFFSCREEN_READY almost immediately; when that message
+  // is missed (e.g. the worker was restarted while it loaded) the promise must
+  // still settle, otherwise every later render waits forever.
+  const readyWaiter = offscreenReadyPromise;
+  const timedOut = await Promise.race([
+    readyWaiter.then(() => false),
+    new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 5000)),
+  ]);
+  if (timedOut && !offscreenReady) {
+    markOffscreenReady();
   }
 }
 
@@ -989,9 +1025,14 @@ async function ensureOffscreenDocument(): Promise<void> {
 // whether the page is HTML via document.contentType and bails out early
 // if it's a raw text file).
 async function handleElementRuntimeInjection(tabId: number): Promise<void> {
-  // Element runtime renders into an iframe, so the host page does not need
-  // ui/styles.css. Injecting it would set global side effects (e.g.
-  // body{overflow:hidden}) on unrelated websites.
+  // Inline element mode renders into the host page DOM, so it needs the
+  // shared content styles — injected as a FILTERED copy (content selectors
+  // only, no global html/body rules) so the host page itself is unaffected.
+  // iframe mode does not need this: viewer-embed.html loads ui/styles.css.
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ['core/inject-element-styles.js'],
+  });
   await chrome.scripting.executeScript({
     target: { tabId },
     files: ['core/element-runtime.js'],
@@ -1011,10 +1052,14 @@ async function handleContentScriptInjection(tabId: number, fromContextMenu = fal
         files: ['core/html-to-markdown.js'],
       });
     }
-    // Inject CSS
-    await chrome.scripting.insertCSS({
+    // Inject the content stylesheet as a real <style> element. insertCSS is
+    // deliberately NOT used: its injected stylesheets never appear in
+    // document.styleSheets, so the export CSS collectors would miss every
+    // structural content rule (diagram-block centering etc.) and exported
+    // HTML/EPUB would lose the shared stylesheet.
+    await chrome.scripting.executeScript({
       target: { tabId },
-      files: ['ui/styles.css'],
+      files: ['core/inject-styles.js'],
     });
     // Inject the viewer (handles markdown, .slides.md, and converted HTML)
     await chrome.scripting.executeScript({
@@ -1164,44 +1209,115 @@ async function getMenuTitle(isRaw = false): Promise<string> {
   return chrome.i18n.getMessage(key) || defaultText;
 }
 
-// Initialize context menu for viewing any file as markdown
-async function initializeContextMenu(): Promise<void> {
-  try {
-    // Remove old menu items if exist (prevents duplicate ID error on SW restart)
-    try {
-      await chrome.contextMenus.remove('preview-as-markdown');
-    } catch {
-      // Ignore if old menu doesn't exist
-    }
-    try {
-      await chrome.contextMenus.remove('view-as-markdown');
-    } catch {
-      // Ignore if menu doesn't exist yet
-    }
-    
-    const title = await getMenuTitle();
-    chrome.contextMenus.create({
-      id: 'view-as-markdown',
-      title,
-      contexts: ['link', 'page'],
-      documentUrlPatterns: ['file://*/*', 'http://*/*', 'https://*/*']
+const CONTEXT_MENU_ID = 'view-as-markdown';
+
+// The contextMenus API only gained Promise support in Chrome 123 (the bundle
+// targets Chrome 120 syntax, so Chrome 120-122 is supported as well). On those
+// versions a promise-style `remove`/`update` never rejects: the failure stays in
+// runtime.lastError unread, so Chrome logs
+// "Unchecked runtime.lastError: Cannot find menu item with id ..." even for calls
+// that are expected to fail (removing an item that does not exist yet, updating
+// before creation finished). The callback form plus an explicit runtime.lastError
+// read behaves identically on every supported version and keeps the service
+// worker console clean.
+function removeAllContextMenus(): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.contextMenus.removeAll(() => {
+      // An already empty menu list is not an error worth reporting.
+      void chrome.runtime.lastError;
+      resolve();
     });
+  });
+}
+
+function createContextMenuItem(title: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    chrome.contextMenus.create(
+      {
+        id: CONTEXT_MENU_ID,
+        title,
+        contexts: ['link', 'page'],
+        documentUrlPatterns: ['file://*/*', 'http://*/*', 'https://*/*']
+      },
+      () => {
+        // create() reports failures (e.g. duplicate id) through lastError only.
+        const error = chrome.runtime.lastError;
+        if (error) {
+          console.warn('Failed to create context menu:', error.message);
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      }
+    );
+  });
+}
+
+function updateContextMenuItem(title: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    chrome.contextMenus.update(CONTEXT_MENU_ID, { title }, () => {
+      // A missing menu item (not created yet, or dropped on a service worker
+      // restart) is reported through lastError instead of throwing.
+      resolve(!chrome.runtime.lastError);
+    });
+  });
+}
+
+// Initialize context menu for viewing any file as markdown
+async function initializeContextMenu(titleOverride?: string): Promise<boolean> {
+  try {
+    // Menu items do not survive a browser restart, but they do survive a service
+    // worker restart, and the id changed in earlier versions (preview-as-markdown):
+    // clear every leftover before creating, otherwise create() fails on a duplicate id.
+    await removeAllContextMenus();
+
+    const title = titleOverride ?? await getMenuTitle();
+    return await createContextMenuItem(title);
   } catch (error) {
     console.error('Failed to create context menu:', error);
+    return false;
   }
+}
+
+let contextMenuReady = false;
+let contextMenuInit: Promise<void> | null = null;
+
+// Create the menu once per service worker life cycle. Concurrent callers share the
+// in-flight initialization so they cannot race into a duplicate id.
+function ensureContextMenu(title?: string): Promise<void> {
+  if (contextMenuReady) {
+    return Promise.resolve();
+  }
+  if (!contextMenuInit) {
+    contextMenuInit = initializeContextMenu(title)
+      .then((created) => {
+        contextMenuReady = created;
+      })
+      .finally(() => {
+        contextMenuInit = null;
+      });
+  }
+  return contextMenuInit;
 }
 
 // Update context menu when settings change
 async function updateContextMenu(tabId?: number): Promise<void> {
   try {
+    // Wait for the initial creation instead of racing it, so the very first update
+    // of a fresh service worker does not hit a missing menu item.
+    await ensureContextMenu();
+
     const isRaw = tabId !== undefined ? injectedTabs.has(tabId) : false;
     const title = await getMenuTitle(isRaw);
-    await chrome.contextMenus.update('view-as-markdown', { title });
-  } catch (error) {
-    // Menu might not exist yet, ignore
-    if (!error?.toString().includes('Cannot find menu item')) {
-      console.error('Failed to update context menu:', error);
+    const updated = await updateContextMenuItem(title);
+    if (!updated) {
+      // The item is gone (service worker restart, manual removal): rebuild it so the
+      // title matches the current tab instead of staying stale.
+      contextMenuReady = false;
+      await ensureContextMenu(title);
     }
+  } catch (error) {
+    console.error('Failed to update context menu:', error);
   }
 }
 
@@ -1225,7 +1341,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === 'view-as-markdown' && tab?.id) {
+  if (info.menuItemId === CONTEXT_MENU_ID && tab?.id) {
     const tabId = tab.id;
     let targetUrl = '';
     
@@ -1277,4 +1393,4 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 // Initialize context menu when extension loads
-initializeContextMenu();
+void ensureContextMenu();

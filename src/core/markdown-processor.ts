@@ -8,7 +8,7 @@ import remarkCjkFriendly from 'remark-cjk-friendly';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import remarkGemoji from 'remark-gemoji';
-import remarkSuperSub from '../plugins/remark-super-sub';
+import remarkGithubAlerts from '../plugins/remark-github-alerts';
 import remarkTocFilter from '../plugins/remark-toc-filter';
 import remarkRehype from 'remark-rehype';
 import GithubSlugger from 'github-slugger';
@@ -16,13 +16,21 @@ import rehypeSlugShared from './rehype-slug-shared';
 import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeStringify from 'rehype-stringify';
+import { codeToHast, createShikiInternalSync, type ShikiTransformer } from '@shikijs/core';
+import { createJavaScriptRegexEngine } from '@shikijs/engine-javascript';
+import langMarkdown from '@shikijs/langs/markdown';
+import themeVitesseDark from '@shikijs/themes/vitesse-dark';
+import themeVitesseLight from '@shikijs/themes/vitesse-light';
 import { visit } from 'unist-util-visit';
 import rehypeImageUri from '../plugins/rehype-image-uri';
 import rehypeTableMerge from '../plugins/rehype-table-merge';
 import { registerRemarkPlugins } from '../plugins/index';
-import { createPlaceholderElement } from '../plugins/plugin-content-utils';
+import { createErrorHTML, createPlaceholderElement } from '../plugins/plugin-content-utils';
+import { replacePlaceholderWithImageUrl } from '../plugins/plugin-html-utils';
+import { recordRenderDiagnostic } from './render-diagnostics';
+import { syncBlockHtmlFromDOM } from './viewer/viewer-controller';
 import { generateContentHash, hashCode } from '../utils/hash';
-import { isDocumentRelativeUrl } from '../utils/document-url';
+import { sanitizeHtmlFragment } from '../utils/html-sanitizer.ts';
 import {
   splitMarkdownIntoBlocksWithLines as splitBlocks,
   splitMarkdownIntoBlocks as splitBlocksSimple,
@@ -45,6 +53,12 @@ export type { TranslateFunction };
  */
 interface TaskContext {
   cancelled: boolean;
+  /**
+   * Document-level start line of the block currently being rendered (0-based).
+   * Block contents are parsed independently, so remark positions restart at
+   * line 1; error reports add this offset to name the real document line.
+   */
+  blockStartLine?: number;
 }
 
 /**
@@ -181,146 +195,26 @@ export function renderFrontmatterAsRaw(block: string): string {
 }
 
 /**
- * Validate URL values and block javascript-style protocols
- * @param url - URL to validate
- * @returns True when URL is considered safe
+ * Validate URL values and block javascript-style protocols.
+ *
+ * The policy itself lives in src/utils/url-safety.ts, shared with the HTML
+ * block sanitizer so the two cannot drift into different ideas of what is
+ * dangerous; re-exported here because this module is its historical home.
  */
-export function isSafeUrl(url: string | null | undefined): boolean {
-  if (!url) return true;
-
-  const trimmed = url.trim();
-  if (!trimmed || trimmed.startsWith('#')) return true;
-
-  const lower = trimmed.toLowerCase();
-  if (lower.startsWith('javascript:') || lower.startsWith('vbscript:') || lower.startsWith('data:text/javascript')) {
-    return false;
-  }
-
-  if (lower.startsWith('data:')) {
-    return lower.startsWith('data:image/') || lower.startsWith('data:application/pdf');
-  }
-
-  // Allow document-relative URLs via shared URL policy.
-  if (isDocumentRelativeUrl(trimmed)) {
-    return true;
-  }
-
-  try {
-    const parsed = new URL(trimmed, document.baseURI);
-    return ['http:', 'https:', 'mailto:', 'tel:', 'file:'].includes(parsed.protocol);
-  } catch (error) {
-    // If URL parsing fails, it's likely a relative path - allow it
-    return true;
-  }
-}
+export { isSafeUrl, isSafeSrcset } from '../utils/url-safety';
 
 /**
- * Validate that every URL candidate in a srcset attribute is safe
- * @param value - Raw srcset value
- * @returns True when every entry is safe
- */
-export function isSafeSrcset(value: string | null | undefined): boolean {
-  if (!value) return true;
-  return value.split(',').every((candidate) => {
-    const urlPart = candidate.trim().split(/\s+/)[0];
-    return isSafeUrl(urlPart);
-  });
-}
-
-/**
- * Strip unsafe attributes from an element
- * @param element - Element to sanitize
- */
-function sanitizeElementAttributes(element: Element): void {
-  if (!element.hasAttributes()) return;
-
-  const urlAttributes = ['src', 'href', 'xlink:href', 'action', 'formaction', 'poster', 'data', 'srcset'];
-
-  Array.from(element.attributes).forEach((attr) => {
-    const attrName = attr.name.toLowerCase();
-
-    // Remove event handlers
-    if (attrName.startsWith('on')) {
-      element.removeAttribute(attr.name);
-      return;
-    }
-
-    // Validate URL attributes
-    if (urlAttributes.includes(attrName)) {
-      if (attrName === 'srcset') {
-        if (!isSafeSrcset(attr.value)) {
-          element.removeAttribute(attr.name);
-        }
-      } else if (attrName === 'href' || attrName === 'xlink:href') {
-        if (!isSafeUrl(attr.value)) {
-          element.removeAttribute(attr.name);
-        }
-      } else if (!isSafeUrl(attr.value)) {
-        element.removeAttribute(attr.name);
-      }
-    }
-  });
-}
-
-/**
- * Walk the node tree and remove dangerous elements/attributes
- * @param root - Root node to sanitize
- */
-function sanitizeNodeTree(root: DocumentFragment): void {
-  const blockedTags = new Set(['SCRIPT', 'IFRAME', 'OBJECT', 'EMBED', 'AUDIO', 'VIDEO']);
-  const stack: Element[] = [];
-
-  Array.from(root.childNodes).forEach((child) => {
-    if (child.nodeType === Node.ELEMENT_NODE) {
-      stack.push(child as Element);
-    } else if (child.nodeType === Node.COMMENT_NODE) {
-      child.remove();
-    }
-  });
-
-  while (stack.length > 0) {
-    const node = stack.pop()!;
-
-    if (node.nodeType !== Node.ELEMENT_NODE) continue;
-
-    const tagName = node.tagName ? node.tagName.toUpperCase() : '';
-    if (blockedTags.has(tagName)) {
-      const originalMarkup = node.outerHTML || `<${tagName.toLowerCase()}>`;
-      const truncatedMarkup = originalMarkup.length > 500 ? `${originalMarkup.slice(0, 500)}...` : originalMarkup;
-      const warning = document.createElement('pre');
-      warning.className = 'blocked-html-warning';
-      warning.setAttribute('style', 'background: #fee; border-left: 4px solid #f00; padding: 10px; font-size: 12px; white-space: pre-wrap;');
-      warning.textContent = `Blocked insecure <${tagName.toLowerCase()}> element removed.\n\n${truncatedMarkup}`;
-      node.replaceWith(warning);
-      continue;
-    }
-
-    sanitizeElementAttributes(node);
-
-    Array.from(node.childNodes).forEach((child) => {
-      if (child.nodeType === Node.ELEMENT_NODE) {
-        stack.push(child as Element);
-      } else if (child.nodeType === Node.COMMENT_NODE) {
-        child.remove();
-      }
-    });
-  }
-}
-
-/**
- * Sanitize rendered HTML to remove active content like scripts before injection
+ * Sanitize rendered HTML to remove active content like scripts before injection.
+ *
+ * Delegates to the shared sanitizer in src/utils/html-sanitizer.ts with the
+ * rendered-document policy: a visible notice replaces removed elements, and
+ * `<style>` is kept where diagrams need it (inside `<svg>`).
+ *
  * @param html - Raw HTML string produced by the markdown pipeline
  * @returns Sanitized HTML safe for innerHTML assignment
  */
 export function sanitizeRenderedHtml(html: string): string {
-  try {
-    const template = document.createElement('template');
-    template.innerHTML = html;
-    sanitizeNodeTree(template.content);
-    return template.innerHTML;
-  } catch (error) {
-    return html;
-  }
+  return sanitizeHtmlFragment(html, { reportBlocked: true });
 }
 
 /**
@@ -360,6 +254,16 @@ export class AsyncTaskManager {
     // Create a unique context object for this manager instance
     // Tasks will reference this context to check cancellation
     this.context = { cancelled: false };
+  }
+
+  /**
+   * Set the document-level start line (0-based) of the block currently being
+   * processed, so task error reports can name the real source line even when
+   * block contents are parsed independently (remark positions restart at 1).
+   * @param line - 0-based start line of the current block
+   */
+  setBlockStartLine(line: number): void {
+    this.context.blockStartLine = line;
   }
 
   /**
@@ -430,10 +334,20 @@ export class AsyncTaskManager {
     const content = (data.code as string) || '';
     const sourceHash = generateContentHash(type, content);
 
+    // Convert the block-relative remark line to a document line. In whole-
+    // document parsing the block offset is 0 and the remark line is already
+    // absolute; in block-level streaming renders the viewer sets the offset.
+    const rawSourceLine = typeof data.sourceLine === 'number' && data.sourceLine > 0
+      ? data.sourceLine
+      : null;
+    const sourceLine = rawSourceLine === null
+      ? null
+      : rawSourceLine + (this.context.blockStartLine ?? 0);
+
     const task: AsyncTask = {
       id: placeholderId,
       callback: async (taskData: TaskData) => callback(taskData, taskContext),
-      data: { ...data, id: placeholderId, sourceHash },
+      data: { ...data, id: placeholderId, sourceHash, sourceLine },
       type,
       status: initialStatus,
       error: null,
@@ -444,12 +358,24 @@ export class AsyncTaskManager {
 
     this.queue.push(task);
 
+    // Authored <img> attributes (width/height/alt) flow through the task data
+    // (set by withImageNodeAttrs in the remark visitors) onto the placeholder
+    // element so the replacement step can re-apply them after rendering.
+    const imgAttrs = {
+      width: typeof data.sourceWidth === 'string' && data.sourceWidth !== '' ? data.sourceWidth : null,
+      height: typeof data.sourceHeight === 'string' && data.sourceHeight !== '' ? data.sourceHeight : null,
+      alt: typeof data.sourceAlt === 'string' && data.sourceAlt !== '' ? data.sourceAlt : null,
+    };
+    const hasImgAttrs = imgAttrs.width !== null || imgAttrs.height !== null || imgAttrs.alt !== null;
+
     const placeholderHtml = createPlaceholderElement(
       placeholderId,
       type,
       plugin?.isInline?.() || false,
       this.translate,
-      sourceHash
+      sourceHash,
+      hasImgAttrs ? imgAttrs : null,
+      sourceLine
     );
 
     return {
@@ -514,9 +440,40 @@ export class AsyncTaskManager {
           // Check context before DOM update
           if (task.context.cancelled) return;
           if (placeholder) {
-            const errorDetail = escapeHtml(task.error?.message || this.translate('async_unknown_error'));
-            const localizedError = this.translate('async_processing_error', [errorDetail]);
-            placeholder.outerHTML = `<pre style="background: #fee; border-left: 4px solid #f00; padding: 10px; font-size: 12px;">${localizedError}</pre>`;
+            // Degrade before reporting: content that could not be fetched but
+            // is loadable as a plain image (e.g. a local SVG on a browser that
+            // refuses local file reads) is shown as an <img> rather than as an
+            // error block.
+            const fallbackUrl = typeof task.data.fetchFallbackUrl === 'string'
+              ? task.data.fetchFallbackUrl
+              : '';
+            if (fallbackUrl && replacePlaceholderWithImageUrl(placeholder, fallbackUrl, {
+              sourceHash: task.data.sourceHash,
+              pluginType: task.type,
+            })) {
+              // Keep the in-memory block cache in sync (the block no longer
+              // holds a placeholder), like the plugin render path does.
+              syncBlockHtmlFromDOM(task.id);
+            } else {
+              const errorDetail = escapeHtml(task.error?.message || this.translate('async_unknown_error'));
+              const localizedError = this.translate('async_processing_error', [errorDetail]);
+              // Same signal the console carries, in structured form: the block
+              // could not be fetched and nothing was rendered in its place.
+              recordRenderDiagnostic({
+                level: 'error',
+                kind: 'resource-failed',
+                type: task.type,
+                line: typeof task.data.sourceLine === 'number' ? task.data.sourceLine : null,
+                blockId: task.id,
+                message: task.error?.message || this.translate('async_unknown_error'),
+              });
+              placeholder.outerHTML = createErrorHTML(localizedError, {
+                pluginType: task.type,
+                sourceLine: typeof task.data.sourceLine === 'number' ? task.data.sourceLine : null,
+                blockId: task.id,
+                stage: 'fetch',
+              });
+            }
           }
         } else {
           await task.callback(task.data);
@@ -526,12 +483,26 @@ export class AsyncTaskManager {
         if (task.context.cancelled) {
           return;
         }
-        console.error('[TaskManager] Task processing error:', task.id, error);
+        // Concise warning: the error is already shown in the document via the
+        // placeholder error block — a stack trace here is noise in CLI logs.
+        console.warn(`[TaskManager] Task failed for ${task.id}: ${(error as Error).message}`);
+        recordRenderDiagnostic({
+          level: 'error',
+          kind: 'render-failed',
+          type: task.type,
+          line: typeof task.data.sourceLine === 'number' ? task.data.sourceLine : null,
+          blockId: task.id,
+          message: (error as Error).message,
+        });
         const placeholder = document.getElementById(task.id);
         if (placeholder) {
           const errorDetail = escapeHtml((error as Error).message || '');
           const localizedError = this.translate('async_task_processing_error', [errorDetail]);
-          placeholder.outerHTML = `<pre style="background: #fee; border-left: 4px solid #f00; padding: 10px; font-size: 12px;">${localizedError}</pre>`;
+          placeholder.outerHTML = createErrorHTML(localizedError, {
+            pluginType: task.type,
+            sourceLine: typeof task.data.sourceLine === 'number' ? task.data.sourceLine : null,
+            blockId: task.id,
+          });
         }
         if (onError) onError(error as Error, task);
       } finally {
@@ -566,6 +537,117 @@ export interface CreateMarkdownProcessorOptions {
   tableMergeEmpty?: boolean;
 }
 
+const markdownShikiInternal = createShikiInternalSync({
+  engine: createJavaScriptRegexEngine(),
+  langs: [langMarkdown],
+  themes: [themeVitesseLight, themeVitesseDark],
+});
+
+function getNodeText(node: any): string {
+  if (!node) return '';
+  if (node.type === 'text') return String(node.value || '');
+  if (!Array.isArray(node.children)) return '';
+  return node.children.map((child: any) => getNodeText(child)).join('');
+}
+
+function isDarkThemeActive(): boolean {
+  return Boolean(document?.documentElement?.classList?.contains('dark'));
+}
+
+/**
+ * Hand the code surface back to the theme.
+ *
+ * Shiki paints its own `background-color` (vitesse white/black) inline on the
+ * `<pre>`, and an inline declaration beats the viewer's
+ * `#markdown-content pre { background-color: … }` rule — so a ```markdown
+ * fence used to sit on Shiki's colour while every other code block sat on the
+ * theme's code background. Only the background is dropped: the token colours
+ * (inline on the spans) are what makes the fence syntax highlighted.
+ */
+const themeOwnedCodeBackground: ShikiTransformer = {
+  name: 'documd-theme-owned-code-background',
+  pre(node) {
+    const style = node.properties?.style;
+    if (typeof style !== 'string') {
+      return;
+    }
+
+    const declarations = style
+      .split(';')
+      .map((declaration) => declaration.trim())
+      .filter((declaration) => declaration !== '' && !/^background(-color)?\s*:/i.test(declaration));
+
+    if (declarations.length > 0) {
+      node.properties.style = declarations.join(';');
+    } else {
+      delete node.properties.style;
+    }
+  },
+};
+
+function getMarkdownShikiPre(code: string): any | null {
+  try {
+    const root = codeToHast(markdownShikiInternal, code, {
+      lang: 'markdown',
+      theme: isDarkThemeActive() ? themeVitesseDark : themeVitesseLight,
+      transformers: [themeOwnedCodeBackground],
+    });
+    return root.children.find((child: any) => child?.type === 'element' && child?.tagName === 'pre') || null;
+  } catch {
+    return null;
+  }
+}
+
+export function renderMarkdownCodeBlockHtml(code: string): string | null {
+  const shikiPre = getMarkdownShikiPre(code);
+  if (!shikiPre) {
+    return null;
+  }
+
+  try {
+    return String(
+      unified()
+        .use(rehypeStringify)
+        .stringify({ type: 'root', children: [shikiPre] } as any)
+    );
+  } catch {
+    return null;
+  }
+}
+
+function rehypeEnhanceMarkdownCode() {
+  return (tree: any): void => {
+    visit(tree, 'element', (node: any, _index: number | undefined, parent: any) => {
+      if (!parent || node.tagName !== 'pre' || !Array.isArray(node.children)) {
+        return;
+      }
+
+      const codeNode = node.children.find((child: any) => child?.type === 'element' && child?.tagName === 'code');
+      if (!codeNode) {
+        return;
+      }
+
+      const classList = Array.isArray(codeNode.properties?.className)
+        ? codeNode.properties.className
+        : typeof codeNode.properties?.className === 'string'
+          ? codeNode.properties.className.split(/\s+/)
+          : [];
+
+      if (!classList.includes('language-markdown') && !classList.includes('language-md')) {
+        return;
+      }
+
+      const shikiPre = getMarkdownShikiPre(getNodeText(codeNode));
+      if (!shikiPre) {
+        return;
+      }
+
+      node.properties = shikiPre.properties || {};
+      node.children = shikiPre.children || [];
+    });
+  };
+}
+
 /**
  * Create the unified markdown processor pipeline
  * @param renderer - Renderer instance for diagrams
@@ -598,7 +680,7 @@ export function createMarkdownProcessor(
     .use(remarkGfm, { singleTilde: false })
     .use(remarkMath)
     .use(remarkGemoji)
-    .use(remarkSuperSub)
+    .use(remarkGithubAlerts)  // GitHub-style alert syntax (> [!NOTE] / [!TIP] / …)
     .use(remarkTocFilter);  // Filter out [toc] markers in rendered HTML
 
   // Register all plugins from plugin registry
@@ -612,6 +694,7 @@ export function createMarkdownProcessor(
     .use(rehypeImageUri)  // Rewrite relative image paths for VS Code webview
     .use(rehypeTableMerge, { enabled: tableMergeEmpty })  // Auto-merge empty table cells
     .use(rehypeHighlight)
+    .use(rehypeEnhanceMarkdownCode)
     .use(rehypeKatex)
     .use(rehypeStringify, { allowDangerousHtml: true });
 

@@ -11,6 +11,26 @@ import * as os from 'os';
 import { findHeadingLine } from '../../../src/utils/heading-slug';
 import type { CacheStorage } from './cache-storage';
 import type { EmojiStyle } from '../../../src/types/docx.js';
+import {
+  normalizeSetting,
+  DEFAULT_SETTINGS,
+} from '../../../src/config/settings.generated';
+
+interface ThemeBootstrapData {
+  fontConfig: unknown;
+  registry: unknown;
+}
+
+const PREVIEW_OPEN_CONTEXT = 'markdownViewerPreviewOpen';
+const PREVIEW_FOCUSED_CONTEXT = 'markdownViewerPreviewFocused';
+
+function setPreviewPanelOpen(open: boolean): void {
+  void vscode.commands.executeCommand('setContext', PREVIEW_OPEN_CONTEXT, open);
+}
+
+function setPreviewPanelFocused(focused: boolean): void {
+  void vscode.commands.executeCommand('setContext', PREVIEW_FOCUSED_CONTEXT, focused);
+}
 
 export class MarkdownPreviewPanel {
   public static currentPanel: MarkdownPreviewPanel | undefined;
@@ -71,7 +91,7 @@ export class MarkdownPreviewPanel {
     cacheStorage: CacheStorage,
     column?: vscode.ViewColumn
   ): MarkdownPreviewPanel {
-    const targetColumn = column || vscode.ViewColumn.Beside;
+    const targetColumn = column ?? vscode.ViewColumn.Active;
 
     // If panel already exists, show it
     if (MarkdownPreviewPanel.currentPanel) {
@@ -111,6 +131,7 @@ export class MarkdownPreviewPanel {
       }
     );
 
+    setPreviewPanelOpen(true);
     MarkdownPreviewPanel.currentPanel = new MarkdownPreviewPanel(panel, extensionUri, document, cacheStorage);
     return MarkdownPreviewPanel.currentPanel;
   }
@@ -163,13 +184,11 @@ export class MarkdownPreviewPanel {
     // Handle panel disposal
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
-    // Handle view state changes
+    // Sync context keys for editor/title menu visibility (see package.json when clauses)
+    setPreviewPanelFocused(this._panel.active);
     this._panel.onDidChangeViewState(
       (e) => {
-        // NOTE: Do NOT call _update() here. The webview context is retained when hidden 
-        // (retainContextWhenHidden: true), so we only need to update the content when 
-        // it actually changes (via updateContent()), not when visibility changes.
-        // Calling _update() here would cause unnecessary full page reloads.
+        setPreviewPanelFocused(e.webviewPanel.active);
       },
       null,
       this._disposables
@@ -198,10 +217,10 @@ export class MarkdownPreviewPanel {
     this._panel.title = `Preview: ${path.basename(document.fileName)}`;
     
     // Include scrollLine so the render flow uses it as targetLine directly,
-    // instead of relying on a separate SCROLL_TO_LINE message that may race
+    // instead of relying on a separate SYNC_HOST_NAVIGATION message that may race
     // with editor-driven scroll events.
     const line = typeof initialLine === 'number' ? initialLine : 0;
-    this.updateContent(document.getText(), line);
+    this.openDocument(document.getText(), line);
   }
 
   public isDocumentMatch(document: vscode.TextDocument): boolean {
@@ -229,20 +248,39 @@ export class MarkdownPreviewPanel {
     });
   }
 
-  public updateContent(content: string, scrollLine?: number): void {
-    // Calculate document directory webview URI for resolving relative paths
+  private _buildDocumentPayload(content: string, scrollLine?: number): {
+    content: string;
+    filename: string;
+    documentKey: string;
+    documentBaseUri?: string;
+    scrollLine?: number;
+  } {
     let documentBaseUri: string | undefined;
+    let filename = 'untitled.md';
+    let documentKey = 'untitled';
+
     if (this._document) {
       const docDir = vscode.Uri.file(path.dirname(this._document.uri.fsPath));
       documentBaseUri = this._panel.webview.asWebviewUri(docDir).toString();
+      filename = path.basename(this._document.fileName);
+      documentKey = this._document.uri.toString();
     }
 
-    this._postToWebview('UPDATE_CONTENT', {
+    return {
       content,
-      filename: this._document ? path.basename(this._document.fileName) : 'untitled.md',
+      filename,
+      documentKey,
       documentBaseUri,
       scrollLine,
-    });
+    };
+  }
+
+  public openDocument(content: string, scrollLine?: number): void {
+    this._postToWebview('OPEN_DOCUMENT', this._buildDocumentPayload(content, scrollLine));
+  }
+
+  public updateContent(content: string, scrollLine?: number): void {
+    this._postToWebview('UPDATE_CONTENT', this._buildDocumentPayload(content, scrollLine));
   }
 
   public refresh(): void {
@@ -324,7 +362,7 @@ export class MarkdownPreviewPanel {
     if (Date.now() < this._previewScrolledEditorUntil) {
       return;
     }
-    this._postToWebview('SCROLL_TO_LINE', { line });
+    this._postToWebview('SYNC_HOST_NAVIGATION', { line });
   }
 
   /**
@@ -351,7 +389,7 @@ export class MarkdownPreviewPanel {
     // the actual editor content below the sticky header.
     const stickyHeight = this._getEstimatedStickyHeight(Math.floor(line));
     const adjustedLine = line + stickyHeight;
-    this._postToWebview('SCROLL_TO_LINE', { line: adjustedLine });
+    this._postToWebview('SYNC_HOST_NAVIGATION', { line: adjustedLine });
   }
 
   /**
@@ -506,7 +544,7 @@ export class MarkdownPreviewPanel {
           
           // Send initial content
           if (this._document) {
-            this.updateContent(this._document.getText());
+            this.openDocument(this._document.getText());
           }
           
           // Check if we should open settings
@@ -716,10 +754,16 @@ export class MarkdownPreviewPanel {
                   next.tableMergeEmpty = value;
                 } else if (key === 'tableLayout') {
                   next.tableLayout = value;
+                } else if (key === 'imageLayout') {
+                  next.imageLayout = value;
+                } else if (key === 'diagramLayout') {
+                  next.diagramLayout = value;
                 } else if (key === 'docxEmojiStyle') {
                   next.docxEmojiStyle = value;
                 } else if (key === 'frontmatterDisplay') {
                   next.frontmatterDisplay = value;
+                } else if (key === 'firstLineIndent') {
+                  next.firstLineIndent = value;
                 } else {
                   (next as Record<string, unknown>)[key] = value;
                 }
@@ -735,7 +779,6 @@ export class MarkdownPreviewPanel {
           break;
 
         default:
-          console.warn(`Unknown message type: ${type}`);
           response = null;
       }
 
@@ -1101,19 +1144,16 @@ export class MarkdownPreviewPanel {
     // Get settings from persistent storage
     const settings = globalState?.get<Record<string, unknown>>('storage.markdownViewerSettings') ?? {};
     // Theme is stored separately at storage.selectedTheme (used by theme-manager.ts and settings-tab.ts)
-    const theme = globalState?.get<string>('storage.selectedTheme') || 'default';
-    const locale = (typeof settings.preferredLocale === 'string' && settings.preferredLocale) ? settings.preferredLocale : 'auto';
-    const storedHrDisplay = settings.docxHrDisplay;
-    const docxHrDisplay = (storedHrDisplay === 'pageBreak' || storedHrDisplay === 'line' || storedHrDisplay === 'hide')
-      ? storedHrDisplay
-      : 'hide';
-    const tableMergeEmpty = (typeof settings.tableMergeEmpty === 'boolean') ? settings.tableMergeEmpty : true;
-    const storedTableLayout = settings.tableLayout;
-    const tableLayout = (storedTableLayout === 'left' || storedTableLayout === 'center' || storedTableLayout === 'center-full-width') ? storedTableLayout : 'center';
-    const storedEmojiStyle = settings.docxEmojiStyle;
-    const docxEmojiStyle: EmojiStyle = (storedEmojiStyle === 'apple' || storedEmojiStyle === 'windows' || storedEmojiStyle === 'system') ? storedEmojiStyle : 'system';
-    const storedFrontmatterDisplay = settings.frontmatterDisplay;
-    const frontmatterDisplay = (storedFrontmatterDisplay === 'hide' || storedFrontmatterDisplay === 'table' || storedFrontmatterDisplay === 'raw') ? storedFrontmatterDisplay : 'hide';
+    const theme = globalState?.get<string>('storage.selectedTheme') || DEFAULT_SETTINGS.themeId;
+    const locale = normalizeSetting('preferredLocale', settings.preferredLocale);
+    const docxHrDisplay = normalizeSetting('docxHrDisplay', settings.docxHrDisplay);
+    const tableMergeEmpty = normalizeSetting('tableMergeEmpty', settings.tableMergeEmpty);
+    const tableLayout = normalizeSetting('tableLayout', settings.tableLayout);
+    const imageLayout = normalizeSetting('imageLayout', settings.imageLayout);
+    const diagramLayout = normalizeSetting('diagramLayout', settings.diagramLayout);
+    const docxEmojiStyle = normalizeSetting('docxEmojiStyle', settings.docxEmojiStyle) as EmojiStyle;
+    const frontmatterDisplay = normalizeSetting('frontmatterDisplay', settings.frontmatterDisplay);
+    const firstLineIndent = normalizeSetting('firstLineIndent', settings.firstLineIndent);
     
     return {
       theme,
@@ -1121,8 +1161,11 @@ export class MarkdownPreviewPanel {
       docxHrDisplay,
       tableMergeEmpty,
       tableLayout,
+      imageLayout,
+      diagramLayout,
       docxEmojiStyle,
       frontmatterDisplay,
+      firstLineIndent,
       fontSize: config.get('fontSize', 16),
       fontFamily: config.get('fontFamily', ''),
       lineNumbers: config.get('lineNumbers', true),
@@ -1173,6 +1216,7 @@ export class MarkdownPreviewPanel {
 
     const nonce = getNonce();
     const config = this._getConfiguration();
+    const themeBootstrap = this._getThemeBootstrapData();
 
     // CSP needs to allow iframe for diagram rendering
     return `<!DOCTYPE html>
@@ -1180,21 +1224,17 @@ export class MarkdownPreviewPanel {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline' https://fonts.googleapis.com; script-src 'nonce-${nonce}' 'unsafe-eval'; img-src ${webview.cspSource} data: https: blob:; font-src ${webview.cspSource} data: https://fonts.gstatic.com; frame-src ${webview.cspSource} blob:; connect-src ${webview.cspSource} https:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline' https://fonts.googleapis.com; script-src 'nonce-${nonce}' 'unsafe-eval'; img-src ${webview.cspSource} data: https: blob:; font-src ${webview.cspSource} data: https://fonts.gstatic.com; frame-src ${webview.cspSource} 'self' blob:; connect-src ${webview.cspSource} https:;">
   <link rel="stylesheet" href="${styleUri}">
   <link rel="stylesheet" href="${settingsStyleUri}">
   <link rel="stylesheet" href="${searchStyleUri}">
   <link rel="stylesheet" href="${tocStyleUri}">
   <title>Markdown Preview</title>
   <style>
-    /* Hide Chrome extension specific UI elements */
-    #toolbar,
-    #table-of-contents,
-    #toc-overlay {
-      display: none !important;
-    }
-    
-    /* VS Code webview layout - use markdown wrapper scroll */
+    /* VS Code webview layout - use markdown wrapper scroll.
+       Layout overrides (no toolbar / card, flush content) live in the shared
+       stylesheet under body.mv-embed.mv-panel — this block only maps the
+       theme variables and sizes the VS Code-specific shell. */
     html, body {
       height: 100%;
       margin: 0;
@@ -1204,25 +1244,36 @@ export class MarkdownPreviewPanel {
     
     #vscode-root {
       height: 100%;
+      --color-primary: var(--vscode-focusBorder, #007fd4);
+      --color-primary-hover: var(--vscode-textLink-activeForeground, var(--vscode-focusBorder, #007fd4));
+      --color-primary-light: var(--vscode-list-inactiveSelectionBackground, rgba(127, 127, 127, 0.18));
+      --color-primary-subtle: var(--vscode-list-hoverBackground, rgba(127, 127, 127, 0.12));
+      --color-bg-body: var(--vscode-editor-background, #1e1e1e);
+      --color-bg-surface: var(--vscode-sideBar-background, var(--vscode-editorWidget-background, #252526));
+      --color-bg-toc: var(--vscode-sideBar-background, var(--vscode-editorWidget-background, #252526));
+      --color-text-primary: var(--vscode-foreground, #cccccc);
+      --color-text-secondary: var(--vscode-descriptionForeground, #9d9d9d);
+      --color-text-tertiary: var(--vscode-disabledForeground, #808080);
+      --color-border: var(--vscode-panel-border, var(--vscode-widget-border, #454545));
+      --color-border-hover: var(--vscode-focusBorder, #007fd4);
+      --color-nav-active-bg: var(--vscode-list-activeSelectionBackground, rgba(0, 127, 212, 0.35));
+      --color-nav-active-text: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground, #ffffff));
+      --color-nav-active-border: var(--vscode-focusBorder, #007fd4);
+      --gray-50: var(--vscode-list-hoverBackground, rgba(127, 127, 127, 0.12));
+      --gray-100: var(--vscode-toolbar-hoverBackground, rgba(127, 127, 127, 0.16));
+      --gray-200: var(--vscode-panel-border, #454545);
+      --gray-300: var(--vscode-widget-border, #606060);
+      --gray-400: var(--vscode-disabledForeground, #808080);
+      --gray-500: var(--vscode-descriptionForeground, #9d9d9d);
+      --gray-600: var(--vscode-descriptionForeground, #9d9d9d);
+      --gray-700: var(--vscode-foreground, #cccccc);
+      --gray-900: var(--vscode-foreground, #cccccc);
+      --shadow-popover: 0 2px 8px rgba(0, 0, 0, 0.35);
+      --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.4);
     }
     
     #vscode-content {
       height: 100%;
-    }
-    
-    /* Reset wrapper for VS Code (no sidebar offset / no toolbar gap) */
-    #markdown-wrapper {
-      margin-left: 0 !important;
-      margin-top: 0 !important;
-      margin-right: 0 !important;
-      height: 100vh !important;
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
-    }
-    
-    /* Full width content for VS Code */
-    #markdown-page {
-      max-width: none !important;
     }
 
     @media print {
@@ -1245,7 +1296,7 @@ export class MarkdownPreviewPanel {
     }
   </style>
 </head>
-<body>
+<body class="mv-embed mv-panel">
   <div id="vscode-root">
     <div id="vscode-content">
       <div id="markdown-wrapper">
@@ -1261,13 +1312,32 @@ export class MarkdownPreviewPanel {
     window.VSCODE_WEBVIEW_BASE_URI = '${webviewUri}';
     window.VSCODE_CONFIG = ${JSON.stringify(config)};
     window.VSCODE_NONCE = '${nonce}';
+    window.VSCODE_THEME_BOOTSTRAP = ${JSON.stringify(themeBootstrap)};
   </script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
   }
 
+  private _getThemeBootstrapData(): ThemeBootstrapData {
+    const themesRoot = vscode.Uri.joinPath(this._extensionUri, 'webview', 'themes');
+    return {
+      fontConfig: this._readBootstrapJson(vscode.Uri.joinPath(themesRoot, 'font-config.json')),
+      registry: this._readBootstrapJson(vscode.Uri.joinPath(themesRoot, 'registry.json')),
+    };
+  }
+
+  private _readBootstrapJson(uri: vscode.Uri): unknown {
+    try {
+      return JSON.parse(fs.readFileSync(uri.fsPath, 'utf8'));
+    } catch {
+      return null;
+    }
+  }
+
   public dispose(): void {
+    setPreviewPanelOpen(false);
+    setPreviewPanelFocused(false);
     MarkdownPreviewPanel.currentPanel = undefined;
 
     this._panel.dispose();

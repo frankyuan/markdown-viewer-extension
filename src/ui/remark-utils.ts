@@ -93,6 +93,121 @@ export function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd
   return aStart <= bEnd && aEnd >= bStart;
 }
 
+// ─── Sub-block line narrowing helpers ───────────────────────────────────────
+// Exported here (not in remark-mode.ts) so unit tests can import without DOM globals.
+
+const TEXT_NODE = 3; // Node.TEXT_NODE constant
+
+function toElement(node: Node): Element | null {
+  return ('tagName' in node) ? (node as unknown as Element) : (node as Node).parentElement;
+}
+
+/**
+ * Table row → exact markdown line.
+ * header row = blockStart, separator = blockStart+1, tbody[i] = blockStart+2+i
+ */
+export function findTrLineInBlock(node: Node, blockEl: Element): number | null {
+  let el: Element | null = toElement(node);
+  const blockStart = Number(blockEl.getAttribute('data-line')) || 0;
+  while (el && el !== blockEl) {
+    if ((el as Element).tagName === 'TR') {
+      const section = el.parentElement;
+      if (!section) return null;
+      if (section.tagName === 'THEAD') return blockStart;
+      if (section.tagName === 'TBODY') {
+        const rowIdx = Array.from(section.children).indexOf(el as HTMLElement);
+        return rowIdx >= 0 ? blockStart + 2 + rowIdx : null;
+      }
+      return null;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
+/**
+ * List item → approximate markdown line.
+ * Uses document-order <li> index within the block as the line offset.
+ * Works for flat and nested lists; may be off by ≤1 for multi-line items.
+ */
+export function findLiLineInBlock(node: Node, blockEl: Element): number | null {
+  let el: Element | null = toElement(node);
+  const blockStart = Number(blockEl.getAttribute('data-line')) || 0;
+  while (el && el !== blockEl) {
+    if (el.tagName === 'LI') {
+      const allLis = Array.from(blockEl.querySelectorAll<HTMLLIElement>('li'));
+      const idx = allLis.indexOf(el as HTMLLIElement);
+      return idx >= 0 ? blockStart + idx : null;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
+/**
+ * Code block → approximate markdown line.
+ * Walks text nodes inside <pre> counting newlines before the selection point.
+ * blockStart = opening fence line; code body starts at blockStart+1.
+ */
+export function findCodeLineInBlock(node: Node, offset: number, blockEl: Element): number | null {
+  const pre = (blockEl.tagName === 'PRE' ? blockEl : blockEl.querySelector('pre')) as Node | null;
+  if (!pre) return null;
+  const blockStart = Number(blockEl.getAttribute('data-line')) || 0;
+
+  let newlines = 0;
+  let found = false;
+
+  const walk = (n: Node): void => {
+    if (found) return;
+    if (n === node) {
+      newlines += ((n.textContent || '').slice(0, offset).match(/\n/g) || []).length;
+      found = true;
+      return;
+    }
+    if (n.nodeType === TEXT_NODE) {
+      newlines += (n.textContent || '').split('\n').length - 1;
+    }
+    for (const child of n.childNodes) {
+      if (found) break;
+      walk(child);
+    }
+  };
+  walk(pre);
+  // blockStart = ``` fence line; first code line = blockStart+1
+  return found ? blockStart + 1 + newlines : null;
+}
+
+/**
+ * Try to narrow a selection within a block to a specific line range.
+ * Tries table rows → list items → code lines, in that order.
+ * Returns null when the block type has no useful sub-structure.
+ */
+export function narrowLineInBlock(
+  startNode: Node, startOffset: number,
+  endNode: Node, endOffset: number,
+  blockEl: Element,
+): { startLine: number; endLine: number } | null {
+  // 1. Table row (exact)
+  const startTr = findTrLineInBlock(startNode, blockEl);
+  if (startTr !== null) {
+    const endTr = findTrLineInBlock(endNode, blockEl);
+    return { startLine: startTr, endLine: endTr ?? startTr };
+  }
+  // 2. List item (approximate — LI document order within block)
+  const startLi = findLiLineInBlock(startNode, blockEl);
+  if (startLi !== null) {
+    const endLi = findLiLineInBlock(endNode, blockEl);
+    return { startLine: startLi, endLine: endLi ?? startLi };
+  }
+  // 3. Code block (approximate — newline count in pre/code text)
+  const startCode = findCodeLineInBlock(startNode, startOffset, blockEl);
+  if (startCode !== null) {
+    const endCode = findCodeLineInBlock(endNode, endOffset, blockEl);
+    return { startLine: startCode, endLine: endCode ?? startCode };
+  }
+  return null;
+}
+
 /** Check if a block element is a media/image block that should not be annotatable. */
 export function isMediaBlock(el: HTMLElement): boolean {
   if (SKIP_ANNOTATION_TAGS.has(el.tagName)) return true;
@@ -151,4 +266,251 @@ export function formatExportText(
   }
 
   return lines.join('\n');
+}
+
+// ─── Config Style Generation ─────────────────────────────────────────────────
+
+export type HighlightStyle = 'background' | 'underline' | 'wavy' | 'border';
+
+export const BG_COLORS: Record<RemarkColor, string> = {
+  yellow: 'rgba(255, 212, 0, 0.25)',
+  green: 'rgba(46, 160, 67, 0.18)',
+  blue: 'rgba(9, 105, 218, 0.15)',
+  pink: 'rgba(219, 97, 162, 0.18)',
+};
+
+export const LINE_COLORS: Record<RemarkColor, string> = {
+  yellow: 'rgba(202, 138, 4, 0.8)',
+  green: 'rgba(22, 128, 50, 0.75)',
+  blue: 'rgba(9, 80, 180, 0.7)',
+  pink: 'rgba(190, 60, 130, 0.75)',
+};
+
+/** Generate CSS rules for mark elements based on highlight style config */
+export function generateHighlightCSS(style: HighlightStyle): string {
+  if (style === 'background') {
+    return Object.entries(BG_COLORS).map(([c, rgba]) =>
+      `mark.remark-ann-${c} { background-color: ${rgba} !important; text-decoration: none !important; border: none !important; }`
+    ).join('\n');
+  } else if (style === 'underline') {
+    return Object.entries(LINE_COLORS).map(([c, rgba]) =>
+      `mark.remark-ann-${c} { background-color: transparent !important; text-decoration: underline 2px ${rgba} !important; text-underline-offset: 3px; border: none !important; }`
+    ).join('\n');
+  } else if (style === 'wavy') {
+    return Object.entries(LINE_COLORS).map(([c, rgba]) =>
+      `mark.remark-ann-${c} { background-color: transparent !important; text-decoration: wavy underline ${rgba} !important; text-underline-offset: 2px; border: none !important; }`
+    ).join('\n');
+  } else if (style === 'border') {
+    return Object.entries(LINE_COLORS).map(([c, rgba]) =>
+      `mark.remark-ann-${c} { background-color: transparent !important; text-decoration: none !important; border: 1.5px solid ${rgba} !important; border-radius: 3px; padding: 0 2px; }`
+    ).join('\n');
+  }
+  return '';
+}
+
+// ─── Sentence Boundary Detection ─────────────────────────────────────────────
+
+/** Regex for sentence-ending punctuation */
+export const SENTENCE_END_RE = /[。.?!？！\n]/;
+
+/**
+ * Find sentence boundaries around a given offset in text.
+ * Returns [start, end) indices of the sentence containing the offset.
+ */
+export function findSentenceBounds(text: string, offset: number): { start: number; end: number } {
+  let start = 0;
+  for (let i = offset - 1; i >= 0; i--) {
+    if (SENTENCE_END_RE.test(text[i])) { start = i + 1; break; }
+  }
+  let end = text.length;
+  for (let i = offset; i < text.length; i++) {
+    if (SENTENCE_END_RE.test(text[i])) { end = i + 1; break; }
+  }
+  return { start, end };
+}
+
+// ─── Text Node Offset Calculation ────────────────────────────────────────────
+
+export interface TextNodeOffset {
+  nodeIndex: number;
+  localOffset: number;
+}
+
+/**
+ * Given an array of text node lengths, find which node contains a given
+ * global character offset. Returns nodeIndex and localOffset within that node.
+ * Returns null if offset is beyond total length.
+ */
+export function locateOffsetInNodes(
+  nodeLengths: number[],
+  globalOffset: number
+): TextNodeOffset | null {
+  let charCount = 0;
+  for (let i = 0; i < nodeLengths.length; i++) {
+    if (charCount + nodeLengths[i] > globalOffset) {
+      return { nodeIndex: i, localOffset: globalOffset - charCount };
+    }
+    charCount += nodeLengths[i];
+  }
+  // Exact end of last node
+  if (charCount === globalOffset && nodeLengths.length > 0) {
+    const last = nodeLengths.length - 1;
+    return { nodeIndex: last, localOffset: nodeLengths[last] };
+  }
+  return null;
+}
+
+/**
+ * Find start and end positions for a substring within concatenated text nodes.
+ * Used by findTextRange to map text.indexOf() result to node-level offsets.
+ */
+export function locateSubstringInNodes(
+  nodeLengths: number[],
+  substringStart: number,
+  substringLength: number
+): { start: TextNodeOffset; end: TextNodeOffset } | null {
+  const startPos = locateOffsetInNodes(nodeLengths, substringStart);
+  const endPos = locateOffsetInNodes(nodeLengths, substringStart + substringLength);
+  if (!startPos || !endPos) return null;
+  return { start: startPos, end: endPos };
+}
+
+// ─── Portable Remarks File (download / import-merge) ─────────────────────────
+
+/** Discriminator written into exported remark files for validation on import. */
+export const REMARKS_FILE_TYPE = 'markdown-viewer-remarks';
+/** Schema version of the exported remark file. */
+export const REMARKS_FILE_VERSION = 1;
+
+export interface RemarksFile {
+  type: typeof REMARKS_FILE_TYPE;
+  version: number;
+  /** Best-effort source document path/URL the remarks belong to. */
+  source?: string;
+  /** ISO timestamp of when the file was exported. */
+  exportedAt?: string;
+  annotations: RemarkAnnotation[];
+}
+
+const VALID_COLORS: ReadonlySet<string> = new Set<RemarkColor>(['yellow', 'green', 'blue', 'pink']);
+
+/** Build a portable file object from the given annotations. */
+export function serializeAnnotations(
+  annotations: readonly RemarkAnnotation[],
+  source?: string,
+): RemarksFile {
+  return {
+    type: REMARKS_FILE_TYPE,
+    version: REMARKS_FILE_VERSION,
+    source,
+    exportedAt: new Date().toISOString(),
+    annotations: annotations.map(a => ({
+      id: a.id,
+      startLine: a.startLine,
+      endLine: a.endLine,
+      selectedText: a.selectedText,
+      note: a.note,
+      color: a.color,
+      timestamp: a.timestamp,
+      ...(a.blockId ? { blockId: a.blockId } : {}),
+    })),
+  };
+}
+
+/** Coerce an unknown value into a valid RemarkAnnotation, or return null. */
+function coerceAnnotation(raw: unknown): RemarkAnnotation | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const selectedText = typeof o.selectedText === 'string' ? o.selectedText : '';
+  if (!selectedText.trim()) return null;
+  const startLine = Number(o.startLine);
+  if (!Number.isFinite(startLine)) return null;
+  const endLine = Number.isFinite(Number(o.endLine)) ? Number(o.endLine) : startLine;
+  const color = (typeof o.color === 'string' && VALID_COLORS.has(o.color)) ? o.color as RemarkColor : 'yellow';
+  return {
+    id: typeof o.id === 'string' && o.id ? o.id : '',
+    startLine,
+    endLine,
+    selectedText,
+    note: typeof o.note === 'string' ? o.note : '',
+    color,
+    timestamp: Number.isFinite(Number(o.timestamp)) ? Number(o.timestamp) : Date.now(),
+    ...(typeof o.blockId === 'string' && o.blockId ? { blockId: o.blockId } : {}),
+  };
+}
+
+/**
+ * Parse the text content of an imported remarks file.
+ * Accepts either the wrapped `{ type, version, annotations }` object or a bare
+ * array of annotations. Returns validated annotations plus optional metadata.
+ */
+export function parseRemarksFile(text: string): { annotations: RemarkAnnotation[]; source?: string } | { error: string } {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return { error: 'invalid-json' };
+  }
+
+  let rawList: unknown;
+  let source: string | undefined;
+
+  if (Array.isArray(data)) {
+    rawList = data;
+  } else if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+    if (obj.type !== undefined && obj.type !== REMARKS_FILE_TYPE) {
+      return { error: 'wrong-type' };
+    }
+    if (typeof obj.source === 'string') source = obj.source;
+    rawList = obj.annotations;
+  }
+
+  if (!Array.isArray(rawList)) return { error: 'no-annotations' };
+
+  const annotations: RemarkAnnotation[] = [];
+  for (const raw of rawList) {
+    const ann = coerceAnnotation(raw);
+    if (ann) annotations.push(ann);
+  }
+
+  if (annotations.length === 0) return { error: 'no-annotations' };
+  return { annotations, source };
+}
+
+/**
+ * Merge incoming annotations into an existing set.
+ * Deduplicates by (selectedText + startLine + endLine): a duplicate is skipped,
+ * keeping the existing annotation. New annotations receive a fresh id (via
+ * `makeId`) when their id is empty or collides with an existing id, so imported
+ * files never clobber current annotations.
+ */
+export function mergeAnnotations(
+  existing: readonly RemarkAnnotation[],
+  incoming: readonly RemarkAnnotation[],
+  makeId: () => string,
+): { merged: RemarkAnnotation[]; added: number; skipped: number } {
+  const merged = [...existing];
+  const usedIds = new Set(existing.map(a => a.id));
+  const dedupKey = (a: RemarkAnnotation): string => `${a.startLine}|${a.endLine}|${a.selectedText}`;
+  const seen = new Set(existing.map(dedupKey));
+
+  let added = 0;
+  let skipped = 0;
+
+  for (const ann of incoming) {
+    if (seen.has(dedupKey(ann))) {
+      skipped++;
+      continue;
+    }
+    let id = ann.id;
+    if (!id || usedIds.has(id)) id = makeId();
+    const copy: RemarkAnnotation = { ...ann, id };
+    merged.push(copy);
+    usedIds.add(id);
+    seen.add(dedupKey(copy));
+    added++;
+  }
+
+  return { merged, added, skipped };
 }
